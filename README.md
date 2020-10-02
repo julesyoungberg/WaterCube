@@ -2,25 +2,43 @@
 
 An interactive SPH water simulation using Cinder.
 
+
 ## Setup
 
-The simplest way to get started is to download cinder 0.9.1 from the [download page](https://libcinder.org/download).
+Download cinder 0.9.3dev from github:
 
-Works on [Mac](https://libcinder.org/docs/guides/mac-setup/index.html) or [Windows](https://libcinder.org/docs/guides/windows-setup/index.html).
+```shell
+git clone --recursive https://github.com/cinder/Cinder.git
+```
 
-### Setting the Path
 
-This project needs to know where cinder is installed. 
+#### Visual Studio 2019
 
-#### Visual Studio
+Open `Cinder\CMakeLists.txt` in Visual Studio, once the build files have been generated select `Build > Build All`.
 
-#### XCode
-Update `Header Search Paths` to include `/path-to-cinder/include`.
+Next, update `CINDER_PATH` in `WaterCube\proj\cmake\CMakeSettings.json` to point to the cinder repo. 
+Then open `WaterCube\proj\cmake\CMakeLists.txt` in Visual Studio and let the build files generate.
+Lastly, either run `Current Document` as a startup item or select `Build > Build All` then run `WaterCube.exe` as a startup item.
 
-#### CMake
+
+### XCode
+
+Open `Cinder/proj/xcode/cinder.xcodeproj` and build.
+
+Next open `WaterCube/xcode/WaterCube.xcodeproj`, update `Header Search Paths` to include `/path-to-cinder/include`, then run.
+
+
+### CMake
+
+You must [build cinder](https://libcinder.org/docs/guides/cmake/cmake.html) with CMake before building this project. Then,
 
 ```shell
 cp .env.example .env
 ```
 
-Set `CINDER_PATH` in `.env` to the path to cinder.
+Set `CINDER_PATH` in `.env`, then run
+
+```shell
+make
+```
+
