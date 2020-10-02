@@ -12,7 +12,7 @@ git clone --recursive https://github.com/cinder/Cinder.git
 ```
 
 
-#### Visual Studio 2019
+### Visual Studio 2019
 
 Open `Cinder\CMakeLists.txt` in Visual Studio, once the build files have been generated select `Build > Build All`.
 
