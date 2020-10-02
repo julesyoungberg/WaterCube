@@ -7,7 +7,7 @@ using namespace ci::app;
 using namespace std;
 
 class WaterCubeApp : public App {
-  public:
+public:
 	void setup() override;
 	void mouseDown(MouseEvent event) override;
 	void update() override;
