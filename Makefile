@@ -5,7 +5,7 @@ export $(shell sed 's/=.*//' .env)
 .PHONY: run
 
 run: build
-	open build/Debug/WaterCube/WaterCube.app
+	./build/Debug/WaterCube/WaterCube.app/Contents/MacOS/WaterCube
 
 build: cmake
 	pushd build && make -j4 && popd
@@ -16,4 +16,5 @@ cmake:
 clean:
 	rm -rf build
 
-
+format:
+	clang-format --glob=./src/**/* > /dev/null
