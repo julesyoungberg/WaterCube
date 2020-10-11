@@ -39,7 +39,7 @@ void WaterCubeApp::setup() {
 void WaterCubeApp::update() {}
 
 void WaterCubeApp::draw() {
-    gl::clear();
+    gl::clear(Color(0.2f, 0.2f, 0.3f));
     gl::setMatrices(cam_);
     cube_->draw();
 }
