@@ -2,8 +2,14 @@
 
 using namespace core;
 
-Particle::Particle(): Object("") {}
+Particle::Particle(): Object<Particle>("") {}
 
-ParticleRef Particle::create() {
-    return ParticleRef(new Particle());
+Particle& Particle::density(double density) {
+    density_ = density;
+    return *this;
+}
+
+Particle& Particle::pressure(double pressure) {
+    pressure_ = pressure;
+    return *this;
 }

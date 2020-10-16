@@ -17,4 +17,4 @@ clean:
 	rm -rf build
 
 format:
-	clang-format --glob=./src/**/* > /dev/null
+	clang-format --glob="./src/**/*.{h,cpp}" > /dev/null

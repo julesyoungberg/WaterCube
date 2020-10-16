@@ -13,15 +13,23 @@ namespace core {
 
     class Fluid : public BaseObject {
     public:
-        Fluid(const std::string& name);
+        Fluid(const std::string& name, ContainerRef container);
         ~Fluid();
 
         int numParticles() { return num_particles_; }
         Fluid numParticles(int n) { num_particles_ = n; return *this; }
 
+        Fluid* setup();
+        void update(double time) override;
+        void draw() override;
+        void reset() override;
+
+        static FluidRef create(const std::string& name, ContainerRef container);
+
     private:
         int num_particles_;
         std::vector<Particle> particles_;
+        ContainerRef container_;
     
     };
 

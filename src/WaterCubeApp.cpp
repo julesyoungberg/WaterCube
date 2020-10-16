@@ -7,12 +7,15 @@
 #include "cinder/gl/gl.h"
 
 #include "./core/Container.h"
+#include "./core/Fluid.h"
 #include "./core/Scene.h"
 
 using namespace std;
 using namespace ci;
 using namespace ci::app;
 using namespace core;
+
+const int NUM_PARTICLES = 0; // 10000;
 
 // TODO plugins:
 // https://github.com/simongeilfus/Watchdog
@@ -37,7 +40,12 @@ void WaterCubeApp::setup() {
     scene_ = Scene::create();
 
     Container* container = new Container("container");
-    scene_->addObject(BaseObjectRef(container));
+    assert(scene_->addObject(BaseObjectRef(container)));
+
+    Fluid* fluid = Fluid("fluid", ContainerRef(container))
+        .numParticles(NUM_PARTICLES)
+        .setup();
+    assert(scene_->addObject(BaseObjectRef(fluid)));
 }
 
 void WaterCubeApp::update() {

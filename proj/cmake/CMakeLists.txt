@@ -13,6 +13,7 @@ include( "${CINDER_PATH}/proj/cmake/modules/cinderMakeApp.cmake" )
 
 list( APPEND SOURCES
 	${APP_PATH}/src/core/Container.cpp
+	${APP_PATH}/src/core/Fluid.cpp
 	${APP_PATH}/src/core/Object.cpp
 	${APP_PATH}/src/core/Particle.cpp
 	${APP_PATH}/src/core/Scene.cpp

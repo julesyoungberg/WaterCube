@@ -11,30 +11,44 @@ using namespace ci;
 
 namespace core {
 
-    typedef std::shared_ptr<class Object> ObjectRef;
-
-    class Object : public BaseObject {
+    template <class D> class Object : public BaseObject {
     public:
         Object(const std::string& name);
 
         float mass() { return mass_; }
-        Object mass(float mass);
+        D& mass(float mass) {
+            mass_ = mass;
+            return dthis();
+        }
         
         vec3 position() { return position_; }
-        Object position(vec3 position);
+        D position(vec3 position) {
+            position_ = position;
+            return dthis();
+        }
 
         vec3 velocity() { return velocity_; }
-        Object velocity(vec3 velocity);
+        D& velocity(vec3 velocity) {
+            velocity_ = velocity;
+            return dthis();
+        }
 
         vec3 acceleration() { return acceleration_; }
-        Object acceleration(vec3 acceleration);
+        D& acceleration(vec3 acceleration) {
+            acceleration_ = acceleration;
+            return dthis();
+        }
 
         void applyForce(vec3 force);
         void update(float timestep);
 
-        static ObjectRef create(const std::string& name);
-
     private:
+        friend D;
+        Object() = default;
+
+        D& dthis() { return static_cast<D&>(*this); }
+        D& dthis() const { return static_cast<D const &>(*this); }
+
         float mass_;
         vec3 position_, velocity_, acceleration_;
 

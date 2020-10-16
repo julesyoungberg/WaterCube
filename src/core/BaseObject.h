@@ -13,7 +13,7 @@ namespace core {
         virtual ~BaseObject() {}
 
         std::string name() { return name_; }
-        BaseObject name(std::string& name) { 
+        BaseObject& name(std::string& name) { 
             name_ = name; 
             return *this;
         }

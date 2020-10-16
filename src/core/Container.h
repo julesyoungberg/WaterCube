@@ -13,11 +13,13 @@ namespace core {
 
     typedef std::shared_ptr<class Container> ContainerRef;
 
-    class Container : public Object {
+    class Container : public Object<Container> {
     public:
         Container(const std::string& name);
 
-        void draw();
+        void update(double time) override;
+        void draw() override;
+        void reset() override;
 
         static ContainerRef create(const std::string& name);
 
