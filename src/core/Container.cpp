@@ -25,5 +25,5 @@ void Container::reset() {
 }
 
 ContainerRef Container::create(const std::string& name) {
-    return ContainerRef(new Container(name));
+    return std::make_shared<Container>(name);
 }

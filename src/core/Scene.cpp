@@ -1,8 +1,12 @@
+#include "cinder/app/App.h"
+
 #include "./Scene.h"
 
+using namespace ci;
+using namespace ci::app;
 using namespace core;
 
-Scene::Scene(): object_db_(), object_list_(), display_list_() {}
+Scene::Scene() {}
 
 Scene::~Scene() {
     clear();
@@ -44,25 +48,26 @@ BaseObjectRef Scene::getObjectFromIndex(unsigned int index) const {
     if (index >= object_list_.size()) {
         return BaseObjectRef(NULL);
     }
-
     return object_list_.at(index);
 }
 
 void Scene::update(double time) {
-    for (BaseObjectRef object : object_list_) {
-        object->update(time);
+    // console() << "updating scene: " << object_list_.size() << " objects\n";
+    for (const auto & o : object_list_) {
+        o->update(time);
     }
 }
 
 void Scene::draw() {
-    for (BaseObjectRef object : object_list_) {
-        object->draw();
+    // console() << "drawing scene\n";
+    for (const auto & o : display_list_) {
+        o->draw();
     }
 }
 
 void Scene::reset() {
-    for (BaseObjectRef object : object_list_) {
-        object->reset();
+    for (const auto & o : object_list_) {
+        o->reset();
     }
 }
 

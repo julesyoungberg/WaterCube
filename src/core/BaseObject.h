@@ -23,7 +23,7 @@ namespace core {
         virtual void reset() {}
 
         static BaseObjectRef create(const std::string& name) {
-            return BaseObjectRef(new BaseObject(name));
+            return std::make_shared<BaseObject>(name);
         }
 
     private:

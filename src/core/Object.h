@@ -11,9 +11,15 @@ using namespace ci;
 
 namespace core {
 
-    template <class D> class Object : public BaseObject {
+    template <class D> struct Object : public BaseObject {
     public:
-        Object(const std::string& name);
+        Object(const std::string& name):
+            BaseObject(name),
+            mass_(1.0),
+            position_(0),
+            velocity_(0),
+            acceleration_(0)
+        {}
 
         float mass() { return mass_; }
         D& mass(float mass) {
@@ -22,7 +28,7 @@ namespace core {
         }
         
         vec3 position() { return position_; }
-        D position(vec3 position) {
+        D& position(vec3 position) {
             position_ = position;
             return dthis();
         }
@@ -39,8 +45,15 @@ namespace core {
             return dthis();
         }
 
-        void applyForce(vec3 force);
-        void update(float timestep);
+        void applyForce(vec3 force) {
+            acceleration_ += force / mass_;
+        }
+
+        void update(double time) {
+            velocity_ += acceleration_ * (float)time;
+            position_ += velocity_ * (float)time;
+            acceleration_ *= 0.0;
+        }
 
     private:
         friend D;

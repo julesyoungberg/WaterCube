@@ -22,6 +22,7 @@ namespace core {
         Scene();
         ~Scene();
 
+        int numObjects() { return object_list_.size(); }
         bool exists(const std::string& name) const;
         bool addObject(BaseObjectRef object, bool visible = true);
         BaseObjectRef getObject(const std::string& name) const;

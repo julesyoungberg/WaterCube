@@ -17,9 +17,9 @@ namespace core {
         ~Fluid();
 
         int numParticles() { return num_particles_; }
-        Fluid numParticles(int n) { num_particles_ = n; return *this; }
+        FluidRef numParticles(int n);
 
-        Fluid* setup();
+        FluidRef setup();
         void update(double time) override;
         void draw() override;
         void reset() override;

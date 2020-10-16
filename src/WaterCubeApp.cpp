@@ -15,7 +15,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = 0; // 10000;
+const int NUM_PARTICLES = 1; // 10000;
 
 // TODO plugins:
 // https://github.com/simongeilfus/Watchdog
@@ -37,15 +37,20 @@ void WaterCubeApp::setup() {
     gl::enableDepthWrite();
     gl::enableDepthRead();
 
+    console() << "creating scene\n";
     scene_ = Scene::create();
 
-    Container* container = new Container("container");
-    assert(scene_->addObject(BaseObjectRef(container)));
+    ContainerRef container = Container::create("container");
+    BaseObjectRef container_ref = std::dynamic_pointer_cast<BaseObject, Container>(container);
+    assert(scene_->addObject(container_ref));
 
-    Fluid* fluid = Fluid("fluid", ContainerRef(container))
-        .numParticles(NUM_PARTICLES)
-        .setup();
-    assert(scene_->addObject(BaseObjectRef(fluid)));
+    FluidRef fluid = Fluid::create("fluid", container)
+        ->numParticles(NUM_PARTICLES)
+        ->setup();
+    BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid);
+    assert(scene_->addObject(fluid_ref));
+
+    console() << "done setup, created " << scene_->numObjects() << " objects\n";
 }
 
 void WaterCubeApp::update() {

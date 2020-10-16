@@ -1,5 +1,9 @@
+#include "cinder/app/App.h"
+
 #include "./Fluid.h"
 
+using namespace ci;
+using namespace ci::app;
 using namespace core;
 
 Fluid::Fluid(const std::string& name, ContainerRef container):
@@ -9,10 +13,18 @@ Fluid::Fluid(const std::string& name, ContainerRef container):
 
 Fluid::~Fluid() {}
 
-Fluid* Fluid::setup() {
+FluidRef Fluid::numParticles(int n) {
+    num_particles_ = n;
+    return std::make_shared<Fluid>(*this);
+}
+
+FluidRef Fluid::setup() {
+    // console() << "creating fluid\n";
+
     int n = num_particles_;
     particles_.resize(n);
 
+    // console() << "creating particles\n";
     for (int i = 0; i < n; i++) {
         const float x = ((std::rand() % n) / (float)n);
         const float y = ((std::rand() % n) / (float)n);
@@ -20,7 +32,8 @@ Fluid* Fluid::setup() {
         particles_[i] = Particle().position(vec3(x, y, z));
     }
 
-    return this;
+    // console() << "fluid created\n";
+    return std::make_shared<Fluid>(*this);
 }
 
 void Fluid::update(double time) {
@@ -36,5 +49,5 @@ void Fluid::reset() {
 }
 
 FluidRef Fluid::create(const std::string& name, ContainerRef container) {
-    return FluidRef(new Fluid(name, container));
+    return std::make_shared<Fluid>(name, container);
 }
