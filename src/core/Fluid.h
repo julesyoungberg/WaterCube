@@ -3,34 +3,49 @@
 #include <memory>
 #include <string>
 
+#include "cinder/app/App.h"
+#include "cinder/app/RendererGl.h"
+#include "cinder/Rand.h"
+#include "cinder/gl/gl.h"
+#include "cinder/Utilities.h"
+#include "cinder/gl/Ssbo.h"
+
 #include "./BaseObject.h"
 #include "./Container.h"
 #include "./Particle.h"
 
+using namespace ci;
+using namespace ci::app;
+
 namespace core {
 
-    typedef std::shared_ptr<class Fluid> FluidRef;
+const int WORK_GROUP_SIZE = 128;
 
-    class Fluid : public BaseObject {
-    public:
-        Fluid(const std::string& name, ContainerRef container);
-        ~Fluid();
+typedef std::shared_ptr<class Fluid> FluidRef;
 
-        int numParticles() { return num_particles_; }
-        FluidRef numParticles(int n);
+class Fluid : public BaseObject {
+public:
+    Fluid(const std::string& name, ContainerRef container);
+    ~Fluid();
 
-        FluidRef setup();
-        void update(double time) override;
-        void draw() override;
-        void reset() override;
+    int numParticles() { return num_particles_; }
+    FluidRef numParticles(int n);
 
-        static FluidRef create(const std::string& name, ContainerRef container);
+    FluidRef setup();
+    void update(double time) override;
+    void draw() override;
+    void reset() override;
 
-    private:
-        int num_particles_;
-        std::vector<Particle> particles_;
-        ContainerRef container_;
-    
-    };
+    static FluidRef create(const std::string& name, ContainerRef container);
+
+private:
+    int num_particles_;
+    // std::vector<Particle> particles_;
+    ContainerRef container_;
+    gl::SsboRef particle_buffer_;
+    gl::VboRef ids_vbo_;
+    gl::VboRef attributes_;
+
+};
 
 };

@@ -1,10 +1,9 @@
-#include <assert.h>
-
 #include "cinder/Easing.h"
 #include "cinder/app/App.h"
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/Shader.h"
 #include "cinder/gl/gl.h"
+#include "cinder/Utilities.h"
 
 #include "./core/Container.h"
 #include "./core/Fluid.h"
@@ -42,13 +41,13 @@ void WaterCubeApp::setup() {
 
     ContainerRef container = Container::create("container");
     BaseObjectRef container_ref = std::dynamic_pointer_cast<BaseObject, Container>(container);
-    assert(scene_->addObject(container_ref));
+    CI_ASSERT(scene_->addObject(container_ref));
 
     FluidRef fluid = Fluid::create("fluid", container)
         ->numParticles(NUM_PARTICLES)
         ->setup();
     BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid);
-    assert(scene_->addObject(fluid_ref));
+    CI_ASSERT(scene_->addObject(fluid_ref));
 
     console() << "done setup, created " << scene_->numObjects() << " objects\n";
 }

@@ -78,5 +78,5 @@ void Scene::clear() {
 }
 
 SceneRef Scene::create() {
-    return SceneRef(new Scene());
+    return std::make_shared<Scene>();
 }
