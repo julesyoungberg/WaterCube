@@ -3,15 +3,16 @@
 #extension GL_ARB_shader_storage_buffer_object : enable
 #extension GL_ARB_compute_variable_group_size : enable
 
-struct Particle {
-	vec3 	position;
-    vec3 	velocity;
-    float 	density;
-    float 	pressure;
+layout(std140, binding = 0) buffer Positions {
+    vec3 positions[];
 };
 
-layout(std140, binding = 0) buffer Part {
-    Particle particles[];
+layout(std140, binding = 1) buffer Velocities {
+    vec3 velocities[];
+};
+
+layout(std140, binding = 2) buffer Densities {
+    float densities[];
 };
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
@@ -21,8 +22,9 @@ const float dt2 = 1.0 / (60.0 * 60.0);
 void main() {
     uint gid = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
 
-    vec3 position = particles[gid].position;
-    vec3 velocity = particles[gid].velocity;
+    vec3 position = positions[gid];
+    vec3 velocity = velocities[gid];
+    float density = densities[gid];
 
-    particles[gid].position = position + velocity;
+    positions[gid] = position + velocity;
 }

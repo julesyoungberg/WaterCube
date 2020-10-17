@@ -23,15 +23,13 @@ namespace core {
 const int WORK_GROUP_SIZE = 128;
 
 /**
- * Particle representation - shared between CPU and GPU
+ * Particle representation
  */
 struct Particle {
-    Particle() : position(0), velocity(0), density(1), pressure(1) {}
-
+    Particle() : position(0), velocity(0), density(1) {}
     vec3 position;
     vec3 velocity;
     float density;
-    float pressure;
 };
 
 typedef std::shared_ptr<class Fluid> FluidRef;
@@ -56,16 +54,22 @@ public:
 
     int num_particles_;
     ContainerRef container_;
+    std::vector<Particle> initial_particles_;
 
     gl::GlslProgRef bucket_prog_, density_prog_, render_prog_, update_prog_;
 
-    gl::SsboRef particle_buffer_;
+    gl::SsboRef position_buffer_, velocity_buffer_, density_buffer_;
     gl::VboRef ids_vbo_;
     gl::VaoRef attributes_;
 
 private:
-    std::vector<Particle> generateParticles();
-    void prepareBuffers(std::vector<Particle>);
+    void generateInitialParticles();
+    void prepareBuffers();
+
+    void compileBucketProg();
+    void compileDensityProg();
+    void compileUpdateProg();
+    void compileRenderProg();
     void compileShaders();
 
     void runProg();
