@@ -57,7 +57,7 @@ public:
     int num_particles_;
     ContainerRef container_;
 
-    gl::GlslProgRef render_prog_, update_prog_;
+    gl::GlslProgRef bucket_prog_, density_prog_, render_prog_, update_prog_;
 
     gl::SsboRef particle_buffer_;
     gl::VboRef ids_vbo_;
@@ -67,6 +67,11 @@ private:
     std::vector<Particle> generateParticles();
     void prepareBuffers(std::vector<Particle>);
     void compileShaders();
+
+    void runProg();
+    void runBucketProg();
+    void runDensityProg();
+    void runUpdateProg();
 };
 
 } // namespace core

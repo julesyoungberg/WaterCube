@@ -50,6 +50,7 @@ std::vector<Particle> Fluid::generateParticles() {
 
 /**
  * Prepares shared memory buffers
+ * TODO: add bucket, distance function, wall weight function buffers
  */
 void Fluid::prepareBuffers(std::vector<Particle> particles) {
     // Create particle buffers on GPU and copy data into the first buffer.
@@ -87,6 +88,12 @@ void Fluid::compileShaders() {
     gl::enableVertexAttribArray(0);
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 
+    bucket_prog_ = gl::GlslProg::create(
+        gl::GlslProg::Format().compute(loadAsset("bucketGeneration.comp")));
+
+    density_prog_ = gl::GlslProg::create(
+        gl::GlslProg::Format().compute(loadAsset("densityComputation.comp")));
+
     update_prog_ = gl::GlslProg::create(
         gl::GlslProg::Format().compute(loadAsset("particleUpdate.comp")));
 }
@@ -107,14 +114,34 @@ FluidRef Fluid::setup() {
     return std::make_shared<Fluid>(*this);
 }
 
-void Fluid::update(double time) {
-    gl::ScopedGlslProg prog(update_prog_);
-    // update_prog_->uniform("uTime", (float)getElapsedSeconds());
-
-    gl::ScopedBuffer scoped_particle_ssbo(particle_buffer_);
-
+void Fluid::runProg() {
     gl::dispatchCompute(num_particles_ / WORK_GROUP_SIZE, 1, 1);
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+void Fluid::runBucketProg() {
+    gl::ScopedGlslProg prog(bucket_prog_);
+    gl::ScopedBuffer scoped_particle_ssbo(particle_buffer_);
+    runProg();
+}
+
+void Fluid::runDensityProg() {
+    gl::ScopedGlslProg prog(density_prog_);
+    gl::ScopedBuffer scoped_particle_ssbo(particle_buffer_);
+    runProg();
+}
+
+void Fluid::runUpdateProg() {
+    gl::ScopedGlslProg prog(update_prog_);
+    // update_prog_->uniform("uTime", (float)getElapsedSeconds());
+    gl::ScopedBuffer scoped_particle_ssbo(particle_buffer_);
+    runProg();
+}
+
+void Fluid::update(double time) {
+    runBucketProg();
+    runDensityProg();
+    runUpdateProg();
 }
 
 void Fluid::draw() {

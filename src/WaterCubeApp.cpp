@@ -35,7 +35,7 @@ public:
 
 void WaterCubeApp::setup() {
     prev_time_ = 0.0;
-    // cam_.lookAt(vec3(3, 2, 4), vec3(0));
+    // cam_.lookAt(vec3(0, 0, 800), vec3(0));
 
     gl::enableDepthWrite();
     gl::enableDepthRead();
