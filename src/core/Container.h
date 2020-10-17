@@ -5,7 +5,7 @@
 
 #include "cinder/gl/gl.h"
 
-#include "./Object.h"
+#include "./PhysicalObject.h"
 
 using namespace ci;
 
@@ -13,7 +13,10 @@ namespace core {
 
 typedef std::shared_ptr<class Container> ContainerRef;
 
-class Container : public Object<Container> {
+/**
+ * Class representing water container
+ */
+class Container : public PhysicalObject<Container> {
 public:
     Container(const std::string& name);
 
@@ -28,7 +31,6 @@ private:
     std::vector<std::uint32_t> box_indices_;
     gl::BatchRef batch_;
     gl::GlslProgRef glsl_;
-
 };
 
-};
+} // namespace core

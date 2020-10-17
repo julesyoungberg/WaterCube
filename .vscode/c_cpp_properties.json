@@ -1,16 +1,11 @@
 {
     "configurations": [
         {
-            "name": "Mac",
+            "name": "Windows",
             "includePath": [
                 "${default}",
-                "/Users/jules/workspace/crtv/cinder/include/"
+                "/Users/jules/Cinder/include/"
             ],
-            "defines": [],
-            "macFrameworkPath": [],
-            "compilerPath": "/usr/local/bin/gcc-10",
-            "intelliSenseMode": "gcc-x64",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json",
             "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],

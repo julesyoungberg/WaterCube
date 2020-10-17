@@ -1,11 +1,11 @@
 #pragma once
 
-#include <vector>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <set>
 #include <string>
-#include <iostream>
+#include <vector>
 
 #include "./BaseObject.h"
 
@@ -17,6 +17,9 @@ typedef std::map<std::string, BaseObjectRef> ObjectDB;
 
 typedef std::shared_ptr<class Scene> SceneRef;
 
+/**
+ * Scene manager class
+ */
 class Scene {
 public:
     Scene();
@@ -39,7 +42,6 @@ private:
     ObjectDB object_db_;
     ObjectList object_list_;
     DisplayList display_list_;
-
 };
 
-};
+} // namespace core

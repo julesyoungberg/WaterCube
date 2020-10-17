@@ -8,9 +8,7 @@ using namespace core;
 
 Scene::Scene() {}
 
-Scene::~Scene() {
-    clear();
-}
+Scene::~Scene() { clear(); }
 
 bool Scene::exists(const std::string& name) const {
     auto found = object_db_.find(name);
@@ -52,21 +50,19 @@ BaseObjectRef Scene::getObjectFromIndex(unsigned int index) const {
 }
 
 void Scene::update(double time) {
-    // console() << "updating scene: " << object_list_.size() << " objects\n";
-    for (const auto & o : object_list_) {
+    for (const auto& o : object_list_) {
         o->update(time);
     }
 }
 
 void Scene::draw() {
-    // console() << "drawing scene\n";
-    for (const auto & o : display_list_) {
+    for (const auto& o : display_list_) {
         o->draw();
     }
 }
 
 void Scene::reset() {
-    for (const auto & o : object_list_) {
+    for (const auto& o : object_list_) {
         o->reset();
     }
 }
@@ -77,6 +73,4 @@ void Scene::clear() {
     object_db_.clear();
 }
 
-SceneRef Scene::create() {
-    return std::make_shared<Scene>();
-}
+SceneRef Scene::create() { return std::make_shared<Scene>(); }

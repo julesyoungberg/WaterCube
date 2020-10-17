@@ -7,14 +7,17 @@ namespace core {
 
 typedef std::shared_ptr<class BaseObject> BaseObjectRef;
 
+/**
+ * Base Class for all scene objects to inherit from
+ */
 class BaseObject {
 public:
-    BaseObject(const std::string& name): name_(name) {}
+    BaseObject(const std::string& name) : name_(name) {}
     virtual ~BaseObject() {}
 
     std::string name() { return name_; }
-    BaseObject& name(std::string& name) { 
-        name_ = name; 
+    BaseObject& name(std::string& name) {
+        name_ = name;
         return *this;
     }
 
@@ -27,7 +30,6 @@ public:
     }
 
     std::string name_;
-
 };
 
-};
+} // namespace core

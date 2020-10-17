@@ -1,3 +1,4 @@
 .env
 build
 .DS_Store
+.vs

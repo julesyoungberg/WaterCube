@@ -13,7 +13,8 @@
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
-      "variables": []
+      "variables": [],
+      "c_cpp.default.includePath": ["\\Users\\jules\\Cinder\\include\\"]
     }
   ]
 }

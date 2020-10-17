@@ -1,18 +1,19 @@
 #pragma once
 
+#include <Windows.h>
 #include <memory>
 #include <string>
+#include <vector>
 
+#include "cinder/Rand.h"
+#include "cinder/Utilities.h"
 #include "cinder/app/App.h"
 #include "cinder/app/RendererGl.h"
-#include "cinder/Rand.h"
-#include "cinder/gl/gl.h"
-#include "cinder/Utilities.h"
 #include "cinder/gl/Ssbo.h"
+#include "cinder/gl/gl.h"
 
 #include "./BaseObject.h"
 #include "./Container.h"
-#include "./Particle.h"
 
 using namespace ci;
 using namespace ci::app;
@@ -21,8 +22,23 @@ namespace core {
 
 const int WORK_GROUP_SIZE = 128;
 
+/**
+ * Particle representation - shared between CPU and GPU
+ */
+struct Particle {
+    Particle() : position(0), velocity(0), density(1), pressure(1) {}
+
+    vec3 position;
+    vec3 velocity;
+    float density;
+    float pressure;
+};
+
 typedef std::shared_ptr<class Fluid> FluidRef;
 
+/**
+ * Fluid Simulator class
+ */
 class Fluid : public BaseObject {
 public:
     Fluid(const std::string& name, ContainerRef container);
@@ -38,14 +54,19 @@ public:
 
     static FluidRef create(const std::string& name, ContainerRef container);
 
-private:
     int num_particles_;
-    // std::vector<Particle> particles_;
     ContainerRef container_;
+
+    gl::GlslProgRef render_prog_, update_prog_;
+
     gl::SsboRef particle_buffer_;
     gl::VboRef ids_vbo_;
-    gl::VboRef attributes_;
+    gl::VaoRef attributes_;
 
+private:
+    std::vector<Particle> generateParticles();
+    void prepareBuffers(std::vector<Particle>);
+    void compileShaders();
 };
 
-};
+} // namespace core

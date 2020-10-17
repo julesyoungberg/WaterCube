@@ -3,7 +3,7 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 project(WaterCube)
 
-get_filename_component(CINDER_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../../crtv/cinder" ABSOLUTE) # "$ENV{CINDER_PATH}" ABSOLUTE)
+get_filename_component(CINDER_PATH "/Users/jules/Cinder" ABSOLUTE) # "$ENV{CINDER_PATH}" ABSOLUTE)
 get_filename_component(APP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
 
 include( "${CINDER_PATH}/proj/cmake/modules/cinderMakeApp.cmake" )
@@ -14,7 +14,6 @@ include( "${CINDER_PATH}/proj/cmake/modules/cinderMakeApp.cmake" )
 list( APPEND SOURCES
 	${APP_PATH}/src/core/Container.cpp
 	${APP_PATH}/src/core/Fluid.cpp
-	${APP_PATH}/src/core/Particle.cpp
 	${APP_PATH}/src/core/Scene.cpp
 	${APP_PATH}/src/WaterCubeApp.cpp
   )
