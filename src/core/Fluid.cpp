@@ -178,7 +178,7 @@ void Fluid::runDensityProg() {
 
 void Fluid::runUpdateProg() {
     gl::ScopedGlslProg prog(update_prog_);
-    // update_prog_->uniform("uTime", (float)getElapsedSeconds());
+    update_prog_->uniform("utime", (float)getElapsedSeconds());
     gl::ScopedBuffer scoped_position_ssbo(position_buffer_);
     gl::ScopedBuffer scoped_velocity_ssbo(velocity_buffer_);
     gl::ScopedBuffer scoped_density_ssbo(density_buffer_);
