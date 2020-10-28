@@ -18,23 +18,23 @@ layout(std430, binding = 1) restrict writeonly buffer Particles2 {
 };
 
 layout(std430, binding = 16) restrict readonly buffer Buckets {
-    int buckets[];
+    uint buckets[];
 };
 
 layout(std430, binding = 17) restrict readonly buffer Offsets {
-    int offsets[];
+    uint offsets[];
 };
 
 layout(std430, binding = 18) restrict buffer Counts {
-    int counts[];
+    uint counts[];
 };
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
 void main() {
     const uint particleID = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
-    const int bucketID = buckets[particleID];
-    const int localIndex = atomicAdd(counts[bucketID], 1);
+    const uint bucketID = buckets[particleID];
+    const uint localIndex = atomicAdd(counts[bucketID], 1);
     const uint globalIndex = offsets[bucketID] + localIndex;
     out_particles[globalIndex] = in_particles[particleID];
 }
