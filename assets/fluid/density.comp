@@ -1,0 +1,115 @@
+#version 460 core
+#extension GL_ARB_compute_shader : enable
+#extension GL_ARB_shader_storage_buffer_object : enable
+
+uniform float binSize;
+uniform int gridRes;
+uniform float mass;
+uniform float kernel;
+uniform float weightConst;
+uniform float k;
+uniform float restDensity;
+uniform float restPressure;
+
+layout(std140, binding = 0) buffer Positions {
+    vec3 positions[];
+};
+
+layout(std140, binding = 1) buffer Buckets {
+    int buckets[];
+};
+
+layout(std140, binding = 2) buffer Offsets {
+    int offsets[];
+};
+
+layout(std140, binding = 3) buffer Counts {
+    int counts[];
+};
+
+layout(std140, binding = 4) buffer Sorted {
+    int sorted[];
+};
+
+layout(std140, binding = 5) buffer Densities {
+    float densities[];
+};
+
+layout(std140, binding = 6) buffer Pressures {
+    float pressures[];
+};
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+const ivec3 NEIGHBORHOOD[27] = {
+    ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
+    ivec3(-1, -1,  0), ivec3(0, -1,  0), ivec3(1, -1,  0),
+    ivec3(-1, -1,  1), ivec3(0, -1,  1), ivec3(1, -1,  1),
+    ivec3(-1,  0, -1), ivec3(0,  0, -1), ivec3(1,  0, -1),
+    ivec3(-1,  0,  0), ivec3(0,  0,  0), ivec3(1,  0,  0),
+    ivec3(-1,  0,  1), ivec3(0,  0,  1), ivec3(1,  0,  1),
+    ivec3(-1,  1, -1), ivec3(0,  1, -1), ivec3(1,  1, -1),
+    ivec3(-1,  1,  0), ivec3(0,  1,  0), ivec3(1,  1,  0),
+    ivec3(-1,  1,  1), ivec3(0,  1,  1), ivec3(1,  1,  1)
+};
+
+ivec3 getBucketCoordinates(int id) {
+    float sRes = pow(gridRes, 2);
+    float x = id / sRes;
+    float i = mod(id, sRes);
+    float y = i / gridRes;
+    float z = mod(i, gridRes);
+    return ivec3(x, y, z);
+}
+
+int getBucketID(ivec3 coord) {
+    return int(floor(coord.x * pow(gridRes, 2) + coord.y * gridRes + coord.z));
+}
+
+void main() {
+    const uint particleID = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
+    const vec3 position = positions[particleID];
+    // const float density = densities[gid];
+    const int bucketID = buckets[particleID];
+    float density = mass * pow(kernel * kernel, 3) * weightConst;
+    ivec3 coord = getBucketCoordinates(bucketID);
+
+    #pragma unroll 1
+    for (uint i = 0; i < 27; i++) {
+        const ivec3 neighborCoord = coord + NEIGHBORHOOD[i];
+        const int neighborID = getBucketID(neighborCoord);
+
+        if (
+            any(lessThan(neighborCoord, ivec3(0))) || 
+            any(greaterThanEqual(neighborCoord, ivec3(binSize)))
+        ) {
+            continue;
+        }
+
+        const uint offset = offsets[neighborID];
+        const uint count = counts[neighborID];
+
+        for (uint p = 0; p < count; p++) {
+            const uint otherParticleID = sorted[offset + p];
+            // ignore myself
+            if (particleID == otherParticleID) {
+                continue;
+            }
+
+            const vec3 otherPosition = positions[otherParticleID];
+            const vec3 r = position - otherPosition;
+            const float len = length(r);
+
+            // ignore if out of range
+            if (len >= kernel) {
+                continue;
+            }
+
+            const float weight = pow(kernel * kernel - len * len, 3) * weightConst;
+            density += mass * weight;
+        }
+    }
+
+    densities[particleID] = density;
+    pressures[particleID] = restPressure + k * (density - restDensity);
+}

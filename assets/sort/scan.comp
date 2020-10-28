@@ -1,0 +1,22 @@
+#version 460 core
+#extension GL_ARB_compute_shader : enable
+#extension GL_ARB_shader_storage_buffer_object : enable
+
+uniform int numBins;
+
+layout(std140, binding = 0) buffer Counts {
+    int counts[];
+};
+
+layout(std140, binding = 1) buffer Offsets {
+    int offsets[];
+};
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+void main() {
+    offsets[0] = 0;
+    for (int i = 1; i < numBins; i++) {
+        offsets[i] = offsets[i-1] + counts[i];
+    }
+}

@@ -8,7 +8,6 @@
 #include "cinder/gl/Shader.h"
 #include "cinder/gl/gl.h"
 
-#include "./core/Container.h"
 #include "./core/Fluid.h"
 #include "./core/Scene.h"
 
@@ -43,15 +42,8 @@ void WaterCubeApp::setup() {
     OutputDebugStringA("creating scene\n");
     scene_ = Scene::create();
 
-    ContainerRef container = Container::create("container");
-    BaseObjectRef container_ref =
-        std::dynamic_pointer_cast<BaseObject, Container>(container);
-    CI_ASSERT(scene_->addObject(container_ref));
-
-    FluidRef fluid =
-        Fluid::create("fluid", container)->numParticles(NUM_PARTICLES)->setup();
-    BaseObjectRef fluid_ref =
-        std::dynamic_pointer_cast<BaseObject, Fluid>(fluid);
+    FluidRef fluid = Fluid::create("fluid")->numParticles(NUM_PARTICLES)->setup();
+    BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid);
     CI_ASSERT(scene_->addObject(fluid_ref));
 }
 
@@ -69,9 +61,7 @@ void WaterCubeApp::draw() {
     scene_->draw();
 
     gl::setMatricesWindow(app::getWindowSize());
-    gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps",
-                   vec2(32.0f, 52.0f));
+    gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(32.0f, 52.0f));
 }
 
-CINDER_APP(WaterCubeApp, RendererGl,
-           [](App::Settings* settings) { settings->setWindowSize(1280, 720); })
+CINDER_APP(WaterCubeApp, RendererGl, [](App::Settings* settings) { settings->setWindowSize(1280, 720); })

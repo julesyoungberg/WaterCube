@@ -1,0 +1,170 @@
+#version 460 core
+#extension GL_ARB_compute_shader : enable
+#extension GL_ARB_shader_storage_buffer_object : enable
+
+uniform float binSize;
+uniform int gridRes;
+uniform float dt;
+uniform float particleCount;
+uniform vec3 gravity;
+uniform float mass;
+uniform float kernel;
+uniform float viscosityCoefficient;
+uniform float viscosityWeight;
+uniform float pressureWeight;
+
+layout(std140, binding = 0) buffer Positions {
+    vec3 positions[];
+};
+
+layout(std140, binding = 1) buffer Buckets {
+    int buckets[];
+};
+
+layout(std140, binding = 2) buffer Offsets {
+    int offsets[];
+};
+
+layout(std140, binding = 3) buffer Counts {
+    int counts[];
+};
+
+layout(std140, binding = 4) buffer Sorted {
+    int sorted[];
+};
+
+layout(std140, binding = 5) buffer Densities {
+    float densities[];
+};
+
+layout(std140, binding = 6) buffer Pressures {
+    float pressures[];
+};
+
+layout(std140, binding = 7) buffer Velocities {
+    vec3 velocities[];
+};
+
+layout(std140, binding = 8) buffer BinVelocities {
+    vec3 binVelocities[];
+};
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+const ivec3 NEIGHBORHOOD[27] = {
+    ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
+    ivec3(-1, -1,  0), ivec3(0, -1,  0), ivec3(1, -1,  0),
+    ivec3(-1, -1,  1), ivec3(0, -1,  1), ivec3(1, -1,  1),
+    ivec3(-1,  0, -1), ivec3(0,  0, -1), ivec3(1,  0, -1),
+    ivec3(-1,  0,  0), ivec3(0,  0,  0), ivec3(1,  0,  0),
+    ivec3(-1,  0,  1), ivec3(0,  0,  1), ivec3(1,  0,  1),
+    ivec3(-1,  1, -1), ivec3(0,  1, -1), ivec3(1,  1, -1),
+    ivec3(-1,  1,  0), ivec3(0,  1,  0), ivec3(1,  1,  0),
+    ivec3(-1,  1,  1), ivec3(0,  1,  1), ivec3(1,  1,  1)
+};
+
+ivec3 getBucketCoordinates(int id) {
+    float sRes = pow(gridRes, 2);
+    float x = id / sRes;
+    float i = mod(id, sRes);
+    float y = i / gridRes;
+    float z = mod(i, gridRes);
+    return ivec3(x, y, z);
+}
+
+int getBucketID(ivec3 coord) {
+    return int(floor(coord.x * pow(gridRes, 2) + coord.y * gridRes + coord.z));
+}
+
+vec3 getVelocity(vec3 position) {
+    ivec3 p000 = ivec3(floor(position));
+    const ivec3 p001 = p000 + ivec3(0, 0, 1);
+    const ivec3 p010 = p000 + ivec3(0, 1, 0);
+    const ivec3 p011 = p000 + ivec3(0, 1, 1);
+    const ivec3 p100 = p000 + ivec3(1, 0, 0);
+    const ivec3 p101 = p000 + ivec3(1, 0, 1);
+    const ivec3 p110 = p000 + ivec3(1, 1, 0);
+    const ivec3 p111 = p000 + ivec3(1, 1, 1);
+
+    const vec3 v000 = binVelocities[getBucketID(p000)];
+    const vec3 v001 = binVelocities[getBucketID(p001)];
+    const vec3 v010 = binVelocities[getBucketID(p010)];
+    const vec3 v011 = binVelocities[getBucketID(p011)];
+    const vec3 v100 = binVelocities[getBucketID(p100)];
+    const vec3 v101 = binVelocities[getBucketID(p101)];
+    const vec3 v110 = binVelocities[getBucketID(p110)];
+    const vec3 v111 = binVelocities[getBucketID(p111)];
+
+    const vec3 d = (position - p000) / binSize;
+
+    const vec3 v00 = v000 * (1 - d.x) + v100 * d.x;
+    const vec3 v01 = v001 * (1 - d.x) + v101 * d.x;
+    const vec3 v10 = v010 * (1 - d.x) + v110 * d.x;
+    const vec3 v11 = v011 * (1 - d.x) + v111 * d.x;
+
+    const vec3 v0 = v00 * (1 - d.y) + v10 * d.y;
+    const vec3 v1 = v01 * (1 - d.y) + v11 * d.y;
+
+    return v0 * (1 - d.z) + v1 * d.z;
+}
+
+void main() {
+    const uint particleID = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
+    const vec3 position = positions[particleID];
+    const float pressure = pressures[particleID];
+    const float density = densities[particleID];
+    // const float density = densities[gid];
+    const int bucketID = buckets[particleID];
+    ivec3 coord = getBucketCoordinates(bucketID);
+    
+    vec3 forcePressure = vec3(0);
+    vec3 forceViscosity = vec3(0);
+
+    #pragma unroll 1
+    for (uint i = 0; i < 27; i++) {
+        const ivec3 neighborCoord = coord + NEIGHBORHOOD[i];
+        const int neighborID = getBucketID(neighborCoord);
+
+        if (
+            any(lessThan(neighborCoord, ivec3(0))) || 
+            any(greaterThanEqual(neighborCoord, ivec3(binSize)))
+        ) {
+            continue;
+        }
+
+        const uint offset = offsets[neighborID];
+        const uint count = counts[neighborID];
+
+        for (uint p = 0; p < count; p++) {
+            const uint otherParticleID = sorted[offset + p]; 
+
+            const vec3 otherPosition = positions[otherParticleID];
+            const vec3 r = position - otherPosition;
+            const float len = length(r);
+
+            if (len >= kernel) {
+                continue;
+            }
+
+            vec3 mPressureWeight = vec3(0);
+
+            if (len > 0) {
+                mPressureWeight = pressureWeight * pow(kernel - len, 3) * (r / len);
+            }
+
+            const float appliedPressure = pressure + pressures[otherParticleID];
+            const float otherDensity = densities[otherParticleID];
+            forcePressure += (mass * appliedPressure * mPressureWeight) / (2.0 * otherDensity);
+
+            const float mViscosityWeight = viscosityWeight * (kernel - len);
+            const vec3 filteredVelocity = getVelocity(otherPosition / binSize);
+            const vec3 velocityDiff = filteredVelocity - velocities[otherParticleID];
+            forceViscosity += (mass * velocityDiff * mViscosityWeight) / otherDensity;
+        }
+    }
+
+    const vec3 forceGravity = gravity * density;
+    const vec3 force = (forceViscosity * viscosityCoefficient) - forcePressure + forceGravity;
+    const vec3 acceleration = force / density;
+    velocities[particleID] += acceleration * dt;
+}
