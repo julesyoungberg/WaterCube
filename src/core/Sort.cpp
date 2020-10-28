@@ -47,6 +47,8 @@ void Sort::prepareBuffers() {
     count_buffer_ = gl::Ssbo::create(num_bins_ * sizeof(int), counts.data(), GL_STATIC_DRAW);
     offset_buffer_ = gl::Ssbo::create(num_bins_ * sizeof(int), offsets.data(), GL_STATIC_DRAW);
     sorted_buffer_ = gl::Ssbo::create(num_items_ * sizeof(int), sorted.data(), GL_STATIC_DRAW);
+
+    grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_);
 }
 
 /**
@@ -128,6 +130,14 @@ void Sort::compileShaders() {
 }
 
 /**
+ * Clears the count bin count buffer
+ */
+void Sort::clearCount() {
+    const std::uint32_t clear_value = 0;
+    glClearBufferData(count_buffer_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
+}
+
+/**
  * Generic run shader on particles - one for each
  */
 void Sort::runProg(int work_groups) {
@@ -142,6 +152,8 @@ void Sort::runProg() { runProg(num_work_groups_); }
  */
 void Sort::runBucketProg() {
     gl::ScopedGlslProg prog(bucket_prog_);
+    // grid_->bind(0);
+    // bucket_prog_->uniform("grid", 0);
     bucket_prog_->uniform("gridRes", grid_res_);
     bucket_prog_->uniform("binSize", bin_size_);
     gl::ScopedBuffer scoped_position_ssbo(position_buffer_);
@@ -154,6 +166,7 @@ void Sort::runBucketProg() {
  * TODO reset count buffer
  */
 void Sort::runCountProg() {
+    clearCount();
     gl::ScopedGlslProg prog(count_prog_);
     gl::ScopedBuffer scoped_bucket_ssbo(bucket_buffer_);
     gl::ScopedBuffer scoped_count_ssbo(count_buffer_);
@@ -166,6 +179,7 @@ void Sort::runCountProg() {
  * TODO parallelize
  */
 void Sort::runScanProg() {
+    clearCount();
     gl::ScopedGlslProg prog(scan_prog_);
     scan_prog_->uniform("numBins", num_bins_);
     gl::ScopedBuffer scoped_count_ssbo(count_buffer_);

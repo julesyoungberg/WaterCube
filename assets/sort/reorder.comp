@@ -2,19 +2,19 @@
 #extension GL_ARB_compute_shader : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
 
-layout(std140, binding = 0) buffer Buckets {
+layout(std140, binding = 32) buffer Buckets {
     int buckets[];
 };
 
-layout(std140, binding = 1) buffer Offsets {
+layout(std140, binding = 33) buffer Offsets {
     int offsets[];
 };
 
-layout(std140, binding = 2) buffer Counts {
+layout(std140, binding = 34) buffer Counts {
     int counts[];
 };
 
-layout(std140, binding = 3) buffer Sorted {
+layout(std140, binding = 35) buffer Sorted {
     int sorted[];
 };
 

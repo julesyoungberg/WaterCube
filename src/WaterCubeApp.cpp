@@ -18,9 +18,6 @@ using namespace core;
 
 const int NUM_PARTICLES = static_cast<int>(600e3);
 
-// TODO plugins:
-// https://github.com/simongeilfus/Watchdog
-
 class WaterCubeApp : public App {
 public:
     void setup() override;

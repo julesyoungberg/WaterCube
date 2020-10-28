@@ -6,7 +6,7 @@ uniform float binSize;
 uniform int gridRes;
 uniform float mass;
 uniform float kernel;
-uniform float weightConst;
+uniform float weightConstant;
 uniform float k;
 uniform float restDensity;
 uniform float restPressure;
@@ -71,7 +71,7 @@ void main() {
     const vec3 position = positions[particleID];
     // const float density = densities[gid];
     const int bucketID = buckets[particleID];
-    float density = mass * pow(kernel * kernel, 3) * weightConst;
+    float density = mass * pow(kernel * kernel, 3) * weightConstant;
     ivec3 coord = getBucketCoordinates(bucketID);
 
     #pragma unroll 1
@@ -105,7 +105,7 @@ void main() {
                 continue;
             }
 
-            const float weight = pow(kernel * kernel - len * len, 3) * weightConst;
+            const float weight = pow(kernel * kernel - len * len, 3) * weightConstant;
             density += mass * weight;
         }
     }

@@ -263,14 +263,14 @@ void Fluid::runBinVelocityProg() {
  */
 void Fluid::runDensityProg() {
     gl::ScopedGlslProg prog(density_prog_);
-    update_prog_->uniform("binSize", bin_size_);
-    update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("mass", particle_mass_);
-    update_prog_->uniform("kernel", kernel_);
-    update_prog_->uniform("weightConstant", weight_constant_);
-    update_prog_->uniform("k", k_);
-    update_prog_->uniform("restDensity", rest_density_);
-    update_prog_->uniform("restPressure", rest_pressure_);
+    density_prog_->uniform("binSize", bin_size_);
+    density_prog_->uniform("gridRes", grid_res_);
+    density_prog_->uniform("mass", particle_mass_);
+    density_prog_->uniform("kernel", kernel_);
+    density_prog_->uniform("weightConstant", weight_constant_);
+    density_prog_->uniform("k", k_);
+    density_prog_->uniform("restDensity", rest_density_);
+    density_prog_->uniform("restPressure", rest_pressure_);
     gl::ScopedBuffer scoped_position_ssbo(position_buffer_);
     gl::ScopedBuffer scoped_bucket_ssbo(sort_->bucketBuffer());
     gl::ScopedBuffer scoped_offset_ssbo(sort_->offsetBuffer());

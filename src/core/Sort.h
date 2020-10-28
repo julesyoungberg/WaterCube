@@ -42,14 +42,18 @@ public:
 protected:
     int num_items_, num_bins_, num_work_groups_, grid_res_;
     float bin_size_;
+
     gl::GlslProgRef bucket_prog_, count_prog_, scan_prog_, reorder_prog_;
     gl::SsboRef position_buffer_, bucket_buffer_, count_buffer_, offset_buffer_, sorted_buffer_;
+    gl::Texture3dRef grid_;
 
 private:
     void compileBucketProg();
     void compileCountProg();
     void compileScanProg();
     void compileReorderProg();
+
+    void clearCount();
 
     void runProg(int work_groups);
     void runProg();

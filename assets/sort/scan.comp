@@ -4,12 +4,12 @@
 
 uniform int numBins;
 
-layout(std140, binding = 0) buffer Counts {
-    int counts[];
+layout(std140, binding = 33) buffer Offsets {
+    int offsets[];
 };
 
-layout(std140, binding = 1) buffer Offsets {
-    int offsets[];
+layout(std140, binding = 34) buffer Counts {
+    int counts[];
 };
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;

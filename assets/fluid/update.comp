@@ -5,7 +5,7 @@
 uniform float binSize;
 uniform int gridRes;
 uniform float dt;
-uniform float particleCount;
+uniform int particleCount;
 uniform vec3 gravity;
 uniform float mass;
 uniform float kernel;
@@ -13,39 +13,39 @@ uniform float viscosityCoefficient;
 uniform float viscosityWeight;
 uniform float pressureWeight;
 
-layout(std140, binding = 0) buffer Positions {
+layout(std140, binding = 16) buffer Positions {
     vec3 positions[];
 };
 
-layout(std140, binding = 1) buffer Buckets {
+layout(std140, binding = 32) buffer Buckets {
     int buckets[];
 };
 
-layout(std140, binding = 2) buffer Offsets {
+layout(std140, binding = 33) buffer Offsets {
     int offsets[];
 };
 
-layout(std140, binding = 3) buffer Counts {
+layout(std140, binding = 34) buffer Counts {
     int counts[];
 };
 
-layout(std140, binding = 4) buffer Sorted {
+layout(std140, binding = 35) buffer Sorted {
     int sorted[];
 };
 
-layout(std140, binding = 5) buffer Densities {
+layout(std140, binding = 17) buffer Densities {
     float densities[];
 };
 
-layout(std140, binding = 6) buffer Pressures {
+layout(std140, binding = 18) buffer Pressures {
     float pressures[];
 };
 
-layout(std140, binding = 7) buffer Velocities {
+layout(std140, binding = 19) buffer Velocities {
     vec3 velocities[];
 };
 
-layout(std140, binding = 8) buffer BinVelocities {
+layout(std140, binding = 20) buffer BinVelocities {
     vec3 binVelocities[];
 };
 

@@ -1,15 +1,17 @@
 #version 460 core
 #extension GL_ARB_compute_shader : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
+// #extension GL_ARB_bindless_texture: require
 
+// layout(location = 0, r32ui, bindless_image) uniform restrict uimage3D grid;
 uniform int gridRes;
 uniform float binSize;
 
-layout(std140, binding = 0) buffer Positions {
+layout(std140, binding = 16) buffer Positions {
     vec3 positions[];
 };
 
-layout(std140, binding = 1) buffer Buckets {
+layout(std140, binding = 32) buffer Buckets {
     int buckets[];
 };
 

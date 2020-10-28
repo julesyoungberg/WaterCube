@@ -62,7 +62,7 @@ public:
 
     gl::GlslProgRef bin_velocity_prog_, density_prog_, render_prog_, update_prog_, geometry_prog, shading_prog_;
 
-    gl::SsboRef position_buffer_, velocity_buffer_, density_buffer_, pressure_buffer_, bin_velocity_buffer_;
+    gl::SsboRef position_buffer_, density_buffer_, pressure_buffer_, velocity_buffer_, bin_velocity_buffer_;
     gl::VboRef ids_vbo_;
     gl::VaoRef attributes_;
 
