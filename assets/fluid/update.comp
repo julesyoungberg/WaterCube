@@ -9,7 +9,7 @@ uniform float dt;
 uniform int particleCount;
 uniform vec3 gravity;
 uniform float mass;
-uniform float kernel;
+uniform float kernelRadius;
 uniform float viscosityCoefficient;
 uniform float viscosityWeight;
 uniform float pressureWeight;
@@ -130,20 +130,20 @@ void main() {
             const vec3 r = particle.position - other.position;
             const float len = length(r);
 
-            if (len >= kernel) {
+            if (len >= kernelRadius) {
                 continue;
             }
 
             vec3 mPressureWeight = vec3(0);
 
             if (len > 0) {
-                mPressureWeight = pressureWeight * pow(kernel - len, 3) * (r / len);
+                mPressureWeight = pressureWeight * pow(kernelRadius - len, 3) * (r / len);
             }
 
             const float appliedPressure = particle.pressure + other.pressure;
             forcePressure += (mass * appliedPressure * mPressureWeight) / (2.0 * other.density);
 
-            const float mViscosityWeight = viscosityWeight * (kernel - len);
+            const float mViscosityWeight = viscosityWeight * (kernelRadius - len);
             const vec3 filteredVelocity = getVelocity(other.position / binSize);
             const vec3 velocityDiff = filteredVelocity - other.velocity;
             forceViscosity += (mass * velocityDiff * mViscosityWeight) / other.density;

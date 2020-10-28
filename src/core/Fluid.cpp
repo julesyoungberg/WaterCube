@@ -194,7 +194,6 @@ void Fluid::runUpdateProg(float time_step) {
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
     update_prog_->uniform("dt", time_step);
-    update_prog_->uniform("particleCount", num_particles_);
     update_prog_->uniform("gravity", gravity_);
     update_prog_->uniform("mass", particle_mass_);
     update_prog_->uniform("kernelRadius", kernel_radius_);
