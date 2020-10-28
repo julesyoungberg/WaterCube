@@ -2,3 +2,4 @@
 build
 .DS_Store
 .vs
+proj/cmake/.vs/
