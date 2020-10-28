@@ -2,6 +2,7 @@
 #extension GL_ARB_compute_shader : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
 
+uniform float size;
 uniform float binSize;
 uniform int gridRes;
 uniform float dt;
@@ -24,19 +25,19 @@ layout(std430, binding = 1) restrict buffer Particles {
     Particle particles[];
 };
 
-layout(std430, binding = 8) buffer BinVelocities {
+layout(std430, binding = 8) restrict readonly buffer BinVelocities {
     vec3 binVelocities[];
 };
 
-layout(std430, binding = 16) buffer Buckets {
+layout(std430, binding = 16) restrict readonly buffer Buckets {
     uint buckets[];
 };
 
-layout(std430, binding = 17) buffer Offsets {
+layout(std430, binding = 17) restrict readonly buffer Offsets {
     uint offsets[];
 };
 
-layout(std430, binding = 18) buffer Counts {
+layout(std430, binding = 18) restrict readonly buffer Counts {
     uint counts[];
 };
 
@@ -152,6 +153,36 @@ void main() {
     const vec3 forceGravity = gravity * particle.density;
     const vec3 force = (forceViscosity * viscosityCoefficient) - forcePressure + forceGravity;
     const vec3 acceleration = force / particle.density;
-    particle.velocity += acceleration * dt;
+
+    vec3 vel = particle.velocity + acceleration;
+    vec3 pos = particle.position + vel * dt;
+    const float wallDamping = 0.5;
+
+    if (pos.x < 0) {
+        vel.x *= -wallDamping;
+        pos.x = 0;
+    } else if (pos.x > size) {
+        vel.x *= -wallDamping;
+        pos.x = size;
+    }
+
+    if (pos.y < 0) {
+        vel.y *= -wallDamping;
+        pos.y = 0;
+    } else if (pos.y > size) {
+        vel.y *= -wallDamping;
+        pos.y = size;
+    }
+
+    if (pos.z < 0) {
+        vel.z *= -wallDamping;
+        pos.z = 0;
+    } else if (pos.z > size) {
+        vel.z *= -wallDamping;
+        pos.z = size;
+    }
+
+    particle.velocity = vel;
+    particle.position = pos;
     particles[particleID] = particle;
 }

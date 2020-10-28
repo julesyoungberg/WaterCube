@@ -210,7 +210,7 @@ void Fluid::runUpdateProg(float time_step) {
 void Fluid::update(double time) {
     odd_frame_ = !odd_frame_;
     gl::ScopedBuffer scoped_particle_buffer1(particle_buffer_1_);
-    gl::ScopedBuffer scoped_particle_buffer1(particle_buffer_2_);
+    gl::ScopedBuffer scoped_particle_buffer2(particle_buffer_2_);
     particle_buffer_1_->bindBase(odd_frame_ ? 0 : 1);
     particle_buffer_2_->bindBase(odd_frame_ ? 1 : 0);
     gl::ScopedBuffer scoped_bin_velocity(bin_velocity_buffer_);
