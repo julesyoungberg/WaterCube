@@ -4,11 +4,11 @@
 
 uniform int numBins;
 
-layout(std140, binding = 33) buffer Offsets {
+layout(std430, binding = 17) restrict buffer Offsets {
     int offsets[];
 };
 
-layout(std140, binding = 34) buffer Counts {
+layout(std430, binding = 18) restrict readonly buffer Counts {
     int counts[];
 };
 

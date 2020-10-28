@@ -25,10 +25,11 @@ namespace core {
  * Particle representation
  */
 struct Particle {
-    Particle() : position(0), velocity(0), density(1) {}
+    Particle() : position(0), velocity(0), density(0), pressure(0) {}
     vec3 position;
     vec3 velocity;
     float density;
+    float pressure;
 };
 
 typedef std::shared_ptr<class Fluid> FluidRef;
@@ -52,9 +53,17 @@ public:
 
     static FluidRef create(const std::string& name);
 
-    float size_, bin_size_, particle_mass_, kernel_, viscosity_coefficient_, weight_constant_;
-    float viscosity_weight_, pressure_weight_, k_, rest_density_, rest_pressure_;
-    int num_particles_, grid_res_, num_work_groups_, num_partitions_, num_bins_;
+protected:
+    float size_, bin_size_, kernel_radius_;
+    float particle_mass_;
+    float viscosity_coefficient_;
+    float viscosity_weight_, pressure_weight_, kernel_weight_;
+    float stiffness_;
+    float rest_density_, rest_pressure_;
+
+    int num_particles_, grid_res_, num_work_groups_, num_bins_;
+
+    bool odd_frame_;
 
     vec3 position_, gravity_;
     ContainerRef container_;
@@ -62,7 +71,7 @@ public:
 
     gl::GlslProgRef bin_velocity_prog_, density_prog_, render_prog_, update_prog_, geometry_prog, shading_prog_;
 
-    gl::SsboRef position_buffer_, density_buffer_, pressure_buffer_, velocity_buffer_, bin_velocity_buffer_;
+    gl::SsboRef particle_buffer_1_, particle_buffer_2_, bin_velocity_buffer_;
     gl::VboRef ids_vbo_;
     gl::VaoRef attributes_;
 

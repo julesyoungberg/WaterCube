@@ -41,12 +41,10 @@ void Sort::prepareBuffers() {
     std::vector<int> buckets(num_items_, 0);
     std::vector<int> counts(num_bins_, 0);
     std::vector<int> offsets(num_bins_, 0);
-    std::vector<int> sorted(num_items_, 0);
 
     bucket_buffer_ = gl::Ssbo::create(num_items_ * sizeof(int), buckets.data(), GL_STATIC_DRAW);
     count_buffer_ = gl::Ssbo::create(num_bins_ * sizeof(int), counts.data(), GL_STATIC_DRAW);
     offset_buffer_ = gl::Ssbo::create(num_bins_ * sizeof(int), offsets.data(), GL_STATIC_DRAW);
-    sorted_buffer_ = gl::Ssbo::create(num_items_ * sizeof(int), sorted.data(), GL_STATIC_DRAW);
 
     grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_);
 }
@@ -56,13 +54,6 @@ void Sort::prepareBuffers() {
  */
 void Sort::compileBucketProg() {
     OutputDebugStringA("\tcompiling sorter bucket shader\n");
-
-    gl::ScopedBuffer scoped_position_ssbo(position_buffer_);
-    position_buffer_->bindBase(0);
-
-    gl::ScopedBuffer scoped_bucket_ssbo(bucket_buffer_);
-    bucket_buffer_->bindBase(1);
-
     bucket_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/bucket.comp")));
 }
 
@@ -71,13 +62,6 @@ void Sort::compileBucketProg() {
  */
 void Sort::compileCountProg() {
     OutputDebugStringA("\tcompiling sorter count shader\n");
-
-    gl::ScopedBuffer scoped_bucket_ssbo(bucket_buffer_);
-    bucket_buffer_->bindBase(0);
-
-    gl::ScopedBuffer scoped_count_ssbo(count_buffer_);
-    count_buffer_->bindBase(1);
-
     count_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/count.comp")));
 }
 
@@ -86,13 +70,6 @@ void Sort::compileCountProg() {
  */
 void Sort::compileScanProg() {
     OutputDebugStringA("\tcompiling sorter scan shader\n");
-
-    gl::ScopedBuffer scoped_count_ssbo(count_buffer_);
-    count_buffer_->bindBase(0);
-
-    gl::ScopedBuffer scoped_offset_ssbo(offset_buffer_);
-    offset_buffer_->bindBase(1);
-
     scan_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/scan.comp")));
 }
 
@@ -101,19 +78,6 @@ void Sort::compileScanProg() {
  */
 void Sort::compileReorderProg() {
     OutputDebugStringA("\tcompiling sorter reorder shader\n");
-
-    gl::ScopedBuffer scoped_bucket_ssbo(bucket_buffer_);
-    bucket_buffer_->bindBase(0);
-
-    gl::ScopedBuffer scoped_offset_ssbo(offset_buffer_);
-    offset_buffer_->bindBase(1);
-
-    gl::ScopedBuffer scoped_count_ssbo(count_buffer_);
-    count_buffer_->bindBase(2);
-
-    gl::ScopedBuffer scoped_sorted_ssbo(sorted_buffer_);
-    sorted_buffer_->bindBase(3);
-
     reorder_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/reorder.comp")));
 }
 
@@ -123,6 +87,14 @@ void Sort::compileReorderProg() {
  */
 void Sort::compileShaders() {
     OutputDebugStringA("compiling sort shaders\n");
+
+    gl::ScopedBuffer scoped_bucket(bucket_buffer_);
+    bucket_buffer_->bindBase(16);
+    gl::ScopedBuffer scoped_offset(offset_buffer_);
+    offset_buffer_->bindBase(17);
+    gl::ScopedBuffer scoped_count(count_buffer_);
+    count_buffer_->bindBase(18);
+
     compileBucketProg();
     compileCountProg();
     compileScanProg();
@@ -156,8 +128,6 @@ void Sort::runBucketProg() {
     // bucket_prog_->uniform("grid", 0);
     bucket_prog_->uniform("gridRes", grid_res_);
     bucket_prog_->uniform("binSize", bin_size_);
-    gl::ScopedBuffer scoped_position_ssbo(position_buffer_);
-    gl::ScopedBuffer scoped_bucket_ssbo(bucket_buffer_);
     runProg();
 }
 
@@ -168,8 +138,6 @@ void Sort::runBucketProg() {
 void Sort::runCountProg() {
     clearCount();
     gl::ScopedGlslProg prog(count_prog_);
-    gl::ScopedBuffer scoped_bucket_ssbo(bucket_buffer_);
-    gl::ScopedBuffer scoped_count_ssbo(count_buffer_);
     runProg();
 }
 
@@ -182,8 +150,6 @@ void Sort::runScanProg() {
     clearCount();
     gl::ScopedGlslProg prog(scan_prog_);
     scan_prog_->uniform("numBins", num_bins_);
-    gl::ScopedBuffer scoped_count_ssbo(count_buffer_);
-    gl::ScopedBuffer scoped_offset_ssbo(offset_buffer_);
     runProg(1);
 }
 
@@ -193,14 +159,14 @@ void Sort::runScanProg() {
  */
 void Sort::runReorderProg() {
     gl::ScopedGlslProg prog(reorder_prog_);
-    gl::ScopedBuffer scoped_bucket_ssbo(bucket_buffer_);
-    gl::ScopedBuffer scoped_offset_ssbo(offset_buffer_);
-    gl::ScopedBuffer scoped_count_ssbo(count_buffer_);
-    gl::ScopedBuffer scoped_sorted_ssbo(sorted_buffer_);
     runProg();
 }
 
 void Sort::run() {
+    gl::ScopedBuffer scoped_bucket(bucket_buffer_);
+    gl::ScopedBuffer scoped_offset(offset_buffer_);
+    gl::ScopedBuffer scoped_count(count_buffer_);
+
     runBucketProg();
     runCountProg();
     runScanProg();

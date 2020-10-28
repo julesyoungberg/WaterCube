@@ -16,7 +16,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(600e3);
+const int NUM_PARTICLES = static_cast<int>(1000); // static_cast<int>(600e3);
 
 class WaterCubeApp : public App {
 public:
@@ -31,7 +31,7 @@ public:
 
 void WaterCubeApp::setup() {
     prev_time_ = 0.0;
-    // cam_.lookAt(vec3(0, 0, 800), vec3(0));
+    cam_.lookAt(vec3(0, 0, 5), vec3(0, 0, 0));
 
     gl::enableDepthWrite();
     gl::enableDepthRead();
@@ -58,7 +58,7 @@ void WaterCubeApp::draw() {
     scene_->draw();
 
     gl::setMatricesWindow(app::getWindowSize());
-    gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(32.0f, 52.0f));
+    gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(64.0f, 100.0f));
 }
 
 CINDER_APP(WaterCubeApp, RendererGl, [](App::Settings* settings) { settings->setWindowSize(1280, 720); })

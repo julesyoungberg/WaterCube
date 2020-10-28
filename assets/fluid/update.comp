@@ -13,40 +13,31 @@ uniform float viscosityCoefficient;
 uniform float viscosityWeight;
 uniform float pressureWeight;
 
-layout(std140, binding = 16) buffer Positions {
-    vec3 positions[];
+struct Particle {
+    vec3 position;
+    vec3 velocity;
+    float density;
+    float pressure;
 };
 
-layout(std140, binding = 32) buffer Buckets {
+layout(std430, binding = 1) restrict buffer Particles {
+    Particle particles[];
+};
+
+layout(std430, binding = 8) buffer BinVelocities {
+    vec3 binVelocities[];
+};
+
+layout(std430, binding = 16) buffer Buckets {
     int buckets[];
 };
 
-layout(std140, binding = 33) buffer Offsets {
+layout(std430, binding = 17) buffer Offsets {
     int offsets[];
 };
 
-layout(std140, binding = 34) buffer Counts {
+layout(std430, binding = 18) buffer Counts {
     int counts[];
-};
-
-layout(std140, binding = 35) buffer Sorted {
-    int sorted[];
-};
-
-layout(std140, binding = 17) buffer Densities {
-    float densities[];
-};
-
-layout(std140, binding = 18) buffer Pressures {
-    float pressures[];
-};
-
-layout(std140, binding = 19) buffer Velocities {
-    vec3 velocities[];
-};
-
-layout(std140, binding = 20) buffer BinVelocities {
-    vec3 binVelocities[];
 };
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
@@ -110,10 +101,7 @@ vec3 getVelocity(vec3 position) {
 
 void main() {
     const uint particleID = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
-    const vec3 position = positions[particleID];
-    const float pressure = pressures[particleID];
-    const float density = densities[particleID];
-    // const float density = densities[gid];
+    Particle particle = particles[particleID];
     const int bucketID = buckets[particleID];
     ivec3 coord = getBucketCoordinates(bucketID);
     
@@ -136,10 +124,9 @@ void main() {
         const uint count = counts[neighborID];
 
         for (uint p = 0; p < count; p++) {
-            const uint otherParticleID = sorted[offset + p]; 
-
-            const vec3 otherPosition = positions[otherParticleID];
-            const vec3 r = position - otherPosition;
+            const uint otherParticleID = offset + p; 
+            Particle other = particles[otherParticleID];
+            const vec3 r = particle.position - other.position;
             const float len = length(r);
 
             if (len >= kernel) {
@@ -152,19 +139,19 @@ void main() {
                 mPressureWeight = pressureWeight * pow(kernel - len, 3) * (r / len);
             }
 
-            const float appliedPressure = pressure + pressures[otherParticleID];
-            const float otherDensity = densities[otherParticleID];
-            forcePressure += (mass * appliedPressure * mPressureWeight) / (2.0 * otherDensity);
+            const float appliedPressure = particle.pressure + other.pressure;
+            forcePressure += (mass * appliedPressure * mPressureWeight) / (2.0 * other.density);
 
             const float mViscosityWeight = viscosityWeight * (kernel - len);
-            const vec3 filteredVelocity = getVelocity(otherPosition / binSize);
-            const vec3 velocityDiff = filteredVelocity - velocities[otherParticleID];
-            forceViscosity += (mass * velocityDiff * mViscosityWeight) / otherDensity;
+            const vec3 filteredVelocity = getVelocity(other.position / binSize);
+            const vec3 velocityDiff = filteredVelocity - other.velocity;
+            forceViscosity += (mass * velocityDiff * mViscosityWeight) / other.density;
         }
     }
 
-    const vec3 forceGravity = gravity * density;
+    const vec3 forceGravity = gravity * particle.density;
     const vec3 force = (forceViscosity * viscosityCoefficient) - forcePressure + forceGravity;
-    const vec3 acceleration = force / density;
-    velocities[particleID] += acceleration * dt;
+    const vec3 acceleration = force / particle.density;
+    particle.velocity += acceleration * dt;
+    particles[particleID] = particle;
 }

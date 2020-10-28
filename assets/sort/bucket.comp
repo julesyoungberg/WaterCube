@@ -7,11 +7,18 @@
 uniform int gridRes;
 uniform float binSize;
 
-layout(std140, binding = 16) buffer Positions {
-    vec3 positions[];
+struct Particle {
+    vec3 position;
+    vec3 velocity;
+    float density;
+    float pressure;
 };
 
-layout(std140, binding = 32) buffer Buckets {
+layout(std430, binding = 0) restrict readonly buffer Particles {
+    Particle particles[];
+};
+
+layout(std430, binding = 16) restrict writeonly buffer Buckets {
     int buckets[];
 };
 
@@ -23,8 +30,9 @@ int getBucketID(vec3 coord) {
 
 void main() {
     const uint particleID = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
-    vec3 p = positions[particleID];
+    vec3 p = particles[particleID].position;
 
+    // assign the particle to a bin based on its position
     vec3 bucketCoord = vec3(floor(p.x / binSize), floor(p.y / binSize), floor(p.z / binSize));
     buckets[particleID] = getBucketID(bucketCoord);
 }

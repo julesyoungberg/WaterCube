@@ -2,11 +2,11 @@
 #extension GL_ARB_compute_shader : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
 
-layout(std140, binding = 32) buffer Buckets {
+layout(std430, binding = 16) restrict readonly buffer Buckets {
     int buckets[];
 };
 
-layout(std140, binding = 33) buffer Counts {
+layout(std430, binding = 18) restrict writeonly buffer Counts {
     int counts[];
 };
 

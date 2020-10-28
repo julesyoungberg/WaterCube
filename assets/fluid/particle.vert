@@ -10,7 +10,7 @@ layout(location = 0) in int particleId;
 out vec3 vColor;
 out vec3 vPosition;
 
-layout(std140, binding = 16) buffer Positions {
+layout(std430, binding = 16) buffer Positions {
     vec3 positions[];
 };
 

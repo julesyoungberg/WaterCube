@@ -35,7 +35,6 @@ public:
     gl::SsboRef bucketBuffer() { return bucket_buffer_; }
     gl::SsboRef countBuffer() { return count_buffer_; }
     gl::SsboRef offsetBuffer() { return offset_buffer_; }
-    gl::SsboRef sortedBuffer() { return sorted_buffer_; }
 
     static SortRef create();
 
@@ -44,7 +43,7 @@ protected:
     float bin_size_;
 
     gl::GlslProgRef bucket_prog_, count_prog_, scan_prog_, reorder_prog_;
-    gl::SsboRef position_buffer_, bucket_buffer_, count_buffer_, offset_buffer_, sorted_buffer_;
+    gl::SsboRef position_buffer_, bucket_buffer_, count_buffer_, offset_buffer_;
     gl::Texture3dRef grid_;
 
 private:
