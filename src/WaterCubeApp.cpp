@@ -7,6 +7,7 @@
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/Shader.h"
 #include "cinder/gl/gl.h"
+#include "cinder/params/Params.h"
 
 #include "./core/Fluid.h"
 #include "./core/Scene.h"
@@ -16,19 +17,23 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(100e3);
+const int NUM_PARTICLES = static_cast<int>(10e4);
 
 class WaterCubeApp : public App {
 public:
     void setup() override;
     void update() override;
     void draw() override;
+    void keyDown(KeyEvent event) override;
 
     bool run_once_, running_;
-    double prev_time_;
+    double prev_time_, first_frame_;
     float size_;
     CameraPersp cam_;
     SceneRef scene_;
+    params::InterfaceGlRef params_;
+    quat scene_rotation_;
+    FluidRef fluid_;
 };
 
 void WaterCubeApp::setup() {
@@ -36,7 +41,12 @@ void WaterCubeApp::setup() {
     running_ = true;
     size_ = 5.0f;
     prev_time_ = 0.0;
-    cam_.lookAt(vec3(size_, size_ * 2, size_ * 4), vec3(0, 0, 0));
+
+    params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
+    params_->addParam("Scene Rotation", &scene_rotation_);
+
+    cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
+    cam_.lookAt(vec3(size_, size_, size_ * 3), vec3(0, 0, 0));
 
     gl::enableDepthWrite();
     gl::enableDepthRead();
@@ -44,8 +54,9 @@ void WaterCubeApp::setup() {
     util::log("creating scene");
     scene_ = Scene::create();
 
-    FluidRef fluid = Fluid::create("fluid")->size(size_)->numParticles(NUM_PARTICLES)->setup();
-    BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid);
+    fluid_ = Fluid::create("fluid")->size(size_)->numParticles(NUM_PARTICLES);
+    fluid_->addParams(params_);
+    BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid_);
     CI_ASSERT(scene_->addObject(fluid_ref));
 }
 
@@ -54,27 +65,40 @@ void WaterCubeApp::update() {
         return;
     }
 
+    if (first_frame_) {
+        fluid_->setup();
+    }
+
     double time = getElapsedSeconds();
     scene_->update(time - prev_time_);
     prev_time_ = time;
-}
-
-void WaterCubeApp::draw() {
-    if (!running_) {
-        return;
-    }
-
-    gl::clear(Color(0.2f, 0.2f, 0.3f));
-    gl::setMatricesWindowPersp(getWindowSize());
-    gl::setMatrices(cam_);
-
-    scene_->draw();
-
-    gl::setMatricesWindow(app::getWindowSize());
-    gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(64.0f, 100.0f));
 
     if (run_once_) {
         running_ = false;
+    }
+}
+
+void WaterCubeApp::draw() {
+    gl::clear(Color(0.2f, 0.2f, 0.3f));
+    gl::setMatricesWindowPersp(getWindowSize());
+    gl::setMatrices(cam_);
+    gl::rotate(scene_rotation_);
+
+    params_->draw();
+    scene_->draw();
+
+    vec2 window = app::getWindowSize();
+    gl::setMatricesWindow(window);
+    gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(window.x - 64.0f, 100.0f));
+}
+
+void WaterCubeApp::keyDown(KeyEvent event) {
+    char c = event.getChar();
+    switch (c) {
+    case 'p':
+        running_ = !running_;
+    case 'r':
+        setup();
     }
 }
 

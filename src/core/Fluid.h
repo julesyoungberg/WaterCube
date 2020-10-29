@@ -11,6 +11,7 @@
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/Ssbo.h"
 #include "cinder/gl/gl.h"
+#include "cinder/params/Params.h"
 
 #include "./BaseObject.h"
 #include "./Container.h"
@@ -57,7 +58,9 @@ public:
     FluidRef restDensity(float d);
     FluidRef restPressure(float p);
     FluidRef position(vec3 p);
-    FluidRef gravity(vec3 g);
+    FluidRef gravity(float g);
+
+    void addParams(params::InterfaceGlRef p);
 
     FluidRef setup();
     void update(double time) override;
@@ -74,11 +77,11 @@ protected:
     float viscosity_coefficient_;
     float viscosity_weight_, pressure_weight_, kernel_weight_;
     float stiffness_;
-    float rest_density_, rest_pressure_;
+    float rest_density_, rest_pressure_, gravity_;
 
     bool odd_frame_;
 
-    vec3 position_, gravity_;
+    vec3 position_;
     ContainerRef container_;
     std::vector<Particle> initial_particles_;
 

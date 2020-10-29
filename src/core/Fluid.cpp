@@ -3,7 +3,7 @@
 using namespace core;
 
 Fluid::Fluid(const std::string& name)
-    : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(5), position_(0), gravity_(0, -9.8f, 0),
+    : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(5), position_(0), gravity_(-9.8f),
       particle_mass_(0.02f), kernel_radius_(0.1828f), viscosity_coefficient_(0.035f), stiffness_(250.0f),
       rest_density_(998.27f), rest_pressure_(0) {}
 
@@ -74,9 +74,20 @@ FluidRef Fluid::position(vec3 p) {
     return thisRef();
 }
 
-FluidRef Fluid::gravity(vec3 g) {
+FluidRef Fluid::gravity(float g) {
     gravity_ = g;
     return thisRef();
+}
+
+void Fluid::addParams(params::InterfaceGlRef p) {
+    p->addParam("Number of Particles", &num_particles_, "min=100 step=100");
+    p->addParam("Grid Resolution", &grid_res_, "min=1 max=1000 step=1");
+    p->addParam("Particle Mass", &particle_mass_, "min=0.001 max=2.0 step=0.001");
+    p->addParam("Viscosity", &viscosity_coefficient_, "min=0.001 max=2.0 step=0.001");
+    p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=1.0");
+    p->addParam("Rest Density", &rest_density_, "min=0.0 max=1000.0 step=1.0");
+    p->addParam("Rest Pressure", &rest_pressure_, "min=0.0 max=10.0 step=0.1");
+    p->addParam("Gravity", &gravity_, "min=-10.0 max=10.0 step=0.1");
 }
 
 /**
@@ -253,7 +264,8 @@ void Fluid::runUpdateProg(float time_step) {
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
     update_prog_->uniform("dt", time_step);
-    update_prog_->uniform("gravity", gravity_);
+    vec3 gravity = vec3(0, gravity_, 0);
+    update_prog_->uniform("gravity", gravity);
     update_prog_->uniform("mass", particle_mass_);
     update_prog_->uniform("kernelRadius", kernel_radius_);
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
