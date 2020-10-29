@@ -7,6 +7,8 @@
 #include "cinder/gl/Ssbo.h"
 #include "cinder/gl/gl.h"
 
+#include "./util.h"
+
 using namespace ci;
 using namespace ci::app;
 

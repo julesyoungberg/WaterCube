@@ -16,6 +16,7 @@ list( APPEND SOURCES
 	${APP_PATH}/src/core/Fluid.cpp
 	${APP_PATH}/src/core/Scene.cpp
 	${APP_PATH}/src/core/Sort.cpp
+	${APP_PATH}/src/core/util.cpp
 	${APP_PATH}/src/WaterCubeApp.cpp
   )
 

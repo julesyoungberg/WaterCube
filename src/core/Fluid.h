@@ -15,6 +15,7 @@
 #include "./BaseObject.h"
 #include "./Container.h"
 #include "./Sort.h"
+#include "./util.h"
 
 using namespace ci;
 using namespace ci::app;
@@ -44,24 +45,36 @@ public:
 
     int numParticles() { return num_particles_; }
     FluidRef numParticles(int n);
+    FluidRef gridRes(int r);
+    FluidRef size(float s);
+    FluidRef kernelRadius(float r);
     FluidRef particleMass(float m);
+    FluidRef viscosityCoefficient(float c);
+    FluidRef viscosityWeight(float w);
+    FluidRef pressureWeight(float w);
+    FluidRef kernelWeight(float w);
+    FluidRef stiffness(float s);
+    FluidRef restDensity(float d);
+    FluidRef restPressure(float p);
+    FluidRef position(vec3 p);
+    FluidRef gravity(vec3 g);
 
     FluidRef setup();
     void update(double time) override;
     void draw() override;
     void reset() override;
 
-    static FluidRef create(const std::string& name);
+    static FluidRef create(const std::string& name) { return std::make_shared<Fluid>(name); }
 
 protected:
+    int num_particles_, grid_res_, num_work_groups_, num_bins_;
+
     float size_, bin_size_, kernel_radius_;
     float particle_mass_;
     float viscosity_coefficient_;
     float viscosity_weight_, pressure_weight_, kernel_weight_;
     float stiffness_;
     float rest_density_, rest_pressure_;
-
-    int num_particles_, grid_res_, num_work_groups_, num_bins_;
 
     bool odd_frame_;
 
@@ -93,6 +106,8 @@ private:
     void runDensityProg();
     void runUpdateProg(float time_step);
     void runRenderProg();
+
+    FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
 };
 
 } // namespace core

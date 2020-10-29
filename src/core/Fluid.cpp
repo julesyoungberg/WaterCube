@@ -5,22 +5,85 @@ using namespace core;
 Fluid::Fluid(const std::string& name)
     : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(5), position_(0), gravity_(0, -9.8f, 0),
       particle_mass_(0.02f), kernel_radius_(0.1828f), viscosity_coefficient_(0.035f), stiffness_(250.0f),
-      rest_density_(998.27f), rest_pressure_(0) {
-    container_ = Container::create("fluidContainer", size_);
-}
+      rest_density_(998.27f), rest_pressure_(0) {}
 
 Fluid::~Fluid() {}
 
 FluidRef Fluid::numParticles(int n) {
     num_particles_ = n;
-    return std::make_shared<Fluid>(*this);
+    return thisRef();
+}
+
+FluidRef Fluid::gridRes(int r) {
+    grid_res_ = r;
+    return thisRef();
+}
+
+FluidRef Fluid::size(float s) {
+    size_ = s;
+    return thisRef();
+}
+
+FluidRef Fluid::kernelRadius(float r) {
+    kernel_radius_ = r;
+    return thisRef();
+}
+
+FluidRef Fluid::particleMass(float m) {
+    particle_mass_ = m;
+    return thisRef();
+}
+
+FluidRef Fluid::viscosityCoefficient(float c) {
+    viscosity_coefficient_ = c;
+    return thisRef();
+}
+
+FluidRef Fluid::viscosityWeight(float w) {
+    viscosity_weight_ = w;
+    return thisRef();
+}
+
+FluidRef Fluid::pressureWeight(float w) {
+    pressure_weight_ = w;
+    return thisRef();
+}
+
+FluidRef Fluid::kernelWeight(float w) {
+    kernel_weight_ = w;
+    return thisRef();
+}
+
+FluidRef Fluid::stiffness(float s) {
+    stiffness_ = s;
+    return thisRef();
+}
+
+FluidRef Fluid::restDensity(float d) {
+    rest_density_ = d;
+    return thisRef();
+}
+
+FluidRef Fluid::restPressure(float p) {
+    rest_pressure_ = p;
+    return thisRef();
+}
+
+FluidRef Fluid::position(vec3 p) {
+    position_ = p;
+    return thisRef();
+}
+
+FluidRef Fluid::gravity(vec3 g) {
+    gravity_ = g;
+    return thisRef();
 }
 
 /**
  * Generates a vector of particles used as the simulations initial state
  */
 void Fluid::generateInitialParticles() {
-    OutputDebugStringA("creating particles\n");
+    util::log("creating particles");
     int n = num_particles_;
     initial_particles_.assign(n, Particle());
 
@@ -45,7 +108,7 @@ void Fluid::generateInitialParticles() {
  * TODO: add distance function, wall weight function buffers
  */
 void Fluid::prepareBuffers() {
-    OutputDebugStringA("preparing fluid buffers\n");
+    util::log("preparing fluid buffers");
 
     int n = num_particles_;
     std::vector<vec3> bin_velocities(num_bins_, vec3(0));
@@ -70,7 +133,7 @@ void Fluid::prepareBuffers() {
  * Compile bin velocity compute shader
  */
 void Fluid::compileBinVelocityProg() {
-    OutputDebugStringA("\tcompiling fluid bin_velocity shader\n");
+    util::log("\tcompiling fluid bin_velocity shader");
     bin_velocity_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/binVelocity.comp")));
 }
 
@@ -78,7 +141,7 @@ void Fluid::compileBinVelocityProg() {
  * Compile density compute shader
  */
 void Fluid::compileDensityProg() {
-    OutputDebugStringA("\tcompiling fluid density shader\n");
+    util::log("\tcompiling fluid density shader");
     density_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/density.comp")));
 }
 
@@ -86,7 +149,7 @@ void Fluid::compileDensityProg() {
  * Compile update compute shader
  */
 void Fluid::compileUpdateProg() {
-    OutputDebugStringA("\tcompiling fluid update shader\n");
+    util::log("\tcompiling fluid update shader");
     update_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/update.comp")));
 }
 
@@ -94,7 +157,7 @@ void Fluid::compileUpdateProg() {
  * Compil render shader
  */
 void Fluid::compileRenderProg() {
-    OutputDebugStringA("\tcompiling fluid render shader\n");
+    util::log("\tcompiling fluid render shader");
     render_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
                                             .vertex(loadAsset("fluid/particle.vert"))
                                             .fragment(loadAsset("fluid/particleGeometry.frag"))
@@ -106,7 +169,7 @@ void Fluid::compileRenderProg() {
  * TODO: handle error
  */
 void Fluid::compileShaders() {
-    OutputDebugStringA("compiling fluid shaders\n");
+    util::log("compiling fluid shaders");
 
     gl::ScopedVao vao(attributes_);
     gl::ScopedBuffer scopedIds(ids_vbo_);
@@ -123,7 +186,7 @@ void Fluid::compileShaders() {
  * setup simulation - initialize buffers and shaders
  */
 FluidRef Fluid::setup() {
-    OutputDebugStringA("initializing fluid\n");
+    util::log("initializing fluid");
     num_work_groups_ = num_particles_ / WORK_GROUP_SIZE;
     num_bins_ = int(pow(grid_res_, 3));
     bin_size_ = size_ / float(grid_res_);
@@ -133,22 +196,24 @@ FluidRef Fluid::setup() {
     pressure_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
     kernel_weight_ = static_cast<float>(315.0f / (64.0f * M_PI * std::pow(kernel_radius_, 9)));
 
+    container_ = Container::create("fluidContainer", size_);
+
     generateInitialParticles();
 
     ivec3 count = gl::getMaxComputeWorkGroupCount();
     CI_ASSERT(count.x >= num_work_groups_);
 
-    OutputDebugStringA("creating buffers\n");
+    util::log("creating buffers");
     prepareBuffers();
 
-    OutputDebugStringA("initializing sorter\n");
+    util::log("initializing sorter");
     sort_ = Sort::create()->numItems(num_particles_)->numBins(num_bins_)->gridRes(grid_res_)->binSize(bin_size_);
     sort_->prepareBuffers();
 
     sort_->compileShaders();
     compileShaders();
 
-    OutputDebugStringA("fluid created\n");
+    util::log("fluid created");
     return std::make_shared<Fluid>(*this);
 }
 
@@ -232,8 +297,10 @@ void Fluid::draw() {
     gl::enableDepthWrite();
     gl::pushMatrices();
     float half = size_ / 2.0f;
-    vec3 center = vec3(getWindowCenter(), 0) + vec3(-half, -half, -half);
-    gl::translate(center.x, center.y, center.z);
+    vec3 offset = vec3(-half, -half, -half);
+    gl::translate(offset.x, offset.y, offset.z);
+
+    container_->draw();
 
     gl::ScopedGlslProg render(render_prog_);
     gl::ScopedVao vao(attributes_);
@@ -245,11 +312,7 @@ void Fluid::draw() {
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, num_particles_);
+    gl::popMatrices();
 }
 
 void Fluid::reset() {}
-
-/**
- * Create a new fluid simulation with a smart pointer
- */
-FluidRef Fluid::create(const std::string& name) { return std::make_shared<Fluid>(name); }

@@ -36,7 +36,7 @@ SortRef Sort::positionBuffer(gl::SsboRef buffer) {
  * Prepares shared memory buffers
  */
 void Sort::prepareBuffers() {
-    OutputDebugStringA("preparing sort buffers\n");
+    util::log("preparing sort buffers");
 
     std::vector<int> buckets(num_items_, 0);
     std::vector<int> counts(num_bins_, 0);
@@ -53,7 +53,7 @@ void Sort::prepareBuffers() {
  * Compile bucket compute shader
  */
 void Sort::compileBucketProg() {
-    OutputDebugStringA("\tcompiling sorter bucket shader\n");
+    util::log("\tcompiling sorter bucket shader");
     bucket_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/bucket.comp")));
 }
 
@@ -61,7 +61,7 @@ void Sort::compileBucketProg() {
  * Compile count compute shader
  */
 void Sort::compileCountProg() {
-    OutputDebugStringA("\tcompiling sorter count shader\n");
+    util::log("\tcompiling sorter count shader");
     count_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/count.comp")));
 }
 
@@ -69,7 +69,7 @@ void Sort::compileCountProg() {
  * Compile scan compute shader
  */
 void Sort::compileScanProg() {
-    OutputDebugStringA("\tcompiling sorter scan shader\n");
+    util::log("\tcompiling sorter scan shader");
     scan_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/scan.comp")));
 }
 
@@ -77,7 +77,7 @@ void Sort::compileScanProg() {
  * Compile reorder compute shader
  */
 void Sort::compileReorderProg() {
-    OutputDebugStringA("\tcompiling sorter reorder shader\n");
+    util::log("\tcompiling sorter reorder shader");
     reorder_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/reorder.comp")));
 }
 
@@ -86,7 +86,7 @@ void Sort::compileReorderProg() {
  * TODO: handle error
  */
 void Sort::compileShaders() {
-    OutputDebugStringA("compiling sort shaders\n");
+    util::log("compiling sort shaders");
 
     gl::ScopedBuffer scoped_bucket(bucket_buffer_);
     bucket_buffer_->bindBase(16);

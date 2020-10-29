@@ -24,41 +24,58 @@ public:
     void update() override;
     void draw() override;
 
+    bool run_once_, running_;
     double prev_time_;
+    float size_;
     CameraPersp cam_;
     SceneRef scene_;
 };
 
 void WaterCubeApp::setup() {
+    run_once_ = false;
+    running_ = true;
+    size_ = 5.0f;
     prev_time_ = 0.0;
-    cam_.lookAt(vec3(0, 0, 5), vec3(0, 0, 0));
+    cam_.lookAt(vec3(size_, size_ * 2, size_ * 4), vec3(0, 0, 0));
 
     gl::enableDepthWrite();
     gl::enableDepthRead();
 
-    OutputDebugStringA("creating scene\n");
+    util::log("creating scene");
     scene_ = Scene::create();
 
-    FluidRef fluid = Fluid::create("fluid")->numParticles(NUM_PARTICLES)->setup();
+    FluidRef fluid = Fluid::create("fluid")->size(size_)->numParticles(NUM_PARTICLES)->setup();
     BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid);
     CI_ASSERT(scene_->addObject(fluid_ref));
 }
 
 void WaterCubeApp::update() {
+    if (!running_) {
+        return;
+    }
+
     double time = getElapsedSeconds();
     scene_->update(time - prev_time_);
     prev_time_ = time;
 }
 
 void WaterCubeApp::draw() {
+    if (!running_) {
+        return;
+    }
+
     gl::clear(Color(0.2f, 0.2f, 0.3f));
     gl::setMatricesWindowPersp(getWindowSize());
-    // gl::setMatrices(cam_);
+    gl::setMatrices(cam_);
 
     scene_->draw();
 
     gl::setMatricesWindow(app::getWindowSize());
     gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(64.0f, 100.0f));
+
+    if (run_once_) {
+        running_ = false;
+    }
 }
 
 CINDER_APP(WaterCubeApp, RendererGl, [](App::Settings* settings) { settings->setWindowSize(1280, 720); })
