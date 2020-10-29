@@ -16,7 +16,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(1000); // static_cast<int>(600e3);
+const int NUM_PARTICLES = static_cast<int>(100e3);
 
 class WaterCubeApp : public App {
 public:
@@ -78,4 +78,4 @@ void WaterCubeApp::draw() {
     }
 }
 
-CINDER_APP(WaterCubeApp, RendererGl, [](App::Settings* settings) { settings->setWindowSize(1280, 720); })
+CINDER_APP(WaterCubeApp, RendererGl, [](App::Settings* settings) { settings->setWindowSize(1920, 1080); })

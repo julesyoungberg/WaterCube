@@ -10,14 +10,21 @@ layout(location = 0) in int particleId;
 out vec3 vColor;
 out vec3 vPosition;
 
-layout(std430, binding = 16) buffer Positions {
-    vec3 positions[];
+struct Particle {
+    vec3 position;
+    vec3 velocity;
+    float density;
+    float pressure;
+};
+
+layout(std430, binding = 1) buffer Particles {
+    Particle particles[];
 };
 
 uniform mat4 ciModelViewProjection;
 
 void main() {
-	vec3 position = positions[particleId];
+	vec3 position = particles[particleId].position;
     vColor = PARTICLE_COLOR;
     vPosition = position;
 	gl_Position = ciModelViewProjection * vec4(position, 1);

@@ -9,19 +9,12 @@ void util::log(char* format, ...) {
     //  others must be accessed using the variable-argument macros.
     va_start(vl, format);
     static char message[1024];
-    static char message2[1024];
 
     vsprintf(message, format, vl);
     va_end(vl);
 
     int len = (int)strlen(message);
-    // assert( len < 1024); // Exceeded internal print buffer.
-    if (len >= 1024) {
-        strncpy(message2, message, 1022);
-        strcpy(message, message2);
-    } else {
-        message[len] = '\n';
-    }
+    message[len] = '\n';
 
     OutputDebugStringA(message);
 }

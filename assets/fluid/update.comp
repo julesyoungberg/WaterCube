@@ -183,6 +183,6 @@ void main() {
     }
 
     particle.velocity = vel;
-    particle.position = pos;
+    // particle.position = pos;
     particles[particleID] = particle;
 }

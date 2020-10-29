@@ -87,20 +87,14 @@ void Fluid::generateInitialParticles() {
     int n = num_particles_;
     initial_particles_.assign(n, Particle());
 
-    const float azimuth = 256.0f * static_cast<float>(M_PI) / initial_particles_.size();
-    const float inclination = static_cast<float>(M_PI) / initial_particles_.size();
-    vec3 center = vec3(getWindowCenter() + vec2(0, 40.0f), 0.0f);
-
-    for (int i = 0; i < n; i++) {
-        // assign starting values to particles.
-        float x = size_ * (math<float>::sin(inclination * i) * math<float>::cos(azimuth * i) * 0.5f + 0.5f);
-        float y = size_ * (math<float>::cos(inclination * i) * 0.5f + 0.5f);
-        float z = size_ * (math<float>::sin(inclination * i) * math<float>::sin(azimuth * i) * 0.5f + 0.5f);
-
-        auto& p = initial_particles_.at(i);
-        p.position = center + vec3(x, y, z);
-        p.velocity = Rand::randVec3() * 10.0f; // random initial velocity
+    for (auto& p : initial_particles_) {
+        p.position = (Rand::randVec3() * 0.5f + 0.5f) * size_;
+        p.velocity = Rand::randVec3() * 1.0f;
     }
+
+    // for (auto const& p : initial_particles_) {
+    //     util::log("particle position: <%f, %f, %f>", p.position.x, p.position.y, p.position.z);
+    // }
 }
 
 /**
