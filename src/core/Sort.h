@@ -15,7 +15,6 @@ using namespace ci::app;
 namespace core {
 
 const int WORK_GROUP_SIZE = 128;
-const int CHUNK_SIZE = WORK_GROUP_SIZE * 4;
 
 typedef std::shared_ptr<class Sort> SortRef;
 
@@ -34,31 +33,30 @@ public:
     void compileShaders();
     void run();
 
-    gl::SsboRef bucketBuffer() { return bucket_buffer_; }
-    gl::SsboRef countBuffer() { return count_buffer_; }
-    gl::SsboRef offsetBuffer() { return offset_buffer_; }
+    gl::Texture3dRef getCountGrid() { return count_grid_; }
+    gl::Texture3dRef getOffsetGrid() { return offset_grid_; }
 
     static SortRef create();
 
 protected:
-    int num_items_, num_bins_, num_work_groups_, grid_res_;
+    int num_items_, num_bins_, grid_res_;
     float bin_size_;
 
-    gl::GlslProgRef bucket_prog_, count_prog_, scan_prog_, reorder_prog_;
-    gl::SsboRef position_buffer_, bucket_buffer_, count_buffer_, offset_buffer_;
-    gl::Texture3dRef grid_;
+    gl::GlslProgRef count_prog_, scan_prog_, reorder_prog_;
+    gl::SsboRef position_buffer_, count_buffer_;
+    gl::Texture3dRef count_grid_, offset_grid_;
 
 private:
-    void compileBucketProg();
     void compileCountProg();
     void compileScanProg();
     void compileReorderProg();
 
+    void clearCountGrid();
     void clearCount();
 
+    void runProg(ivec3 work_groups);
     void runProg(int work_groups);
     void runProg();
-    void runBucketProg();
     void runCountProg();
     void runScanProg();
     void runReorderProg();

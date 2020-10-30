@@ -2,13 +2,18 @@
 #extension GL_ARB_compute_shader : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
 
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
+layout(location = 1, r32ui) uniform restrict uimage3D offsetGrid;
+layout(location = 2) uniform sampler3D velocityField;
 uniform float size;
 uniform float binSize;
 uniform int gridRes;
 uniform float dt;
-uniform int particleCount;
+uniform int numParticles;
 uniform vec3 gravity;
-uniform float mass;
+uniform float particleMass;
 uniform float kernelRadius;
 uniform float viscosityCoefficient;
 uniform float viscosityWeight;
@@ -25,24 +30,6 @@ layout(std430, binding = 1) restrict buffer Particles {
     Particle particles[];
 };
 
-layout(std430, binding = 8) restrict readonly buffer BinVelocities {
-    vec3 binVelocities[];
-};
-
-layout(std430, binding = 16) restrict readonly buffer Buckets {
-    uint buckets[];
-};
-
-layout(std430, binding = 17) restrict readonly buffer Offsets {
-    uint offsets[];
-};
-
-layout(std430, binding = 18) restrict readonly buffer Counts {
-    uint counts[];
-};
-
-layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
-
 const ivec3 NEIGHBORHOOD[27] = {
     ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
     ivec3(-1, -1,  0), ivec3(0, -1,  0), ivec3(1, -1,  0),
@@ -55,81 +42,39 @@ const ivec3 NEIGHBORHOOD[27] = {
     ivec3(-1,  1,  1), ivec3(0,  1,  1), ivec3(1,  1,  1)
 };
 
-ivec3 getBucketCoordinates(uint id) {
-    float sRes = pow(gridRes, 2);
-    float x = id / sRes;
-    float i = mod(id, sRes);
-    float y = i / gridRes;
-    float z = mod(i, gridRes);
-    return ivec3(x, y, z);
-}
-
-int getBucketID(ivec3 coord) {
-    return int(floor(coord.x * pow(gridRes, 2) + coord.y * gridRes + coord.z));
-}
-
-vec3 getVelocity(vec3 position) {
-    ivec3 p000 = ivec3(floor(position));
-    const ivec3 p001 = p000 + ivec3(0, 0, 1);
-    const ivec3 p010 = p000 + ivec3(0, 1, 0);
-    const ivec3 p011 = p000 + ivec3(0, 1, 1);
-    const ivec3 p100 = p000 + ivec3(1, 0, 0);
-    const ivec3 p101 = p000 + ivec3(1, 0, 1);
-    const ivec3 p110 = p000 + ivec3(1, 1, 0);
-    const ivec3 p111 = p000 + ivec3(1, 1, 1);
-
-    const vec3 v000 = binVelocities[getBucketID(p000)];
-    const vec3 v001 = binVelocities[getBucketID(p001)];
-    const vec3 v010 = binVelocities[getBucketID(p010)];
-    const vec3 v011 = binVelocities[getBucketID(p011)];
-    const vec3 v100 = binVelocities[getBucketID(p100)];
-    const vec3 v101 = binVelocities[getBucketID(p101)];
-    const vec3 v110 = binVelocities[getBucketID(p110)];
-    const vec3 v111 = binVelocities[getBucketID(p111)];
-
-    const vec3 d = (position - p000) / binSize;
-
-    const vec3 v00 = v000 * (1 - d.x) + v100 * d.x;
-    const vec3 v01 = v001 * (1 - d.x) + v101 * d.x;
-    const vec3 v10 = v010 * (1 - d.x) + v110 * d.x;
-    const vec3 v11 = v011 * (1 - d.x) + v111 * d.x;
-
-    const vec3 v0 = v00 * (1 - d.y) + v10 * d.y;
-    const vec3 v1 = v01 * (1 - d.y) + v11 * d.y;
-
-    return v0 * (1 - d.z) + v1 * d.z;
-}
-
 void main() {
-    const uint particleID = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
-    Particle particle = particles[particleID];
-    const uint bucketID = buckets[particleID];
-    ivec3 coord = getBucketCoordinates(bucketID);
+    const uint particleID = gl_GlobalInvocationID.x;
+    if (particleID >= numParticles) {
+        return;
+    }
+
+    Particle p = particles[particleID];
+    const ivec3 binCoord = ivec3(p.position / binSize);
     
     vec3 forcePressure = vec3(0);
     vec3 forceViscosity = vec3(0);
 
     #pragma unroll 1
-    for (uint i = 0; i < 27; i++) {
-        const ivec3 neighborCoord = coord + NEIGHBORHOOD[i];
-        const int neighborID = getBucketID(neighborCoord);
+    for (uint binIndex = 0; binIndex < 27; binIndex++) {
+        const ivec3 neighborCoord = binCoord + NEIGHBORHOOD[binIndex];
 
         if (
             any(lessThan(neighborCoord, ivec3(0))) || 
-            any(greaterThanEqual(neighborCoord, ivec3(binSize)))
+            any(greaterThanEqual(neighborCoord, ivec3(gridRes)))
         ) {
             continue;
         }
 
-        const uint offset = offsets[neighborID];
-        const uint count = counts[neighborID];
+        const uint count = imageLoad(countGrid, neighborCoord).x;
+        const uint offset = imageLoad(offsetGrid, neighborCoord).x;
 
-        for (uint p = 0; p < count; p++) {
-            const uint otherParticleID = offset + p; 
+        for (uint localIndex = 0; localIndex < count; localIndex++) {
+            const uint otherParticleID = offset + localIndex; 
             Particle other = particles[otherParticleID];
-            const vec3 r = particle.position - other.position;
+            const vec3 r = p.position - other.position;
             const float len = length(r);
 
+            // ignore if out of bounds
             if (len >= kernelRadius) {
                 continue;
             }
@@ -140,22 +85,22 @@ void main() {
                 mPressureWeight = pressureWeight * pow(kernelRadius - len, 3) * (r / len);
             }
 
-            const float appliedPressure = particle.pressure + other.pressure;
-            forcePressure += (mass * appliedPressure * mPressureWeight) / (2.0 * other.density);
+            const float appliedPressure = p.pressure + other.pressure;
+            forcePressure += (particleMass * appliedPressure * mPressureWeight) / (2.0 * other.density);
 
             const float mViscosityWeight = viscosityWeight * (kernelRadius - len);
-            const vec3 filteredVelocity = getVelocity(other.position / binSize);
+            const vec3 filteredVelocity = texture(velocityField, other.position / size).xyz;
             const vec3 velocityDiff = filteredVelocity - other.velocity;
-            forceViscosity += (mass * velocityDiff * mViscosityWeight) / other.density;
+            forceViscosity += (particleMass * velocityDiff * mViscosityWeight) / other.density;
         }
     }
 
-    const vec3 forceGravity = gravity * particle.density;
+    const vec3 forceGravity = gravity * p.density;
     const vec3 force = (forceViscosity * viscosityCoefficient) - forcePressure + forceGravity;
-    const vec3 acceleration = force / particle.density;
+    const vec3 acceleration = force / p.density;
 
-    vec3 vel = particle.velocity + acceleration;
-    vec3 pos = particle.position + vel * dt;
+    vec3 vel = p.velocity + acceleration;
+    vec3 pos = p.position + vel * dt;
     const float wallDamping = 0.5;
 
     if (pos.x < 0) {
@@ -182,7 +127,7 @@ void main() {
         pos.z = size;
     }
 
-    particle.velocity = vel;
-    // particle.position = pos;
-    particles[particleID] = particle;
+    p.velocity = vel;
+    p.position = pos;
+    particles[particleID] = p;
 }

@@ -2,6 +2,13 @@
 #extension GL_ARB_compute_shader : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
 
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
+layout(location = 1, r32ui) uniform restrict uimage3D offsetGrid;
+uniform float binSize;
+uniform float numItems;
+
 struct Particle {
     vec3 position;
     vec3 velocity;
@@ -10,31 +17,23 @@ struct Particle {
 };
 
 layout(std430, binding = 0) restrict readonly buffer Particles1 {
-    Particle in_particles[];
+    Particle inParticles[];
 };
 
 layout(std430, binding = 1) restrict writeonly buffer Particles2 {
-    Particle out_particles[];
+    Particle outParticles[];
 };
-
-layout(std430, binding = 16) restrict readonly buffer Buckets {
-    uint buckets[];
-};
-
-layout(std430, binding = 17) restrict readonly buffer Offsets {
-    uint offsets[];
-};
-
-layout(std430, binding = 18) restrict buffer Counts {
-    uint counts[];
-};
-
-layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
 void main() {
-    const uint particleID = gl_GlobalInvocationID.x;	// The .y and .z are both 1 in this case.
-    const uint bucketID = buckets[particleID];
-    const uint localIndex = atomicAdd(counts[bucketID], 1);
-    const uint globalIndex = offsets[bucketID] + localIndex;
-    out_particles[globalIndex] = in_particles[particleID];
+    const uint particleID = gl_GlobalInvocationID.x;
+    if (particleID >= numItems) {
+        return;
+    }
+
+    const Particle p = inParticles[particleID];
+    const ivec3 binCoord = ivec3(p.position / binSize);
+    const uint globalOffset = imageLoad(offsetGrid, binCoord).x;
+    const uint localOffset = imageAtomicAdd(countGrid, binCoord, 1);
+    const uint globalIndex = globalOffset + localOffset;
+    outParticles[globalIndex] = p;
 }

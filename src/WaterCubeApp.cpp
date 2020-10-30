@@ -41,6 +41,7 @@ void WaterCubeApp::setup() {
     running_ = true;
     size_ = 5.0f;
     prev_time_ = 0.0;
+    first_frame_ = true;
 
     params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
     params_->addParam("Scene Rotation", &scene_rotation_);
@@ -67,6 +68,7 @@ void WaterCubeApp::update() {
 
     if (first_frame_) {
         fluid_->setup();
+        first_frame_ = false;
     }
 
     double time = getElapsedSeconds();

@@ -2,6 +2,13 @@
 #extension GL_ARB_compute_shader : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
 
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
+layout(location = 1, r32ui) uniform restrict uimage3D offsetGrid;
+layout(location = 2, rgba32f) uniform restrict writeonly image3D velocityField;
+uniform float gridRes;
+
 struct Particle {
     vec3 position;
     vec3 velocity;
@@ -13,28 +20,17 @@ layout(std430, binding = 1) restrict readonly buffer Particles {
     Particle particles[];
 };
 
-layout(std430, binding = 17) restrict readonly buffer Offsets {
-    uint offsets[];
-};
-
-layout(std430, binding = 18) restrict readonly buffer Counts {
-    uint counts[];
-};
-
-layout(std430, binding = 8) restrict writeonly buffer BinVelocities {
-    vec3 binVelocities[];
-};
-
-layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
-
-// compute average bin velocity
 void main() {
-    const uint bucketID = gl_GlobalInvocationID.x; // The .y and .z are both 1 in this case.
-    const uint offset = offsets[bucketID];
-    const uint count = counts[bucketID];
+    const ivec3 binCoord = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThanEqual(binCoord, ivec3(gridRes)))) {
+        return;
+    }
+
+    const uint count = imageLoad(countGrid, binCoord).x;
+    const uint offset = imageLoad(offsetGrid, binCoord).x;
     vec3 velocity = vec3(0);
 
-    for (int i = 0; i < count; i++) {
+    for (uint i = 0; i < count; i++) {
         velocity += particles[offset + i].velocity;
     }
 
@@ -42,5 +38,5 @@ void main() {
         velocity /= count;
     }
 
-    binVelocities[bucketID] = velocity;
+    imageStore(velocityField, binCoord, vec4(velocity, 1));
 }

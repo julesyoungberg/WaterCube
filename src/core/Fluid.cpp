@@ -100,12 +100,8 @@ void Fluid::generateInitialParticles() {
 
     for (auto& p : initial_particles_) {
         p.position = (Rand::randVec3() * 0.5f + 0.5f) * size_;
-        p.velocity = Rand::randVec3() * 1.0f;
+        p.velocity = Rand::randVec3() * 0.1f;
     }
-
-    // for (auto const& p : initial_particles_) {
-    //     util::log("particle position: <%f, %f, %f>", p.position.x, p.position.y, p.position.z);
-    // }
 }
 
 /**
@@ -116,12 +112,10 @@ void Fluid::prepareBuffers() {
     util::log("preparing fluid buffers");
 
     int n = num_particles_;
-    std::vector<vec3> bin_velocities(num_bins_, vec3(0));
 
     // Create particle buffers on GPU and copy data into the first buffer.
     particle_buffer_1_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
     particle_buffer_2_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
-    bin_velocity_buffer_ = gl::Ssbo::create(num_bins_ * sizeof(vec3), bin_velocities.data(), GL_STATIC_DRAW);
 
     std::vector<GLuint> ids(num_particles_);
     GLuint curr_id = 0;
@@ -130,8 +124,8 @@ void Fluid::prepareBuffers() {
     ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
     attributes_ = gl::Vao::create();
 
-    gl::ScopedBuffer scoped_bin_velocity(bin_velocity_buffer_);
-    bin_velocity_buffer_->bindBase(8);
+    auto texture_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
+    velocity_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture_format);
 }
 
 /**
@@ -192,7 +186,7 @@ void Fluid::compileShaders() {
  */
 FluidRef Fluid::setup() {
     util::log("initializing fluid");
-    num_work_groups_ = num_particles_ / WORK_GROUP_SIZE;
+    num_work_groups_ = ceil(num_particles_ / float(WORK_GROUP_SIZE));
     num_bins_ = int(pow(grid_res_, 3));
     bin_size_ = size_ / float(grid_res_);
     kernel_radius_ = bin_size_;
@@ -225,10 +219,12 @@ FluidRef Fluid::setup() {
 /**
  * Generic run shader on particles - one for each
  */
-void Fluid::runProg(int work_groups) {
-    gl::dispatchCompute(work_groups, 1, 1);
+void Fluid::runProg(ivec3 work_groups) {
+    gl::dispatchCompute(work_groups.x, work_groups.y, work_groups.z);
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
+
+void Fluid::runProg(int work_groups) { runProg(ivec3(work_groups, 1, 1)); }
 
 void Fluid::runProg() { runProg(num_work_groups_); }
 
@@ -237,6 +233,10 @@ void Fluid::runProg() { runProg(num_work_groups_); }
  */
 void Fluid::runBinVelocityProg() {
     gl::ScopedGlslProg prog(bin_velocity_prog_);
+    bin_velocity_prog_->uniform("countGrid", 0);
+    bin_velocity_prog_->uniform("offsetGrid", 1);
+    bin_velocity_prog_->uniform("velocityField", 2);
+    bin_velocity_prog_->uniform("gridRes", grid_res_);
     runProg(num_bins_);
 }
 
@@ -245,9 +245,12 @@ void Fluid::runBinVelocityProg() {
  */
 void Fluid::runDensityProg() {
     gl::ScopedGlslProg prog(density_prog_);
+    bin_velocity_prog_->uniform("countGrid", 0);
+    bin_velocity_prog_->uniform("offsetGrid", 1);
     density_prog_->uniform("binSize", bin_size_);
     density_prog_->uniform("gridRes", grid_res_);
-    density_prog_->uniform("mass", particle_mass_);
+    density_prog_->uniform("numParticles", num_particles_);
+    density_prog_->uniform("particleMass", particle_mass_);
     density_prog_->uniform("kernelRadius", kernel_radius_);
     density_prog_->uniform("kernelWeight", kernel_weight_);
     density_prog_->uniform("stiffness", stiffness_);
@@ -261,12 +264,16 @@ void Fluid::runDensityProg() {
  */
 void Fluid::runUpdateProg(float time_step) {
     gl::ScopedGlslProg prog(update_prog_);
+    bin_velocity_prog_->uniform("countGrid", 0);
+    bin_velocity_prog_->uniform("offsetGrid", 1);
+    update_prog_->uniform("velocityField", 2);
+    update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
     update_prog_->uniform("dt", time_step);
-    vec3 gravity = vec3(0, gravity_, 0);
-    update_prog_->uniform("gravity", gravity);
-    update_prog_->uniform("mass", particle_mass_);
+    update_prog_->uniform("numParticles", num_particles_);
+    update_prog_->uniform("gravity", vec3(0, gravity_, 0));
+    update_prog_->uniform("particleMass", particle_mass_);
     update_prog_->uniform("kernelRadius", kernel_radius_);
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
     update_prog_->uniform("viscosityWeight", viscosity_weight_);
@@ -283,16 +290,21 @@ void Fluid::update(double time) {
     gl::ScopedBuffer scoped_particle_buffer2(particle_buffer_2_);
     particle_buffer_1_->bindBase(odd_frame_ ? 0 : 1);
     particle_buffer_2_->bindBase(odd_frame_ ? 1 : 0);
-    gl::ScopedBuffer scoped_bin_velocity(bin_velocity_buffer_);
+
+    sort_->getCountGrid()->bind(0);
+    sort_->getOffsetGrid()->bind(1);
 
     sort_->run();
 
-    gl::ScopedBuffer scoped_offset_ssbo(sort_->offsetBuffer());
-    gl::ScopedBuffer scoped_count_ssbo(sort_->countBuffer());
+    velocity_field_->bind(3);
 
     runBinVelocityProg();
     runDensityProg();
     runUpdateProg(time);
+
+    sort_->getCountGrid()->unbind(0);
+    sort_->getOffsetGrid()->unbind(1);
+    velocity_field_->unbind(3);
 }
 
 /**
@@ -308,13 +320,13 @@ void Fluid::draw() {
 
     container_->draw();
 
+    gl::ScopedBuffer scoped_particle_buffer1(particle_buffer_1_);
+    gl::ScopedBuffer scoped_particle_buffer2(particle_buffer_2_);
+    particle_buffer_1_->bindBase(odd_frame_ ? 0 : 1);
+    particle_buffer_2_->bindBase(odd_frame_ ? 1 : 0);
+
     gl::ScopedGlslProg render(render_prog_);
     gl::ScopedVao vao(attributes_);
-
-    gl::ScopedBuffer scoped_bucket_ssbo(sort_->bucketBuffer());
-    gl::ScopedBuffer scoped_offset_ssbo(sort_->offsetBuffer());
-    gl::ScopedBuffer scoped_count_ssbo(sort_->countBuffer());
-    gl::ScopedBuffer scoped_bin_velocity_ssbo(bin_velocity_buffer_);
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, num_particles_);

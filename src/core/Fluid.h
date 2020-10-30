@@ -87,7 +87,8 @@ protected:
 
     gl::GlslProgRef bin_velocity_prog_, density_prog_, render_prog_, update_prog_, geometry_prog, shading_prog_;
 
-    gl::SsboRef particle_buffer_1_, particle_buffer_2_, bin_velocity_buffer_;
+    gl::SsboRef particle_buffer_1_, particle_buffer_2_;
+    gl::Texture3dRef velocity_field_;
     gl::VboRef ids_vbo_;
     gl::VaoRef attributes_;
 
@@ -103,6 +104,7 @@ private:
     void compileRenderProg();
     void compileShaders();
 
+    void runProg(ivec3 work_groups);
     void runProg(int work_groups);
     void runProg();
     void runBinVelocityProg();
