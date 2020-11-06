@@ -1,20 +1,26 @@
 ﻿{
   "environments": [
-    { "CINDER_PATH": "\\Users\\jules\\Cinder" }
+    {
+      "CINDER_PATH": "\\Users\\jules\\Cinder"
+    }
   ],
   "configurations": [
     {
       "name": "x64-Debug",
       "generator": "Ninja",
       "configurationType": "Debug",
-      "inheritEnvironments": [ "msvc_x64_x64" ],
+      "inheritEnvironments": [
+        "msvc_x64_x64"
+      ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
       "cmakeCommandArgs": "",
       "buildCommandArgs": "",
       "ctestCommandArgs": "",
       "variables": [],
-      "c_cpp.default.includePath": ["\\Users\\jules\\Cinder\\include\\"]
+      "c_cpp.default.includePath": [
+        "${projectDir}\\lib\\Cinder\\include\\"
+      ]
     }
   ]
 }
