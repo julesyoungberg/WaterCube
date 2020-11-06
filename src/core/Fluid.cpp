@@ -3,7 +3,7 @@
 using namespace core;
 
 Fluid::Fluid(const std::string& name)
-    : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(5), position_(0), gravity_(-9.8f),
+    : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(5), position_(0), gravity_(0), // -9.8f),
       particle_mass_(0.02f), kernel_radius_(0.1828f), viscosity_coefficient_(0.035f), stiffness_(250.0f),
       rest_density_(998.27f), rest_pressure_(0) {}
 

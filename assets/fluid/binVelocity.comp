@@ -7,7 +7,7 @@ layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
 layout(location = 1, r32ui) uniform restrict uimage3D offsetGrid;
 layout(location = 2, rgba32f) uniform restrict writeonly image3D velocityField;
-uniform float gridRes;
+uniform int gridRes;
 
 struct Particle {
     vec3 position;

@@ -7,7 +7,7 @@ layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
 layout(location = 1, r32ui) uniform restrict uimage3D offsetGrid;
 uniform float binSize;
-uniform float numItems;
+uniform int numItems;
 
 struct Particle {
     vec3 position;

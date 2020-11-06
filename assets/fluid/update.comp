@@ -30,6 +30,7 @@ layout(std430, binding = 1) restrict buffer Particles {
     Particle particles[];
 };
 
+// neighborhood coordinate offsets
 const ivec3 NEIGHBORHOOD[27] = {
     ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
     ivec3(-1, -1,  0), ivec3(0, -1,  0), ivec3(1, -1,  0),
@@ -42,6 +43,18 @@ const ivec3 NEIGHBORHOOD[27] = {
     ivec3(-1,  1,  1), ivec3(0,  1,  1), ivec3(1,  1,  1)
 };
 
+// Equation (8) from Harada
+vec3 Wpress(vec3 r, float d) {
+    // const float weight = 45.0 / (3.14 * pow(kernelRadius, 6));
+    return pow(kernelRadius - d, 3) * (r / d) * pressureWeight;
+}
+
+// Equation (9) from Harada
+float Wvis(float r) {
+    // const float weight = 45.0 / (3.14 * pow(kernelRadius, 6));
+    return (kernelRadius - r) * viscosityWeight;
+}
+
 void main() {
     const uint particleID = gl_GlobalInvocationID.x;
     if (particleID >= numParticles) {
@@ -51,13 +64,15 @@ void main() {
     Particle p = particles[particleID];
     const ivec3 binCoord = ivec3(p.position / binSize);
     
-    vec3 forcePressure = vec3(0);
-    vec3 forceViscosity = vec3(0);
+    vec3 pressureForce = vec3(0);
+    vec3 viscosityForce = vec3(0);
 
+    // search the particles of each neighboring bin
     #pragma unroll 1
     for (uint binIndex = 0; binIndex < 27; binIndex++) {
         const ivec3 neighborCoord = binCoord + NEIGHBORHOOD[binIndex];
 
+        // dont go out of bounds
         if (
             any(lessThan(neighborCoord, ivec3(0))) || 
             any(greaterThanEqual(neighborCoord, ivec3(gridRes)))
@@ -68,37 +83,44 @@ void main() {
         const uint count = imageLoad(countGrid, neighborCoord).x;
         const uint offset = imageLoad(offsetGrid, neighborCoord).x;
 
+        // search the particles of this bin
         for (uint localIndex = 0; localIndex < count; localIndex++) {
             const uint otherParticleID = offset + localIndex; 
             Particle other = particles[otherParticleID];
+            
+            // find the distance, ignore if too far
             const vec3 r = p.position - other.position;
-            const float len = length(r);
-
-            // ignore if out of bounds
-            if (len >= kernelRadius) {
+            const float dist = length(r);
+            if (dist >= kernelRadius) {
                 continue;
             }
 
+            // if not self, calculate pressure weight
             vec3 mPressureWeight = vec3(0);
-
-            if (len > 0) {
-                mPressureWeight = pressureWeight * pow(kernelRadius - len, 3) * (r / len);
+            if (dist > 0) {
+                mPressureWeight = Wpress(r, dist);
             }
 
-            const float appliedPressure = p.pressure + other.pressure;
-            forcePressure += (particleMass * appliedPressure * mPressureWeight) / (2.0 * other.density);
+            // Equation (6) from Harada
+            const float averagePressure = (p.pressure + other.pressure) / (2.0 * other.density);
+            pressureForce += particleMass * averagePressure * mPressureWeight;
 
-            const float mViscosityWeight = viscosityWeight * (kernelRadius - len);
+            // get smoothed velocity from velocity field
             const vec3 filteredVelocity = texture(velocityField, other.position / size).xyz;
             const vec3 velocityDiff = filteredVelocity - other.velocity;
-            forceViscosity += (particleMass * velocityDiff * mViscosityWeight) / other.density;
+        
+            // Equation (7) from Harada
+            viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
         }
     }
 
-    const vec3 forceGravity = gravity * p.density;
-    const vec3 force = (forceViscosity * viscosityCoefficient) - forcePressure + forceGravity;
-    const vec3 acceleration = force / p.density;
+    const vec3 externalForces = gravity * p.density;
 
+    // Sum of Equations (6) and (7) and external forces from Herada
+    const vec3 force = (viscosityForce * viscosityCoefficient) - pressureForce + externalForces;
+
+    // find accelaration and integrate
+    const vec3 acceleration = force / p.density;
     vec3 vel = p.velocity + acceleration;
     vec3 pos = p.position + vel * dt;
     const float wallDamping = 0.5;

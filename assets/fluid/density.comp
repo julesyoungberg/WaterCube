@@ -27,6 +27,7 @@ layout(std430, binding = 1) restrict buffer Particles {
     Particle particles[];
 };
 
+// neighborhood coordinate offsets
 const ivec3 NEIGHBORHOOD[27] = {
     ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
     ivec3(-1, -1,  0), ivec3(0, -1,  0), ivec3(1, -1,  0),
@@ -38,6 +39,12 @@ const ivec3 NEIGHBORHOOD[27] = {
     ivec3(-1,  1,  0), ivec3(0,  1,  0), ivec3(1,  1,  0),
     ivec3(-1,  1,  1), ivec3(0,  1,  1), ivec3(1,  1,  1)
 };
+
+// Equation (10) from Harada
+float W(float r) {
+    // const float weight = 315.0 / (64 * 3.14 * pow(kernelRadius, 9));
+    return pow(kernelRadius * kernelRadius - r * r, 3) * kernelWeight;
+}
 
 void main() {
     const uint particleID = gl_GlobalInvocationID.x;
@@ -73,20 +80,22 @@ void main() {
                 continue;
             }
 
-            const vec3 otherPosition = particles[otherParticleID].position;
-            const vec3 r = p.position - otherPosition;
-            const float len = length(r);
-
-            if (len >= kernelRadius) {
+            // find the distance, ignore if too far
+            const vec3 r = p.position - particles[otherParticleID].position;
+            const float dist = length(r);
+            if (dist >= kernelRadius) {
                 continue;
             }
 
-            const float weight = pow(kernelRadius * kernelRadius - len * len, 3) * kernelWeight;
-            density += particleMass * weight;
+            // Equation (4) from Harada
+            density += particleMass * W(dist);
         }
     }
 
     p.density = density;
+
+    // Equation (5) from Harada
     p.pressure = restPressure + stiffness * (density - restDensity);
+
     particles[particleID] = p;
 }

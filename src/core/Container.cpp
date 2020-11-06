@@ -27,13 +27,13 @@ void Container::update(double time) {}
 
 void Container::draw() {
     // batch_->draw();
-    for (auto vertex : vertices_) {
-        gl::pushModelMatrix();
-        gl::translate(vertex);
-        gl::color(Color(1, 1, 1));
-        gl::drawSphere(vec3(0), 0.05, 30);
-        gl::popModelMatrix();
-    }
+    // for (auto vertex : vertices_) {
+    //     gl::pushModelMatrix();
+    //     gl::translate(vertex);
+    //     gl::color(Color(1, 1, 1));
+    //     gl::drawSphere(vec3(0), 0.05, 30);
+    //     gl::popModelMatrix();
+    // }
 
     for (auto edge : edges_) {
         vec3 a = vertices_[edge.x];
