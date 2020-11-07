@@ -104,9 +104,49 @@ void Fluid::generateInitialParticles() {
     }
 }
 
+void Fluid::generateBoundaryPlanes() {
+    std::vector<std::vector<ivec3>> walls = {
+        {ivec3(0, 0, 0), ivec3(1, 0, 0), ivec3(1, 1, 0), ivec3(0, 1, 0)},
+        {ivec3(0, 0, 1), ivec3(1, 0, 1), ivec3(1, 1, 1), ivec3(0, 1, 1)},
+        {ivec3(0, 0, 0), ivec3(1, 0, 0), ivec3(1, 0, 1), ivec3(0, 0, 1)},
+        {ivec3(0, 1, 0), ivec3(1, 1, 0), ivec3(1, 1, 1), ivec3(0, 1, 1)},
+        {ivec3(0, 0, 0), ivec3(0, 1, 0), ivec3(0, 1, 1), ivec3(0, 0, 1)},
+        {ivec3(1, 0, 0), ivec3(1, 1, 0), ivec3(1, 1, 1), ivec3(1, 0, 1)},
+    };
+
+    boundaries_.resize(walls.size());
+
+    for (int i = 0; i < walls.size(); i++) {
+        auto const wall = walls[i];
+
+        Plane p = Plane();
+
+        vec3 ab = wall[1] - wall[0];
+        vec3 ac = wall[3] - wall[0];
+        vec3 n = cross(ab, ac);
+
+        p.normal = normalize(n);
+        p.point = wall[2];
+        boundaries_[i] = p;
+    }
+}
+
+void Fluid::prepareWallWeightFunction() {
+    int divisions = 10;
+    float step = kernel_radius_ / float(divisions);
+    std::vector<float> values(divisions + 1, 0);
+
+    for (int i = 0; i <= divisions; i++) {
+        float dist = i * step;
+        values[i] = kernel_weight_ * pow(kernel_radius_ * kernel_radius_ - dist * dist, 3);
+    }
+
+    auto texture_format = gl::Texture1d::Format().internalFormat(GL_R32F);
+    wall_weight_function_ = gl::Texture1d::create(values.data(), GL_R32F, divisions + 1, texture_format);
+}
+
 /**
  * Prepares shared memory buffers
- * TODO: add distance function, wall weight function buffers
  */
 void Fluid::prepareBuffers() {
     util::log("preparing fluid buffers");
@@ -116,6 +156,7 @@ void Fluid::prepareBuffers() {
     // Create particle buffers on GPU and copy data into the first buffer.
     particle_buffer_1_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
     particle_buffer_2_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
+    boundary_buffer_ = gl::Ssbo::create(n * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
 
     std::vector<GLuint> ids(num_particles_);
     GLuint curr_id = 0;
@@ -126,13 +167,21 @@ void Fluid::prepareBuffers() {
 
     auto texture_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
     velocity_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture_format);
+    distance_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture_format);
+
+    prepareWallWeightFunction();
+}
+
+void Fluid::compileDistanceFieldProg() {
+    util::log("\tcompiling fluid distanceField compute shader");
+    distance_field_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/distanceField.comp")));
 }
 
 /**
  * Compile bin velocity compute shader
  */
 void Fluid::compileBinVelocityProg() {
-    util::log("\tcompiling fluid bin_velocity shader");
+    util::log("\tcompiling fluid binVelocity compute shader");
     bin_velocity_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/binVelocity.comp")));
 }
 
@@ -140,7 +189,7 @@ void Fluid::compileBinVelocityProg() {
  * Compile density compute shader
  */
 void Fluid::compileDensityProg() {
-    util::log("\tcompiling fluid density shader");
+    util::log("\tcompiling fluid density compute shader");
     density_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/density.comp")));
 }
 
@@ -148,7 +197,7 @@ void Fluid::compileDensityProg() {
  * Compile update compute shader
  */
 void Fluid::compileUpdateProg() {
-    util::log("\tcompiling fluid update shader");
+    util::log("\tcompiling fluid update compute shader");
     update_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/update.comp")));
 }
 
@@ -175,6 +224,7 @@ void Fluid::compileShaders() {
     gl::enableVertexAttribArray(0);
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 
+    compileDistanceFieldProg();
     compileBinVelocityProg();
     compileDensityProg();
     compileUpdateProg();
@@ -191,13 +241,17 @@ FluidRef Fluid::setup() {
     bin_size_ = size_ / float(grid_res_);
     kernel_radius_ = bin_size_;
 
-    viscosity_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
+    // Parti of equation (8) from Harada
     pressure_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
+    // Part of equation (9) from Harada
+    viscosity_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
+    // Part of equation (10) from Harada
     kernel_weight_ = static_cast<float>(315.0f / (64.0f * M_PI * std::pow(kernel_radius_, 9)));
 
     container_ = Container::create("fluidContainer", size_);
 
     generateInitialParticles();
+    generateBoundaryPlanes();
 
     ivec3 count = gl::getMaxComputeWorkGroupCount();
     CI_ASSERT(count.x >= num_work_groups_);
@@ -211,6 +265,8 @@ FluidRef Fluid::setup() {
 
     sort_->compileShaders();
     compileShaders();
+
+    runDistanceFieldProg();
 
     util::log("fluid created");
     return std::make_shared<Fluid>(*this);
@@ -228,6 +284,25 @@ void Fluid::runProg(int work_groups) { runProg(ivec3(work_groups, 1, 1)); }
 
 void Fluid::runProg() { runProg(num_work_groups_); }
 
+void Fluid::runDistanceFieldProg() {
+    gl::ScopedBuffer scoped_boundary_buffer(boundary_buffer_);
+    boundary_buffer_->bindBase(0);
+    distance_field_->bind(0);
+
+    gl::ScopedGlslProg prog(distance_field_prog_);
+
+    distance_field_prog_->uniform("distanceField", 0);
+    distance_field_prog_->uniform("size", size_);
+    distance_field_prog_->uniform("gridRes", grid_res_);
+    distance_field_prog_->uniform("numBoundaries", int(boundaries_.size()));
+    distance_field_prog_->uniform("binSize", bin_size_);
+
+    runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
+
+    distance_field_->bind(0);
+    boundary_buffer_->unbindBase();
+}
+
 /**
  * Run bin velocity compute shader
  */
@@ -237,7 +312,7 @@ void Fluid::runBinVelocityProg() {
     bin_velocity_prog_->uniform("offsetGrid", 1);
     bin_velocity_prog_->uniform("velocityField", 2);
     bin_velocity_prog_->uniform("gridRes", grid_res_);
-    runProg(num_bins_);
+    runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
 }
 
 /**
@@ -245,8 +320,11 @@ void Fluid::runBinVelocityProg() {
  */
 void Fluid::runDensityProg() {
     gl::ScopedGlslProg prog(density_prog_);
-    bin_velocity_prog_->uniform("countGrid", 0);
-    bin_velocity_prog_->uniform("offsetGrid", 1);
+    density_prog_->uniform("countGrid", 0);
+    density_prog_->uniform("offsetGrid", 1);
+    density_prog_->uniform("distanceField", 3);
+    density_prog_->uniform("wallWeight", 4);
+    density_prog_->uniform("size", size_);
     density_prog_->uniform("binSize", bin_size_);
     density_prog_->uniform("gridRes", grid_res_);
     density_prog_->uniform("numParticles", num_particles_);
@@ -264,9 +342,10 @@ void Fluid::runDensityProg() {
  */
 void Fluid::runUpdateProg(float time_step) {
     gl::ScopedGlslProg prog(update_prog_);
-    bin_velocity_prog_->uniform("countGrid", 0);
-    bin_velocity_prog_->uniform("offsetGrid", 1);
+    update_prog_->uniform("countGrid", 0);
+    update_prog_->uniform("offsetGrid", 1);
     update_prog_->uniform("velocityField", 2);
+    update_prog_->uniform("distanceField", 3);
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
@@ -296,7 +375,9 @@ void Fluid::update(double time) {
 
     sort_->run();
 
-    velocity_field_->bind(3);
+    velocity_field_->bind(2);
+    distance_field_->bind(3);
+    wall_weight_function_->bind(4);
 
     runBinVelocityProg();
     runDensityProg();
@@ -304,7 +385,9 @@ void Fluid::update(double time) {
 
     sort_->getCountGrid()->unbind(0);
     sort_->getOffsetGrid()->unbind(1);
-    velocity_field_->unbind(3);
+    velocity_field_->unbind(2);
+    distance_field_->bind(3);
+    wall_weight_function_->unbind(4);
 }
 
 /**

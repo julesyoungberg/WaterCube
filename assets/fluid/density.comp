@@ -6,6 +6,9 @@ layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
 layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
 layout(location = 1, r32ui) uniform restrict uimage3D offsetGrid;
+layout(location = 3) uniform sampler3D distanceField;
+layout(location = 4) uniform sampler1D wallWeight;
+uniform float size;
 uniform float binSize;
 uniform int gridRes;
 uniform int numParticles;
@@ -42,7 +45,6 @@ const ivec3 NEIGHBORHOOD[27] = {
 
 // Equation (10) from Harada
 float W(float r) {
-    // const float weight = 315.0 / (64 * 3.14 * pow(kernelRadius, 9));
     return pow(kernelRadius * kernelRadius - r * r, 3) * kernelWeight;
 }
 
@@ -90,6 +92,12 @@ void main() {
             // Equation (4) from Harada
             density += particleMass * W(dist);
         }
+    }
+
+    // check distance to nearest wall
+    const float dist = texture(distanceField, p.position / size).a;
+    if (dist <= kernelRadius) {
+        density += texture(wallWeight, dist / kernelRadius).x;
     }
 
     p.density = density;

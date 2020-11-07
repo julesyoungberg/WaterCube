@@ -23,6 +23,12 @@ using namespace ci::app;
 
 namespace core {
 
+struct Plane {
+    Plane() : normal(0), point(0) {}
+    vec3 normal;
+    vec3 point;
+};
+
 /**
  * Particle representation
  */
@@ -84,11 +90,14 @@ protected:
     vec3 position_;
     ContainerRef container_;
     std::vector<Particle> initial_particles_;
+    std::vector<Plane> boundaries_;
 
-    gl::GlslProgRef bin_velocity_prog_, density_prog_, render_prog_, update_prog_, geometry_prog, shading_prog_;
+    gl::GlslProgRef distance_field_prog_, bin_velocity_prog_, density_prog_, update_prog_;
+    gl::GlslProgRef render_prog_, geometry_prog, shading_prog_;
 
-    gl::SsboRef particle_buffer_1_, particle_buffer_2_;
-    gl::Texture3dRef velocity_field_;
+    gl::SsboRef particle_buffer_1_, particle_buffer_2_, boundary_buffer_;
+    gl::Texture1dRef wall_weight_function_;
+    gl::Texture3dRef velocity_field_, distance_field_;
     gl::VboRef ids_vbo_;
     gl::VaoRef attributes_;
 
@@ -96,8 +105,11 @@ protected:
 
 private:
     void generateInitialParticles();
+    void generateBoundaryPlanes();
+    void prepareWallWeightFunction();
     void prepareBuffers();
 
+    void compileDistanceFieldProg();
     void compileBinVelocityProg();
     void compileDensityProg();
     void compileUpdateProg();
@@ -107,6 +119,7 @@ private:
     void runProg(ivec3 work_groups);
     void runProg(int work_groups);
     void runProg();
+    void runDistanceFieldProg();
     void runBinVelocityProg();
     void runDensityProg();
     void runUpdateProg(float time_step);

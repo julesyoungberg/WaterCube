@@ -7,6 +7,7 @@ layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
 layout(location = 1, r32ui) uniform restrict uimage3D offsetGrid;
 layout(location = 2) uniform sampler3D velocityField;
+layout(location = 3) uniform sampler3D distanceField;
 uniform float size;
 uniform float binSize;
 uniform int gridRes;
@@ -114,10 +115,22 @@ void main() {
         }
     }
 
+    // find distance to nearest wall
+    const vec4 interpolatedDistance = texture(distanceField, p.position / size);
+    const vec3 normal = interpolatedDistance.xyz;
+    const float dist = interpolatedDistance.a;
+    // compute pressure from wall
+    vec3 wallForce = vec3(0);
+    const float d = kernelRadius * 2; // ?
+    if (dist <= d) {
+        // Equation (11) from Harada
+        wallForce = particleMass * (((d - abs(dist)) * normal) / (d * dt * dt));
+    }
+
     const vec3 externalForces = gravity * p.density;
 
     // Sum of Equations (6) and (7) and external forces from Herada
-    const vec3 force = (viscosityForce * viscosityCoefficient) - pressureForce + externalForces;
+    const vec3 force = (viscosityForce * viscosityCoefficient) - pressureForce + wallForce + externalForces;
 
     // find accelaration and integrate
     const vec3 acceleration = force / p.density;
