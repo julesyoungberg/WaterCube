@@ -42,8 +42,8 @@ void Sort::prepareBuffers() {
     count_buffer_->bindBase(8);
 
     auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    count_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
-    offset_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
+    count_grid_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, format);
+    offset_grid_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, format);
 }
 
 /**
@@ -112,7 +112,6 @@ void Sort::runCountProg() {
     clearCountGrid();
     gl::ScopedGlslProg prog(count_prog_);
     count_prog_->uniform("countGrid", 0);
-    count_prog_->uniform("gridRes", grid_res_);
     count_prog_->uniform("binSize", bin_size_);
     count_prog_->uniform("numItems", num_items_);
     runProg();
@@ -127,7 +126,7 @@ void Sort::runScanProg() {
     scan_prog_->uniform("countGrid", 0);
     scan_prog_->uniform("offsetGrid", 1);
     scan_prog_->uniform("numBins", num_bins_);
-    scan_prog_->uniform("gridRes", grid_res_);
+    scan_prog_->uniform("gridRes", grid_res_ + 1);
     gl::ScopedBuffer scoped_count_buffer(count_buffer_);
     runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
 }

@@ -166,8 +166,8 @@ void Fluid::prepareBuffers() {
     attributes_ = gl::Vao::create();
 
     auto texture_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
-    velocity_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture_format);
-    distance_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture_format);
+    velocity_field_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture_format);
+    distance_field_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture_format);
 
     prepareWallWeightFunction();
 }
@@ -237,7 +237,7 @@ void Fluid::compileShaders() {
 FluidRef Fluid::setup() {
     util::log("initializing fluid");
     num_work_groups_ = ceil(num_particles_ / float(WORK_GROUP_SIZE));
-    num_bins_ = int(pow(grid_res_, 3));
+    num_bins_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
     kernel_radius_ = bin_size_;
 
@@ -260,7 +260,11 @@ FluidRef Fluid::setup() {
     prepareBuffers();
 
     util::log("initializing sorter");
-    sort_ = Sort::create()->numItems(num_particles_)->numBins(num_bins_)->gridRes(grid_res_)->binSize(bin_size_);
+    sort_ = Sort::create()
+                ->numItems(num_particles_)
+                ->numBins(int(pow(grid_res_, 3))) // do not set this to num_bins
+                ->gridRes(grid_res_)
+                ->binSize(bin_size_);
     sort_->prepareBuffers();
 
     sort_->compileShaders();
@@ -293,7 +297,7 @@ void Fluid::runDistanceFieldProg() {
 
     distance_field_prog_->uniform("distanceField", 0);
     distance_field_prog_->uniform("size", size_);
-    distance_field_prog_->uniform("gridRes", grid_res_);
+    distance_field_prog_->uniform("gridRes", grid_res_ + 1);
     distance_field_prog_->uniform("numBoundaries", int(boundaries_.size()));
     distance_field_prog_->uniform("binSize", bin_size_);
 
@@ -311,7 +315,7 @@ void Fluid::runBinVelocityProg() {
     bin_velocity_prog_->uniform("countGrid", 0);
     bin_velocity_prog_->uniform("offsetGrid", 1);
     bin_velocity_prog_->uniform("velocityField", 2);
-    bin_velocity_prog_->uniform("gridRes", grid_res_);
+    bin_velocity_prog_->uniform("gridRes", grid_res_ + 1);
     runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
 }
 
@@ -326,7 +330,7 @@ void Fluid::runDensityProg() {
     density_prog_->uniform("wallWeight", 4);
     density_prog_->uniform("size", size_);
     density_prog_->uniform("binSize", bin_size_);
-    density_prog_->uniform("gridRes", grid_res_);
+    density_prog_->uniform("gridRes", grid_res_ + 1);
     density_prog_->uniform("numParticles", num_particles_);
     density_prog_->uniform("particleMass", particle_mass_);
     density_prog_->uniform("kernelRadius", kernel_radius_);
@@ -348,7 +352,7 @@ void Fluid::runUpdateProg(float time_step) {
     update_prog_->uniform("distanceField", 3);
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
-    update_prog_->uniform("gridRes", grid_res_);
+    update_prog_->uniform("gridRes", grid_res_ + 1);
     update_prog_->uniform("dt", time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", vec3(0, gravity_, 0));

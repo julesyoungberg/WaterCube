@@ -28,6 +28,7 @@ void main() {
         localCount = 0;
     }
 
+    // 
     barrier();
 
     // Step 2: add bin count to local prerfix sum
