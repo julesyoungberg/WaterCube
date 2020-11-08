@@ -24,7 +24,6 @@ public:
     ~Sort();
 
     SortRef numItems(int n);
-    SortRef numBins(int n);
     SortRef gridRes(int r);
     SortRef binSize(float s);
     SortRef positionBuffer(gl::SsboRef buffer);

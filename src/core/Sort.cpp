@@ -11,13 +11,9 @@ SortRef Sort::numItems(int n) {
     return thisRef();
 }
 
-SortRef Sort::numBins(int n) {
-    num_bins_ = n;
-    return thisRef();
-}
-
 SortRef Sort::gridRes(int r) {
     grid_res_ = r;
+    num_bins_ = int(pow(grid_res_, 3));
     return thisRef();
 }
 
@@ -42,8 +38,8 @@ void Sort::prepareBuffers() {
     count_buffer_->bindBase(8);
 
     auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    count_grid_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, format);
-    offset_grid_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, format);
+    count_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
+    offset_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
 }
 
 /**
@@ -103,7 +99,7 @@ void Sort::runProg(ivec3 work_groups) {
 
 void Sort::runProg(int work_groups) { runProg(ivec3(work_groups, 1, 1)); }
 
-void Sort::runProg() { runProg(ceil(num_items_ / float(WORK_GROUP_SIZE))); }
+void Sort::runProg() { runProg(int(ceil(float(num_items_) / float(WORK_GROUP_SIZE)))); }
 
 /**
  * Run bucket count compute shader
@@ -125,8 +121,7 @@ void Sort::runScanProg() {
     gl::ScopedGlslProg prog(scan_prog_);
     scan_prog_->uniform("countGrid", 0);
     scan_prog_->uniform("offsetGrid", 1);
-    scan_prog_->uniform("numBins", num_bins_);
-    scan_prog_->uniform("gridRes", grid_res_ + 1);
+    scan_prog_->uniform("gridRes", grid_res_);
     gl::ScopedBuffer scoped_count_buffer(count_buffer_);
     runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
 }

@@ -3,27 +3,27 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 project(WaterCube)
 
-get_filename_component(CINDER_PATH "/Users/jules/Cinder" ABSOLUTE) # "$ENV{CINDER_PATH}" ABSOLUTE)
+get_filename_component(CINDER_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../lib/Cinder" ABSOLUTE)
 get_filename_component(APP_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../../" ABSOLUTE)
 
-include( "${CINDER_PATH}/proj/cmake/modules/cinderMakeApp.cmake" )
+include("${CINDER_PATH}/proj/cmake/modules/cinderMakeApp.cmake")
 
 # FILE(GLOB_RECURSE SRCFILES "${APP_PATH}src/**/*.cpp")
 # source_group(SOURCES FILES ${SRCFILES})
 
-list( APPEND SOURCES
+list(APPEND SOURCES
 	${APP_PATH}/src/core/Container.cpp
 	${APP_PATH}/src/core/Fluid.cpp
 	${APP_PATH}/src/core/Scene.cpp
 	${APP_PATH}/src/core/Sort.cpp
 	${APP_PATH}/src/core/util.cpp
 	${APP_PATH}/src/WaterCubeApp.cpp
-  )
+ )
 
-list( APPEND INCLUDES
+list(APPEND INCLUDES
     ${APP_PATH}/include/
     ${APP_PATH}/src/core/
-    )
+)
 
 ci_make_app(
 	APP_NAME    "WaterCube"

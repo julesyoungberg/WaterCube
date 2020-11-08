@@ -76,7 +76,8 @@ public:
     static FluidRef create(const std::string& name) { return std::make_shared<Fluid>(name); }
 
 protected:
-    int num_particles_, grid_res_, num_work_groups_, num_bins_;
+    int num_particles_, grid_res_;
+    int num_work_groups_, distance_field_size_, num_bins_;
 
     float size_, bin_size_, kernel_radius_;
     float particle_mass_;
