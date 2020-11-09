@@ -5,7 +5,7 @@ using namespace core;
 Fluid::Fluid(const std::string& name)
     : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(7), position_(0), gravity_(0), // -9.8f),
       particle_mass_(0.02f), kernel_radius_(0.1828f), viscosity_coefficient_(0.035f), stiffness_(250.0f),
-      rest_density_(998.27f), rest_pressure_(0) {}
+      rest_density_(998.27f), rest_pressure_(0), render_mode_(4), particle_radius_(0.0457) {}
 
 Fluid::~Fluid() {}
 
@@ -31,6 +31,11 @@ FluidRef Fluid::kernelRadius(float r) {
 
 FluidRef Fluid::particleMass(float m) {
     particle_mass_ = m;
+    return thisRef();
+}
+
+FluidRef Fluid::particleRadius(float r) {
+    particle_radius_ = r;
     return thisRef();
 }
 
@@ -74,6 +79,11 @@ FluidRef Fluid::position(vec3 p) {
     return thisRef();
 }
 
+FluidRef Fluid::renderMode(int m) {
+    render_mode_ = m;
+    return thisRef();
+}
+
 FluidRef Fluid::gravity(float g) {
     gravity_ = g;
     return thisRef();
@@ -81,6 +91,7 @@ FluidRef Fluid::gravity(float g) {
 
 void Fluid::addParams(params::InterfaceGlRef p) {
     p->addParam("Number of Particles", &num_particles_, "min=100 step=100");
+    p->addParam("Render Mode", &render_mode_, "min=0 max=4 step=1");
     p->addParam("Grid Resolution", &grid_res_, "min=1 max=1000 step=1");
     p->addParam("Particle Mass", &particle_mass_, "min=0.001 max=2.0 step=0.001");
     p->addParam("Viscosity", &viscosity_coefficient_, "min=0.001 max=2.0 step=0.001");
@@ -167,17 +178,20 @@ void Fluid::prepareBuffers() {
 
     // Create particle buffers on GPU and copy data into the first buffer.
     util::log("\tcreating particle buffers");
-    particle_buffer_1_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
-    particle_buffer_2_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
+    particle_buffer1_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
+    particle_buffer2_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
     util::log("\tcreating boundary buffer");
     boundary_buffer_ = gl::Ssbo::create(n * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
 
-    util::log("\tcreating ids and attributes");
+    util::log("\tcreating ids vbo");
     std::vector<GLuint> ids(num_particles_);
     GLuint curr_id = 0;
     std::generate(ids.begin(), ids.end(), [&curr_id]() -> GLuint { return curr_id++; });
     ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
-    attributes_ = gl::Vao::create();
+
+    util::log("\tcreating attributes vao");
+    attributes1_ = gl::Vao::create();
+    attributes2_ = gl::Vao::create();
 
     util::log("\tcreating velocity field");
     auto texture_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
@@ -230,13 +244,15 @@ void Fluid::compileRenderProg() {
 
 /**
  * Compiles and prepares shader programs
- * TODO: handle error
  */
 void Fluid::compileShaders() {
     util::log("compiling fluid shaders");
 
-    gl::ScopedVao vao(attributes_);
     gl::ScopedBuffer scopedIds(ids_vbo_);
+    gl::ScopedVao vao1(attributes1_);
+    gl::enableVertexAttribArray(0);
+    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
+    gl::ScopedVao vao2(attributes2_);
     gl::enableVertexAttribArray(0);
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 
@@ -381,10 +397,10 @@ void Fluid::runUpdateProg(float time_step) {
  */
 void Fluid::update(double time) {
     odd_frame_ = !odd_frame_;
-    gl::ScopedBuffer scoped_particle_buffer1(particle_buffer_1_);
-    gl::ScopedBuffer scoped_particle_buffer2(particle_buffer_2_);
-    particle_buffer_1_->bindBase(odd_frame_ ? 0 : 1);
-    particle_buffer_2_->bindBase(odd_frame_ ? 1 : 0);
+    gl::ScopedBuffer scoped_particle_buffer1(particle_buffer1_);
+    gl::ScopedBuffer scoped_particle_buffer2(particle_buffer2_);
+    particle_buffer1_->bindBase(odd_frame_ ? 0 : 1);
+    particle_buffer2_->bindBase(odd_frame_ ? 1 : 0);
 
     sort_->getCountGrid()->bind(0);
     sort_->getOffsetGrid()->bind(1);
@@ -419,13 +435,22 @@ void Fluid::draw() {
 
     container_->draw();
 
-    gl::ScopedBuffer scoped_particle_buffer1(particle_buffer_1_);
-    gl::ScopedBuffer scoped_particle_buffer2(particle_buffer_2_);
-    particle_buffer_1_->bindBase(odd_frame_ ? 0 : 1);
-    particle_buffer_2_->bindBase(odd_frame_ ? 1 : 0);
+    gl::ScopedBuffer scoped_particle_buffer(odd_frame_ ? particle_buffer2_ : particle_buffer1_);
+    if (odd_frame_) {
+        particle_buffer1_->bindBase(1);
+    } else {
+        particle_buffer1_->bindBase(0);
+    }
 
     gl::ScopedGlslProg render(render_prog_);
-    gl::ScopedVao vao(attributes_);
+    gl::ScopedVao vao(odd_frame_ ? attributes1_ : attributes2_);
+
+    render_prog_->uniform("renderMode", render_mode_);
+    render_prog_->uniform("binSize", bin_size_);
+    render_prog_->uniform("gridRes", grid_res_);
+    const float pointRadius = particle_radius_ * (render_mode_ ? 6.0f : 3.5f);
+    render_prog_->uniform("pointRadius", pointRadius);
+    render_prog_->uniform("pointScale", 650.0f);
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, num_particles_);

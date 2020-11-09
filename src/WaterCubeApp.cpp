@@ -47,7 +47,7 @@ void WaterCubeApp::setup() {
     params_->addParam("Scene Rotation", &scene_rotation_);
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
-    cam_.lookAt(vec3(size_, size_, size_ * 3), vec3(0, 0, 0));
+    cam_.lookAt(vec3(size_, size_, size_ * 3) / 1.5f, vec3(0, 0, 0));
 
     gl::enableDepthWrite();
     gl::enableDepthRead();

@@ -56,6 +56,7 @@ public:
     FluidRef size(float s);
     FluidRef kernelRadius(float r);
     FluidRef particleMass(float m);
+    FluidRef particleRadius(float r);
     FluidRef viscosityCoefficient(float c);
     FluidRef viscosityWeight(float w);
     FluidRef pressureWeight(float w);
@@ -65,6 +66,7 @@ public:
     FluidRef restPressure(float p);
     FluidRef position(vec3 p);
     FluidRef gravity(float g);
+    FluidRef renderMode(int m);
 
     void addParams(params::InterfaceGlRef p);
 
@@ -78,9 +80,10 @@ public:
 protected:
     int num_particles_, grid_res_;
     int num_work_groups_, distance_field_size_, num_bins_;
+    int render_mode_;
 
     float size_, bin_size_, kernel_radius_;
-    float particle_mass_;
+    float particle_mass_, particle_radius_;
     float viscosity_coefficient_;
     float viscosity_weight_, pressure_weight_, kernel_weight_;
     float stiffness_;
@@ -96,11 +99,11 @@ protected:
     gl::GlslProgRef distance_field_prog_, bin_velocity_prog_, density_prog_, update_prog_;
     gl::GlslProgRef render_prog_, geometry_prog, shading_prog_;
 
-    gl::SsboRef particle_buffer_1_, particle_buffer_2_, boundary_buffer_;
+    gl::SsboRef particle_buffer1_, particle_buffer2_, boundary_buffer_;
     gl::Texture1dRef wall_weight_function_;
     gl::Texture3dRef velocity_field_, distance_field_;
     gl::VboRef ids_vbo_;
-    gl::VaoRef attributes_;
+    gl::VaoRef attributes1_, attributes2_;
 
     SortRef sort_;
 
