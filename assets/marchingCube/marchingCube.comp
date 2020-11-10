@@ -6,28 +6,28 @@
 
 layout(local_size_x = THREAD, local_size_y = THREAD, local_size_z = THREAD) in;
 
-layout(location = 0, r32ui) uniform restrict uimage3D densityField;
-uniform float threshold;
-uniform float size;
-uniform int res;
-uniform int border;
-
 struct Grid {
 	vec3 position;
 	vec3 normal;
 };
 
-layout(std430, binding = 8) restrict buffer grids {
+layout(std430, binding = 0) restrict buffer grids {
 	Grid grid[];
 };
 
-layout(std430, binding = 9) restrict readonly buffer CubeEdgeFlag {
+layout(std430, binding = 1) restrict readonly buffer CubeEdgeFlag {
 	int cubeEdgeFlags[];
 };
 
-layout(std430, binding = 10) restrict readonly buffer TriangleConnectionTable {
+layout(std430, binding = 2) restrict readonly buffer TriangleConnectionTable {
 	int triangleConnectionTable[];
 };
+
+layout(binding = 3, r32ui) uniform restrict uimage3D densityField;
+uniform float threshold;
+uniform float size;
+uniform int res;
+uniform int border;
 
 // edgeConnection lists the index of the endpoint vertices for each of the 12 edges of the cube
 const ivec2 edgeConnection[12] = {

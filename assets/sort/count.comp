@@ -4,10 +4,6 @@
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
-layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
-uniform float binSize;
-uniform int numItems;
-
 struct Particle {
     vec3 position;
     vec3 velocity;
@@ -15,9 +11,13 @@ struct Particle {
     float pressure;
 };
 
-layout(std430, binding = 1) restrict readonly buffer Particles {
+layout(std430, binding = 0) restrict readonly buffer Particles {
     Particle particles[];
 };
+
+layout(binding = 1, r32ui) uniform restrict uimage3D countGrid;
+uniform float binSize;
+uniform int numItems;
 
 // Increment the particle's corresponding bin by 1
 void main() {
@@ -27,7 +27,7 @@ void main() {
     }
 
     const vec3 p = particles[particleID].position;
-    const ivec3 binCoord = ivec3(p / binSize);
+    const ivec3 binCoord = ivec3(floor(p / binSize));
 
     imageAtomicAdd(countGrid, binCoord, 1);
 }

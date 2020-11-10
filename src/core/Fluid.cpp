@@ -7,15 +7,15 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     num_particles_ = 1000;
     grid_res_ = 8;
     position_ = vec3(0);
-    gravity_ = -0.05f;
+    gravity_ = 0; // -0.05f;
     particle_mass_ = 0.05f;
     kernel_radius_ = 0.1828f;
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 3;
+    render_mode_ = 5;
     particle_radius_ = 0.05f; // 0.0457f;
-    rest_density_ = 400;      // 998.27f
+    rest_density_ = 4;        // 998.27f
 }
 
 Fluid::~Fluid() {}
@@ -254,7 +254,8 @@ FluidRef Fluid::setup() {
     num_bins_ = int(pow(grid_res_, 3));
     distance_field_size_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
-    kernel_radius_ = bin_size_ / 2.0f;
+    kernel_radius_ = bin_size_;
+    util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_, kernel_radius_);
 
     // Parti of equation (8) from Harada
     pressure_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
@@ -283,7 +284,7 @@ FluidRef Fluid::setup() {
 
     util::log("initializing marching cube");
     marching_cube_ = MarchingCube::create()->size(size_);
-    marching_cube_->setup(64);
+    marching_cube_->setup(8);
 
     runDistanceFieldProg();
 
@@ -294,42 +295,70 @@ FluidRef Fluid::setup() {
 void Fluid::runProg() { util::runProg(num_work_groups_); }
 
 void Fluid::runDistanceFieldProg() {
-    gl::ScopedBuffer scoped_boundary_buffer(boundary_buffer_);
-    boundary_buffer_->bindBase(0);
-    distance_field_->bind(0);
-
     gl::ScopedGlslProg prog(distance_field_prog_);
 
-    distance_field_prog_->uniform("distanceField", 0);
+    gl::ScopedBuffer scoped_boundary_buffer(boundary_buffer_);
+    boundary_buffer_->bindBase(0);
+
+    glActiveTexture(GL_TEXTURE0 + 1);
+    glUniform1i(glGetUniformLocation(distance_field_prog_->getHandle(), "distanceField"), 1);
+    glBindImageTexture(1, distance_field_->getId(), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
     distance_field_prog_->uniform("gridRes", grid_res_ + 1);
     distance_field_prog_->uniform("numBoundaries", int(boundaries_.size()));
     distance_field_prog_->uniform("binSize", bin_size_);
 
-    util::runProg(ivec3(int(ceil(distance_field_size_ / 4.0f))));
+    util::runProg(ivec3(ceil(distance_field_size_ / 4.0f)));
+    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
-    distance_field_->bind(0);
     boundary_buffer_->unbindBase();
 }
 
 /**
  * Run bin velocity compute shader
  */
-void Fluid::runBinVelocityProg() {
+void Fluid::runBinVelocityProg(gl::SsboRef particles) {
     gl::ScopedGlslProg prog(bin_velocity_prog_);
-    bin_velocity_prog_->uniform("countGrid", 0);
-    bin_velocity_prog_->uniform("offsetGrid", 1);
-    bin_velocity_prog_->uniform("velocityField", 2);
+
+    gl::ScopedBuffer scoped_particles(particles);
+    particles->bindBase(0);
+
+    sort_->getCountGrid()->bind(1);
+    sort_->getOffsetGrid()->bind(2);
+    bin_velocity_prog_->uniform("countGrid", 1);
+    bin_velocity_prog_->uniform("offsetGrid", 2);
+
+    glActiveTexture(GL_TEXTURE0 + 3);
+    glUniform1i(glGetUniformLocation(bin_velocity_prog_->getHandle(), "velocityField"), 3);
+    glBindImageTexture(3, velocity_field_->getId(), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+
     bin_velocity_prog_->uniform("gridRes", grid_res_);
-    util::runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
+
+    util::runProg(ivec3(ceil(num_bins_ / 4.0f)));
+    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+
+    sort_->getCountGrid()->unbind(1);
+    sort_->getOffsetGrid()->unbind(2);
+
+    particles->unbindBase();
 }
 
 /**
  * Run density compute shader
  */
-void Fluid::runDensityProg() {
+void Fluid::runDensityProg(gl::SsboRef particles) {
     gl::ScopedGlslProg prog(density_prog_);
-    density_prog_->uniform("countGrid", 0);
-    density_prog_->uniform("offsetGrid", 1);
+
+    gl::ScopedBuffer scoped_particles(particles);
+    particles->bindBase(0);
+
+    sort_->getCountGrid()->bind(1);
+    sort_->getOffsetGrid()->bind(2);
+    distance_field_->bind(3);
+    wall_weight_function_->bind(4);
+
+    density_prog_->uniform("countGrid", 1);
+    density_prog_->uniform("offsetGrid", 2);
     density_prog_->uniform("distanceField", 3);
     density_prog_->uniform("wallWeight", 4);
     density_prog_->uniform("size", size_);
@@ -342,18 +371,36 @@ void Fluid::runDensityProg() {
     density_prog_->uniform("stiffness", stiffness_);
     density_prog_->uniform("restDensity", rest_density_);
     density_prog_->uniform("restPressure", rest_pressure_);
+
     runProg();
+    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+
+    sort_->getCountGrid()->unbind(1);
+    sort_->getOffsetGrid()->unbind(2);
+    distance_field_->unbind(3);
+    wall_weight_function_->unbind(4);
+
+    particles->unbindBase();
 }
 
 /**
  * Run update compute shader
  */
-void Fluid::runUpdateProg(float time_step) {
+void Fluid::runUpdateProg(gl::SsboRef particles, float time_step) {
     gl::ScopedGlslProg prog(update_prog_);
-    update_prog_->uniform("countGrid", 0);
-    update_prog_->uniform("offsetGrid", 1);
-    update_prog_->uniform("velocityField", 2);
-    update_prog_->uniform("distanceField", 3);
+
+    gl::ScopedBuffer scoped_particles(particles);
+    particles->bindBase(0);
+
+    sort_->getCountGrid()->bind(1);
+    sort_->getOffsetGrid()->bind(2);
+    velocity_field_->bind(3);
+    distance_field_->bind(4);
+
+    update_prog_->uniform("countGrid", 1);
+    update_prog_->uniform("offsetGrid", 2);
+    update_prog_->uniform("velocityField", 3);
+    update_prog_->uniform("distanceField", 4);
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
@@ -365,7 +412,16 @@ void Fluid::runUpdateProg(float time_step) {
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
     update_prog_->uniform("viscosityWeight", viscosity_weight_);
     update_prog_->uniform("pressureWeight", pressure_weight_);
+
     runProg();
+    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+
+    sort_->getCountGrid()->unbind(1);
+    sort_->getOffsetGrid()->unbind(2);
+    velocity_field_->unbind(3);
+    distance_field_->unbind(4);
+
+    particles->unbindBase();
 }
 
 /**
@@ -373,32 +429,17 @@ void Fluid::runUpdateProg(float time_step) {
  */
 void Fluid::update(double time) {
     odd_frame_ = !odd_frame_;
-    gl::ScopedBuffer scoped_particle_buffer1(particle_buffer1_);
-    gl::ScopedBuffer scoped_particle_buffer2(particle_buffer2_);
-    particle_buffer1_->bindBase(odd_frame_ ? 0 : 1);
-    particle_buffer2_->bindBase(odd_frame_ ? 1 : 0);
+    gl::SsboRef in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
+    gl::SsboRef out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
 
-    sort_->getCountGrid()->bind(0);
-    sort_->getOffsetGrid()->bind(1);
+    sort_->run(in_particles, out_particles);
 
-    sort_->run();
-
-    velocity_field_->bind(2);
-    distance_field_->bind(3);
-    wall_weight_function_->bind(4);
-
-    runBinVelocityProg();
-    runDensityProg();
-    runUpdateProg(float(time));
-
-    sort_->getCountGrid()->unbind(0);
-    sort_->getOffsetGrid()->unbind(1);
-    velocity_field_->unbind(2);
-    distance_field_->bind(3);
-    wall_weight_function_->unbind(4);
+    // runBinVelocityProg(out_particles);
+    // runDensityProg(out_particles);
+    // runUpdateProg(out_particles, float(time));
 
     if (render_mode_ == 5) {
-        marching_cube_->update(num_particles_, 0.5f);
+        marching_cube_->update(out_particles, num_particles_, 0.5f);
     }
 }
 
@@ -419,6 +460,8 @@ void Fluid::renderGeometry() {
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, num_particles_);
+
+    particle_buffer->unbindBase();
 }
 
 /**
@@ -432,10 +475,12 @@ void Fluid::draw() {
     vec3 offset = vec3(-half, -half, -half);
     gl::translate(offset.x, offset.y, offset.z);
 
-    if (render_mode_ != 5) {
-        renderGeometry();
-    } else {
+    if (render_mode_ == 5) {
+        sort_->renderGrid(size_);
+    } else if (render_mode_ == 6) {
         marching_cube_->draw();
+    } else {
+        renderGeometry();
     }
 
     container_->draw();

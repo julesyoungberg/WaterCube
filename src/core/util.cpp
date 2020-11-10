@@ -29,7 +29,7 @@ void util::log(char* format, ...) {
  */
 void util::runProg(ivec3 work_groups) {
     gl::dispatchCompute(work_groups.x, work_groups.y, work_groups.z);
-    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void util::runProg(int work_groups) { runProg(ivec3(work_groups, 1, 1)); }

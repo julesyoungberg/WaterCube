@@ -4,11 +4,11 @@
 
 #define THREAD 8
 
-const float MAX_DENSITY = 0.1;
+const float MAX_DENSITY = 70.0;
 
 layout(local_size_x = THREAD, local_size_y = THREAD, local_size_z = THREAD) in;
 
-layout(location = 0, r32ui) uniform restrict uimage3D densityField;
+layout(binding = 0, r32ui) uniform restrict uimage3D densityField;
 uniform int res;
 
 void main() {

@@ -17,6 +17,23 @@ namespace core {
 
 const int WORK_GROUP_SIZE = 128;
 
+struct Plane {
+    Plane() : normal(0), point(0) {}
+    vec3 normal;
+    vec3 point;
+};
+
+/**
+ * Particle representation
+ */
+struct Particle {
+    Particle() : position(0), velocity(0), density(0), pressure(0) {}
+    vec3 position;
+    vec3 velocity;
+    float density;
+    float pressure;
+};
+
 namespace util {
 
 void log(char* format, ...);

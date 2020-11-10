@@ -3,20 +3,12 @@
 
 const float FLOAT_MIN = 1.175494351e-38;
 const float GRID_EPS = 0.000001;
-const float MAX_DENSITY = 2.0;
+const float MAX_DENSITY = 70.0;
 const vec3 PARTICLE_COLOR = vec3(0.0, 0.0, 0.6);
 
 layout(location = 0) in int particleID;
 out vec3 vColor;
 out vec3 vPosition;
-
-uniform mat4 ciModelViewProjection;
-uniform mat4 ciViewMatrix;
-uniform int renderMode;
-uniform float binSize;
-uniform int gridRes;
-uniform float pointRadius;
-uniform float pointScale;
 
 struct Particle {
     vec3 position;
@@ -28,6 +20,14 @@ struct Particle {
 layout(std430, binding = 0) restrict readonly buffer Particles {
     Particle particles[];
 };
+
+uniform mat4 ciModelViewProjection;
+uniform mat4 ciViewMatrix;
+uniform int renderMode;
+uniform float binSize;
+uniform int gridRes;
+uniform float pointRadius;
+uniform float pointScale;
 
 void main() {
 	Particle p = particles[particleID];

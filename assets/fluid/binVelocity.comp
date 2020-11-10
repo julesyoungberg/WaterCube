@@ -4,11 +4,6 @@
 
 layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 
-layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
-layout(location = 1, r32ui) uniform restrict uimage3D offsetGrid;
-layout(location = 2, rgba32f) uniform restrict writeonly image3D velocityField;
-uniform int gridRes;
-
 struct Particle {
     vec3 position;
     vec3 velocity;
@@ -16,9 +11,14 @@ struct Particle {
     float pressure;
 };
 
-layout(std430, binding = 1) restrict readonly buffer Particles {
+layout(std430, binding = 0) restrict readonly buffer Particles {
     Particle particles[];
 };
+
+layout(binding = 1, r32ui) uniform restrict uimage3D countGrid;
+layout(binding = 2, r32ui) uniform restrict uimage3D offsetGrid;
+layout(binding = 3, rgba32f) uniform restrict writeonly image3D velocityField;
+uniform int gridRes;
 
 void main() {
     const ivec3 binCoord = ivec3(gl_GlobalInvocationID);
@@ -38,5 +38,5 @@ void main() {
         velocity /= count;
     }
 
-    imageStore(velocityField, binCoord, vec4(velocity, 1));
+    imageStore(velocityField, binCoord, vec4(velocity, 0));
 }

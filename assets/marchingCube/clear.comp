@@ -6,16 +6,16 @@
 
 layout(local_size_x = THREAD, local_size_y = 1, local_size_z = 1) in;
 
-uniform int count;
-
 struct Grid {
 	vec3 position;
 	vec3 normal;
 };
 
-layout(std430, binding = 8) buffer grids {
+layout(std430, binding = 0) buffer grids {
 	Grid grid[];
 };
+
+uniform int count;
 
 void main() {
 	uint idx = gl_GlobalInvocationID.x;

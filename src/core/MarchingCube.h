@@ -30,7 +30,7 @@ public:
     MarchingCubeRef size(float s);
 
     void setup(const int resolution);
-    void update(int num_items, float threshold = 0.5f);
+    void update(gl::SsboRef particles, int num_items, float threshold = 0.5f);
     void draw();
 
     void updateField(float time, float scale);
@@ -62,7 +62,7 @@ private:
     void clearDensity();
 
     void runClearProg();
-    void runBinDensityProg(int num_items);
+    void runBinDensityProg(gl::SsboRef particles, int num_items);
     void runNormalizeDensityProg(const ivec3 thread);
     void runMarchingCubeProg(float threshold, const ivec3 thread);
 

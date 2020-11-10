@@ -25,23 +25,6 @@ using namespace ci::app;
 
 namespace core {
 
-struct Plane {
-    Plane() : normal(0), point(0) {}
-    vec3 normal;
-    vec3 point;
-};
-
-/**
- * Particle representation
- */
-struct Particle {
-    Particle() : position(0), velocity(0), density(0), pressure(0) {}
-    vec3 position;
-    vec3 velocity;
-    float density;
-    float pressure;
-};
-
 typedef std::shared_ptr<class Fluid> FluidRef;
 
 /**
@@ -120,9 +103,9 @@ private:
 
     void runProg();
     void runDistanceFieldProg();
-    void runBinVelocityProg();
-    void runDensityProg();
-    void runUpdateProg(float time_step);
+    void runBinVelocityProg(gl::SsboRef particles);
+    void runDensityProg(gl::SsboRef particles);
+    void runUpdateProg(gl::SsboRef particles, float time_step);
     void renderGeometry();
 
     FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
