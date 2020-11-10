@@ -5,8 +5,7 @@ using namespace core;
 Fluid::Fluid(const std::string& name)
     : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(7), position_(0), gravity_(0), // -9.8f),
       particle_mass_(0.02f), kernel_radius_(0.1828f), viscosity_coefficient_(0.035f), stiffness_(250.0f),
-      rest_density_(998.27f), rest_pressure_(0), render_mode_(3), particle_radius_(0.0457f) {
-}
+      rest_density_(998.27f), rest_pressure_(0), render_mode_(3), particle_radius_(0.0457f) {}
 
 Fluid::~Fluid() {}
 
@@ -232,7 +231,7 @@ void Fluid::compileShaders() {
     geometry_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
                                               .vertex(loadAsset("fluid/particle.vert"))
                                               .fragment(loadAsset("fluid/particle.frag"))
-                                              .attribLocation("particleId", 0));
+                                              .attribLocation("particleID", 0));
 }
 
 /**
@@ -273,7 +272,7 @@ FluidRef Fluid::setup() {
 
     util::log("initializing marching cube");
     marching_cube_ = MarchingCube::create()->size(size_);
-    marching_cube_->setup(100);
+    marching_cube_->setup(64);
 
     runDistanceFieldProg();
 

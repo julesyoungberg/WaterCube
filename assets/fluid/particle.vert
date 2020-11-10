@@ -45,7 +45,7 @@ void main() {
             vColor = vec3(speed, speed, 0);
             break;
         case 3:
-            const float norm = p.density / MAX_DENSITY;
+            const float norm = uintBitsToFloat(floatBitsToUint(p.density)) / MAX_DENSITY;
             invalid = (p.density <= 0.0) || isnan(p.density) || isinf(p.density);
             vColor = mix(vec3(0, 0, norm), vec3(1, 0, 0), float(invalid));
             break;

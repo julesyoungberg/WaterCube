@@ -43,16 +43,17 @@ protected:
     float size_;
 
     gl::GlslProgRef bin_density_prog_, normalize_density_prog_;
-    gl::GlslProgRef marching_cube_prog_, clear_prog_, render_prog_;
+    gl::GlslProgRef marching_cube_prog_, clear_prog_, render_prog_, render_density_prog_;
 
     std::vector<Grid> grids_;
     std::vector<int> indices_;
+    std::vector<ivec3> particles_;
 
-    gl::SsboRef grid_buffer_, index_buffer_;
+    gl::SsboRef grid_buffer_, index_buffer_, particle_buffer_;
     gl::SsboRef cube_edge_flags_buffer_, triangle_connection_table_buffer_;
     gl::Texture3dRef density_field_;
-    gl::VboRef ids_vbo_;
-    gl::VaoRef attributes_;
+    gl::VboRef grid_ids_vbo_, particle_ids_vbo_;
+    gl::VaoRef grid_attributes_, particle_attributes_;
 
 private:
     void prepareBuffers();
@@ -64,6 +65,9 @@ private:
     void runBinDensityProg(int num_items);
     void runNormalizeDensityProg(const ivec3 thread);
     void runMarchingCubeProg(float threshold, const ivec3 thread);
+
+    void render();
+    void renderDensity();
 
     MarchingCubeRef thisRef() { return std::make_shared<MarchingCube>(*this); }
 };

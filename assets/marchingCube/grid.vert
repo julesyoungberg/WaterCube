@@ -14,7 +14,6 @@ layout(std430, binding = 8) buffer grids {
 	Grid grid[];
 };
 
-
 void main() {
     Grid grid = grid[gridID];
 	gl_Position = ciModelViewProjection * vec4(grid.position, 1);

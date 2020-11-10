@@ -2,9 +2,11 @@
 #extension GL_ARB_compute_shader : enable
 #extension GL_ARB_shader_storage_buffer_object : enable
 
+#define THREAD 8
+
 const float MAX_DENSITY = 0.1;
 
-layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = THREAD, local_size_y = THREAD, local_size_z = THREAD) in;
 
 layout(location = 0, r32ui) uniform restrict uimage3D densityField;
 uniform int res;
