@@ -5,7 +5,8 @@ using namespace core;
 Fluid::Fluid(const std::string& name)
     : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(7), position_(0), gravity_(0), // -9.8f),
       particle_mass_(0.02f), kernel_radius_(0.1828f), viscosity_coefficient_(0.035f), stiffness_(250.0f),
-      rest_density_(998.27f), rest_pressure_(0), render_mode_(4), particle_radius_(0.0457) {}
+      rest_density_(998.27f), rest_pressure_(0), render_mode_(3), particle_radius_(0.0457f) {
+}
 
 Fluid::~Fluid() {}
 
@@ -176,12 +177,12 @@ void Fluid::prepareBuffers() {
 
     int n = num_particles_;
 
-    // Create particle buffers on GPU and copy data into the first buffer.
     util::log("\tcreating particle buffers");
     particle_buffer1_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
     particle_buffer2_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
-    util::log("\tcreating boundary buffer");
-    boundary_buffer_ = gl::Ssbo::create(n * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
+
+    util::log("\tcreating boundary buffer - boundaries: %d", boundaries_.size());
+    boundary_buffer_ = gl::Ssbo::create(boundaries_.size() * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
 
     util::log("\tcreating ids vbo");
     std::vector<GLuint> ids(num_particles_);
@@ -192,62 +193,6 @@ void Fluid::prepareBuffers() {
     util::log("\tcreating attributes vao");
     attributes1_ = gl::Vao::create();
     attributes2_ = gl::Vao::create();
-
-    util::log("\tcreating velocity field");
-    auto texture_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
-    velocity_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture_format);
-    util::log("\tcreating disance field");
-    distance_field_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture_format);
-
-    prepareWallWeightFunction();
-}
-
-void Fluid::compileDistanceFieldProg() {
-    util::log("\tcompiling fluid distanceField compute shader");
-    distance_field_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/distanceField.comp")));
-}
-
-/**
- * Compile bin velocity compute shader
- */
-void Fluid::compileBinVelocityProg() {
-    util::log("\tcompiling fluid binVelocity compute shader");
-    bin_velocity_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/binVelocity.comp")));
-}
-
-/**
- * Compile density compute shader
- */
-void Fluid::compileDensityProg() {
-    util::log("\tcompiling fluid density compute shader");
-    density_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/density.comp")));
-}
-
-/**
- * Compile update compute shader
- */
-void Fluid::compileUpdateProg() {
-    util::log("\tcompiling fluid update compute shader");
-    update_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("fluid/update.comp")));
-}
-
-/**
- * Compil render shader
- */
-void Fluid::compileRenderProg() {
-    util::log("\tcompiling fluid render shader");
-    render_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
-                                            .vertex(loadAsset("fluid/particle.vert"))
-                                            .fragment(loadAsset("fluid/particleGeometry.frag"))
-                                            .attribLocation("particleId", 0));
-}
-
-/**
- * Compiles and prepares shader programs
- */
-void Fluid::compileShaders() {
-    util::log("compiling fluid shaders");
-
     gl::ScopedBuffer scopedIds(ids_vbo_);
     gl::ScopedVao vao1(attributes1_);
     gl::enableVertexAttribArray(0);
@@ -256,11 +201,38 @@ void Fluid::compileShaders() {
     gl::enableVertexAttribArray(0);
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 
-    compileDistanceFieldProg();
-    compileBinVelocityProg();
-    compileDensityProg();
-    compileUpdateProg();
-    compileRenderProg();
+    util::log("\tcreating velocity field");
+    auto texture3d_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
+    velocity_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture3d_format);
+    util::log("\tcreating disance field");
+    distance_field_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture3d_format);
+
+    prepareWallWeightFunction();
+}
+
+/**
+ * Compiles and prepares shader programs
+ */
+void Fluid::compileShaders() {
+    util::log("compiling fluid shaders");
+
+    util::log("\tcompiling fluid distanceField compute shader");
+    distance_field_prog_ = util::compileComputeShader("fluid/distanceField.comp");
+
+    util::log("\tcompiling fluid binVelocity compute shader");
+    bin_velocity_prog_ = util::compileComputeShader("fluid/binVelocity.comp");
+
+    util::log("\tcompiling fluid density compute shader");
+    density_prog_ = util::compileComputeShader("fluid/density.comp");
+
+    util::log("\tcompiling fluid update compute shader");
+    update_prog_ = util::compileComputeShader("fluid/update.comp");
+
+    util::log("\tcompiling fluid geometry shader");
+    geometry_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
+                                              .vertex(loadAsset("fluid/particle.vert"))
+                                              .fragment(loadAsset("fluid/particle.frag"))
+                                              .attribLocation("particleId", 0));
 }
 
 /**
@@ -295,9 +267,13 @@ FluidRef Fluid::setup() {
     util::log("initializing sorter");
     sort_ = Sort::create()->numItems(num_particles_)->gridRes(grid_res_)->binSize(bin_size_);
     sort_->prepareBuffers();
-
     sort_->compileShaders();
+
     compileShaders();
+
+    util::log("initializing marching cube");
+    marching_cube_ = MarchingCube::create()->size(size_);
+    marching_cube_->setup(100);
 
     runDistanceFieldProg();
 
@@ -305,17 +281,7 @@ FluidRef Fluid::setup() {
     return std::make_shared<Fluid>(*this);
 }
 
-/**
- * Generic run shader on particles - one for each
- */
-void Fluid::runProg(ivec3 work_groups) {
-    gl::dispatchCompute(work_groups.x, work_groups.y, work_groups.z);
-    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-}
-
-void Fluid::runProg(int work_groups) { runProg(ivec3(work_groups, 1, 1)); }
-
-void Fluid::runProg() { runProg(num_work_groups_); }
+void Fluid::runProg() { util::runProg(num_work_groups_); }
 
 void Fluid::runDistanceFieldProg() {
     gl::ScopedBuffer scoped_boundary_buffer(boundary_buffer_);
@@ -329,7 +295,7 @@ void Fluid::runDistanceFieldProg() {
     distance_field_prog_->uniform("numBoundaries", int(boundaries_.size()));
     distance_field_prog_->uniform("binSize", bin_size_);
 
-    runProg(ivec3(int(ceil(distance_field_size_ / 4.0f))));
+    util::runProg(ivec3(int(ceil(distance_field_size_ / 4.0f))));
 
     distance_field_->bind(0);
     boundary_buffer_->unbindBase();
@@ -344,7 +310,7 @@ void Fluid::runBinVelocityProg() {
     bin_velocity_prog_->uniform("offsetGrid", 1);
     bin_velocity_prog_->uniform("velocityField", 2);
     bin_velocity_prog_->uniform("gridRes", grid_res_);
-    runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
+    util::runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
 }
 
 /**
@@ -420,6 +386,27 @@ void Fluid::update(double time) {
     velocity_field_->unbind(2);
     distance_field_->bind(3);
     wall_weight_function_->unbind(4);
+
+    marching_cube_->update(num_particles_, 0.5f);
+}
+
+void Fluid::renderGeometry() {
+    gl::SsboRef particle_buffer = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
+    gl::ScopedBuffer scoped_particle_buffer(particle_buffer);
+    particle_buffer->bindBase(0);
+
+    gl::ScopedGlslProg render(geometry_prog_);
+    gl::ScopedVao vao(odd_frame_ ? attributes1_ : attributes2_);
+
+    geometry_prog_->uniform("renderMode", render_mode_);
+    geometry_prog_->uniform("binSize", bin_size_);
+    geometry_prog_->uniform("gridRes", grid_res_);
+    const float pointRadius = particle_radius_ * (render_mode_ ? 6.0f : 3.5f);
+    geometry_prog_->uniform("pointRadius", pointRadius);
+    geometry_prog_->uniform("pointScale", 650.0f);
+
+    gl::context()->setDefaultShaderVars();
+    gl::drawArrays(GL_POINTS, 0, num_particles_);
 }
 
 /**
@@ -433,27 +420,12 @@ void Fluid::draw() {
     vec3 offset = vec3(-half, -half, -half);
     gl::translate(offset.x, offset.y, offset.z);
 
+    // renderGeometry();
+
+    marching_cube_->draw();
+
     container_->draw();
 
-    gl::ScopedBuffer scoped_particle_buffer(odd_frame_ ? particle_buffer2_ : particle_buffer1_);
-    if (odd_frame_) {
-        particle_buffer1_->bindBase(1);
-    } else {
-        particle_buffer1_->bindBase(0);
-    }
-
-    gl::ScopedGlslProg render(render_prog_);
-    gl::ScopedVao vao(odd_frame_ ? attributes1_ : attributes2_);
-
-    render_prog_->uniform("renderMode", render_mode_);
-    render_prog_->uniform("binSize", bin_size_);
-    render_prog_->uniform("gridRes", grid_res_);
-    const float pointRadius = particle_radius_ * (render_mode_ ? 6.0f : 3.5f);
-    render_prog_->uniform("pointRadius", pointRadius);
-    render_prog_->uniform("pointScale", 650.0f);
-
-    gl::context()->setDefaultShaderVars();
-    gl::drawArrays(GL_POINTS, 0, num_particles_);
     gl::popMatrices();
 }
 

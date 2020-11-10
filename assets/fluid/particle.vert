@@ -3,7 +3,7 @@
 
 const float FLOAT_MIN = 1.175494351e-38;
 const float GRID_EPS = 0.000001;
-const float MAX_DENSITY = 50.0;
+const float MAX_DENSITY = 0.2;
 const vec3 PARTICLE_COLOR = vec3(0.0, 0.0, 0.6);
 
 layout(location = 0) in int particleID;
@@ -11,6 +11,7 @@ out vec3 vColor;
 out vec3 vPosition;
 
 uniform mat4 ciModelViewProjection;
+uniform mat4 ciViewMatrix;
 uniform int renderMode;
 uniform float binSize;
 uniform int gridRes;
@@ -24,7 +25,7 @@ struct Particle {
     float pressure;
 };
 
-layout(std430, binding = 1) buffer Particles {
+layout(std430, binding = 0) restrict readonly buffer Particles {
     Particle particles[];
 };
 
@@ -46,7 +47,7 @@ void main() {
         case 3:
             const float norm = p.density / MAX_DENSITY;
             invalid = (p.density <= 0.0) || isnan(p.density) || isinf(p.density);
-            vColor = mix(vec3(0, norm, 0), vec3(1, 0, 0), float(invalid));
+            vColor = mix(vec3(0, 0, norm), vec3(1, 0, 0), float(invalid));
             break;
         case 4:
             const ivec3 binCoord = ivec3(floor(p.position / binSize));
@@ -56,7 +57,7 @@ void main() {
             vColor = PARTICLE_COLOR;
     }
     
-    vec4 position = ciModelViewProjection * vec4(p.position, 1);
+    vec4 position = ciViewMatrix * vec4(p.position, 1);
 
     const float dist = max(length(position.xyz), FLOAT_MIN);
 

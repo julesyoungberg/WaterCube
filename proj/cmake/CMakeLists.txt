@@ -14,6 +14,7 @@ include("${CINDER_PATH}/proj/cmake/modules/cinderMakeApp.cmake")
 list(APPEND SOURCES
 	${APP_PATH}/src/core/Container.cpp
 	${APP_PATH}/src/core/Fluid.cpp
+	${APP_PATH}/src/core/MarchingCube.cpp
 	${APP_PATH}/src/core/Scene.cpp
 	${APP_PATH}/src/core/Sort.cpp
 	${APP_PATH}/src/core/util.cpp

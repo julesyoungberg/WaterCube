@@ -1,0 +1,134 @@
+#version 460 core
+#extension GL_ARB_compute_shader : enable
+#extension GL_ARB_shader_storage_buffer_object : enable
+
+#define THREAD 8
+
+layout(local_size_x = THREAD, local_size_y = THREAD, local_size_z = THREAD) in;
+
+layout(location = 0, r32ui) uniform restrict uimage3D densityField;
+uniform float threshold;
+uniform float size;
+uniform int res;
+uniform int border;
+
+struct Grid {
+	vec3 position;
+	vec3 normal;
+};
+
+layout(std430, binding = 8) restrict buffer grids {
+	Grid grid[];
+};
+
+layout(std430, binding = 9) restrict readonly buffer CubeEdgeFlag {
+	int cubeEdgeFlags[];
+};
+
+layout(std430, binding = 10) restrict readonly buffer TriangleConnectionTable {
+	int triangleConnectionTable[];
+};
+
+// edgeConnection lists the index of the endpoint vertices for each of the 12 edges of the cube
+const ivec2 edgeConnection[12] = {
+	ivec2(0,1), ivec2(1,2), ivec2(2,3), ivec2(3,0), ivec2(4,5), ivec2(5,6), ivec2(6,7), ivec2(7,4), ivec2(0,4), ivec2(1,5), ivec2(2,6), ivec2(3,7)
+};
+
+// edgeDirection lists the direction vector (vertex1-vertex0) for each edge in the cube
+const vec3 edgeDirection[12] = {
+	vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(-1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f),
+	vec3(1.0f, 0.0f, 0.0f), vec3(0.0f, 1.0f, 0.0f), vec3(-1.0f, 0.0f, 0.0f), vec3(0.0f, -1.0f, 0.0f),
+	vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f), vec3(0.0f, 0.0f, 1.0f),  vec3(0.0f,  0.0f, 1.0f)
+};
+
+// vertexOffset lists the positions, relative to vertex0, of each of the 8 vertices of a cube
+const vec3 vertexOffset[8] = {
+	vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), vec3(0, 1, 0),
+	vec3(0, 0, 1), vec3(1, 0, 1), vec3(1, 1, 1), vec3(0, 1, 1)
+};
+
+void fillCube(uint x, uint y, uint z, out float cube[8]) {
+	cube[0] = uintBitsToFloat(imageLoad(densityField, ivec3(x, y, z)).x);
+	cube[1] = uintBitsToFloat(imageLoad(densityField, ivec3(x + 1, y, z)).x);
+	cube[2] = uintBitsToFloat(imageLoad(densityField, ivec3(x + 1, y + 1, z)).x);
+	cube[3] = uintBitsToFloat(imageLoad(densityField, ivec3(x, y + 1, z)).x);
+
+	cube[4] = uintBitsToFloat(imageLoad(densityField, ivec3(x, y, z + 1)).x);
+	cube[5] = uintBitsToFloat(imageLoad(densityField, ivec3(x + 1, y, z + 1)).x);
+	cube[6] = uintBitsToFloat(imageLoad(densityField, ivec3(x + 1, y + 1, z + 1)).x);
+	cube[7] = uintBitsToFloat(imageLoad(densityField, ivec3(x, y + 1, z + 1)).x);
+}
+
+// GetOffset finds the approximate point of intersection of the surface
+// between two points with the values v1 and v2
+float getOffset(float v1, float v2) {
+	float delta = v2 - v1;
+	return (delta == 0.0f) ? 0.5f : (threshold - v1) / delta;
+}
+
+vec3 coordToPoint(vec3 c) {
+    return vec3((c / vec3(res)) * vec3(size));
+}
+
+void main() {
+	const ivec3 pos = ivec3(gl_GlobalInvocationID);
+	if (any(greaterThanEqual(pos, ivec3(res - border)))) {
+		return;
+	}
+
+	uint idx = pos.x + pos.y * res + pos.z * res * res;
+
+	float cube[8];
+	fillCube(pos.x, pos.y, pos.z, cube);
+	// if(cube[0] > 0.5) grid[idx].pos.xyz = pos.xyz; return;
+
+	//Find which vertices are inside of the surface and which are outside
+	int flagIndex = 0;
+	for (int i = 0; i < 8; i++) {
+		if (cube[i] <= threshold) {
+			flagIndex |= (1 << i);
+		}
+	}
+
+	//Find which edges are intersected by the surface
+	int edgeFlags = cubeEdgeFlags[flagIndex];
+
+	// no connections, return
+	if (edgeFlags == 0) {
+		return;
+	}
+
+	//Find the point of intersection of the surface with each edge
+	vec3 edgeVertex[12];
+	for (int i = 0; i < 12; i++) {
+		//if there is an intersection on this edge
+		if ((edgeFlags & (1 << i)) != 0) {
+			float offset = getOffset(cube[edgeConnection[i].x], cube[edgeConnection[i].y]);
+			edgeVertex[i] = pos + (vertexOffset[edgeConnection[i].x] + offset * edgeDirection[i]);
+		}
+	}
+
+	//Save the triangles that were found. There can be up to five per cube
+	for (int i = 0; i < 5; i++) {
+		//If the connection table is not -1 then this a triangle.
+		if (triangleConnectionTable[flagIndex * 16 + 3 * i] >= 0) {
+			uint ia = idx * 15 + (3 * i + 0);
+			uint ib = idx * 15 + (3 * i + 1);
+			uint ic = idx * 15 + (3 * i + 2);
+
+			vec3 position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 0)]];
+			grid[ia].position = coordToPoint(position);
+
+			position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 1)]];
+			grid[ib].position = coordToPoint(position);
+
+			position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 2)]];
+			grid[ic].position = coordToPoint(position);
+
+			vec3 ab = grid[ia].position - grid[ib].position;
+			vec3 ac = grid[ia].position - grid[ic].position;
+			vec3 normal = normalize(cross(ab, ac));
+			grid[ia].normal = grid[ib].normal = grid[ic].normal = normal;
+		}
+	}
+}

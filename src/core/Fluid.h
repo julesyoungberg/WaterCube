@@ -9,12 +9,14 @@
 #include "cinder/Utilities.h"
 #include "cinder/app/App.h"
 #include "cinder/app/RendererGl.h"
+#include "cinder/gl/Shader.h"
 #include "cinder/gl/Ssbo.h"
 #include "cinder/gl/gl.h"
 #include "cinder/params/Params.h"
 
 #include "./BaseObject.h"
 #include "./Container.h"
+#include "./MarchingCube.h"
 #include "./Sort.h"
 #include "./util.h"
 
@@ -97,7 +99,7 @@ protected:
     std::vector<Plane> boundaries_;
 
     gl::GlslProgRef distance_field_prog_, bin_velocity_prog_, density_prog_, update_prog_;
-    gl::GlslProgRef render_prog_, geometry_prog, shading_prog_;
+    gl::GlslProgRef geometry_prog_;
 
     gl::SsboRef particle_buffer1_, particle_buffer2_, boundary_buffer_;
     gl::Texture1dRef wall_weight_function_;
@@ -106,6 +108,7 @@ protected:
     gl::VaoRef attributes1_, attributes2_;
 
     SortRef sort_;
+    MarchingCubeRef marching_cube_;
 
 private:
     void generateInitialParticles();
@@ -113,21 +116,14 @@ private:
     void prepareWallWeightFunction();
     void prepareBuffers();
 
-    void compileDistanceFieldProg();
-    void compileBinVelocityProg();
-    void compileDensityProg();
-    void compileUpdateProg();
-    void compileRenderProg();
     void compileShaders();
 
-    void runProg(ivec3 work_groups);
-    void runProg(int work_groups);
     void runProg();
     void runDistanceFieldProg();
     void runBinVelocityProg();
     void runDensityProg();
     void runUpdateProg(float time_step);
-    void runRenderProg();
+    void renderGeometry();
 
     FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
 };

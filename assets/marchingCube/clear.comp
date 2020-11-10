@@ -1,0 +1,27 @@
+#version 460 core
+#extension GL_ARB_compute_shader : enable
+#extension GL_ARB_shader_storage_buffer_object : enable
+
+#define THREAD 1024
+
+layout(local_size_x = THREAD, local_size_y = 1, local_size_z = 1) in;
+
+uniform int count;
+
+struct Grid {
+	vec3 position;
+	vec3 normal;
+};
+
+layout(std430, binding = 8) buffer grids {
+	Grid grid[];
+};
+
+void main() {
+	uint idx = gl_GlobalInvocationID.x;
+	if (idx >= count) return;
+
+	// init
+	grid[idx].position = vec3(0, 0, 0);
+	grid[idx].normal = vec3(0, 0, 0);
+}

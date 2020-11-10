@@ -43,44 +43,23 @@ void Sort::prepareBuffers() {
 }
 
 /**
- * Compile count compute shader
- */
-void Sort::compileCountProg() {
-    util::log("\tcompiling sorter count shader");
-    count_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/count.comp")));
-}
-
-/**
- * Compile scan compute shader
- */
-void Sort::compileScanProg() {
-    util::log("\tcompiling sorter scan shader");
-    scan_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/scan.comp")));
-}
-
-/**
- * Compile reorder compute shader
- */
-void Sort::compileReorderProg() {
-    util::log("\tcompiling sorter reorder shader");
-    reorder_prog_ = gl::GlslProg::create(gl::GlslProg::Format().compute(loadAsset("sort/reorder.comp")));
-}
-
-/**
  * Compiles and prepares shader programs
- * TODO: handle error
  */
 void Sort::compileShaders() {
     util::log("compiling sort shaders");
 
-    compileCountProg();
-    compileScanProg();
-    compileReorderProg();
+    util::log("\tcompiling sorter count shader");
+    count_prog_ = util::compileComputeShader("sort/count.comp");
+
+    util::log("\tcompiling sorter scan shader");
+    scan_prog_ = util::compileComputeShader("sort/scan.comp");
+
+    util::log("\tcompiling sorter reorder shader");
+    reorder_prog_ = util::compileComputeShader("sort/reorder.comp");
 }
 
 void Sort::clearCountGrid() {
     const std::uint32_t clear_value = 0;
-    // glClearBufferData(count_buffer_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
     glClearTexImage(count_grid_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
 }
 
@@ -89,17 +68,7 @@ void Sort::clearCount() {
     glClearBufferData(count_buffer_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
 }
 
-/**
- * Generic run shader on particles - one for each
- */
-void Sort::runProg(ivec3 work_groups) {
-    gl::dispatchCompute(work_groups.x, work_groups.y, work_groups.z);
-    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-}
-
-void Sort::runProg(int work_groups) { runProg(ivec3(work_groups, 1, 1)); }
-
-void Sort::runProg() { runProg(int(ceil(float(num_items_) / float(WORK_GROUP_SIZE)))); }
+void Sort::runProg() { util::runProg(int(ceil(float(num_items_) / float(WORK_GROUP_SIZE)))); }
 
 /**
  * Run bucket count compute shader
@@ -123,7 +92,7 @@ void Sort::runScanProg() {
     scan_prog_->uniform("offsetGrid", 1);
     scan_prog_->uniform("gridRes", grid_res_);
     gl::ScopedBuffer scoped_count_buffer(count_buffer_);
-    runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
+    util::runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
 }
 
 /**

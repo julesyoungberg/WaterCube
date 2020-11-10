@@ -1,12 +1,12 @@
 #version 460 core
 #extension GL_ARB_compute_shader : enable
-#extension GL_ARB_shader_storage_buffer_object : enable
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
-layout(location = 0, r32ui) uniform restrict uimage3D countGrid;
-uniform float binSize;
+layout(location = 0, r32ui) uniform restrict uimage3D densityField;
+uniform float size;
 uniform int numItems;
+uniform int res;
 
 struct Particle {
     vec3 position;
@@ -19,15 +19,18 @@ layout(std430, binding = 1) restrict readonly buffer Particles {
     Particle particles[];
 };
 
-// Increment the particle's corresponding bin by 1
+ivec3 pointToBinCoord(vec3 p) {
+    return ivec3((p / size) * ivec3(res));
+}
+
 void main() {
     const uint particleID = gl_GlobalInvocationID.x;
     if (particleID >= numItems) {
         return;
     }
 
-    const vec3 p = particles[particleID].position;
-    const ivec3 binCoord = ivec3(p / binSize);
+    const Particle p = particles[particleID];
+    const ivec3 binCoord = pointToBinCoord(p.position);
 
-    imageAtomicAdd(countGrid, binCoord, 1);
+    imageAtomicAdd(densityField, binCoord, floatBitsToUint(p.density));
 }

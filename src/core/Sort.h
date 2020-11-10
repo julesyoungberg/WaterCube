@@ -4,6 +4,7 @@
 #include <memory>
 
 #include "cinder/app/App.h"
+#include "cinder/gl/Shader.h"
 #include "cinder/gl/Ssbo.h"
 #include "cinder/gl/gl.h"
 
@@ -13,8 +14,6 @@ using namespace ci;
 using namespace ci::app;
 
 namespace core {
-
-const int WORK_GROUP_SIZE = 128;
 
 typedef std::shared_ptr<class Sort> SortRef;
 
@@ -46,15 +45,9 @@ protected:
     gl::Texture3dRef count_grid_, offset_grid_;
 
 private:
-    void compileCountProg();
-    void compileScanProg();
-    void compileReorderProg();
-
     void clearCountGrid();
     void clearCount();
 
-    void runProg(ivec3 work_groups);
-    void runProg(int work_groups);
     void runProg();
     void runCountProg();
     void runScanProg();

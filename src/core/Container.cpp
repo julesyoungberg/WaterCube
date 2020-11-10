@@ -6,10 +6,10 @@ using namespace ci::app;
 using namespace core;
 
 Container::Container(const std::string& name, float size) : PhysicalObject<Container>(name), size_(size) {
-    render_prog_ = gl::GlslProg::create(loadAsset("container.vert"), loadAsset("container.frag"));
+    // render_prog_ = gl::GlslProg::create(loadAsset("container.vert"), loadAsset("container.frag"));
 
-    auto geometry = geom::Cube();
-    batch_ = gl::Batch::create(geometry, render_prog_);
+    // auto geometry = geom::Cube();
+    // batch_ = gl::Batch::create(geometry, render_prog_);
 
     vertices_ = {
         vec3(0, 0, size_), vec3(size_, 0, size_), vec3(size_, size_, size_), vec3(0, size_, size_),
@@ -22,6 +22,8 @@ Container::Container(const std::string& name, float size) : PhysicalObject<Conta
     edges_ = {ivec2(0, 1), ivec2(0, 3), ivec2(0, 4), ivec2(1, 2), ivec2(1, 5), ivec2(2, 3),
               ivec2(2, 6), ivec2(3, 7), ivec2(4, 5), ivec2(4, 7), ivec2(5, 6), ivec2(6, 7)};
 }
+
+void Container::setup() {}
 
 void Container::update(double time) {}
 

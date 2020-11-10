@@ -22,6 +22,7 @@ class Container : public PhysicalObject<Container> {
 public:
     Container(const std::string& name, float size);
 
+    void setup();
     void update(double time) override;
     void draw() override;
     void reset() override;

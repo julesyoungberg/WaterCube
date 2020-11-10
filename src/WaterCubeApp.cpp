@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(10e4);
+const int NUM_PARTICLES = static_cast<int>(50e4);
 
 class WaterCubeApp : public App {
 public:
@@ -81,13 +81,14 @@ void WaterCubeApp::update() {
 }
 
 void WaterCubeApp::draw() {
+    gl::clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     gl::clear(Color(0.2f, 0.2f, 0.3f));
     gl::setMatricesWindowPersp(getWindowSize());
     gl::setMatrices(cam_);
     gl::rotate(scene_rotation_);
 
-    params_->draw();
     scene_->draw();
+    params_->draw();
 
     vec2 window = app::getWindowSize();
     gl::setMatricesWindow(window);

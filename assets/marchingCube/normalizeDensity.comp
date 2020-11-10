@@ -1,0 +1,20 @@
+#version 460 core
+#extension GL_ARB_compute_shader : enable
+#extension GL_ARB_shader_storage_buffer_object : enable
+
+const float MAX_DENSITY = 0.1;
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+layout(location = 0, r32ui) uniform restrict uimage3D densityField;
+uniform int res;
+
+void main() {
+    const ivec3 binCoord = ivec3(gl_GlobalInvocationID);
+	if (any(greaterThanEqual(binCoord, ivec3(res)))) {
+		return;
+	}
+
+    const float density = uintBitsToFloat(imageLoad(densityField, binCoord).x);
+    imageStore(densityField, binCoord, ivec4(floatBitsToUint(density / MAX_DENSITY)));
+}
