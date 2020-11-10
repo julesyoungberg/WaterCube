@@ -147,16 +147,18 @@ void Sort::runLinearScanProg() {
     gl::ScopedGlslProg prog(linear_scan_prog_);
 
     glActiveTexture(GL_TEXTURE0);
-    glUniform1i(glGetUniformLocation(linear_scan_prog_->getHandle(), "countGrid"), 0);
-    glBindImageTexture(0, count_grid_->getId(), 0, GL_TRUE, 0, GL_READ_ONLY, GL_R32UI);
+    glUniform1i(glGetUniformLocation(linear_scan_prog_->getHandle(), "offsetGrid"), 0);
+    glBindImageTexture(0, offset_grid_->getId(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
 
-    glActiveTexture(GL_TEXTURE0 + 1);
-    glUniform1i(glGetUniformLocation(linear_scan_prog_->getHandle(), "offsetGrid"), 1);
-    glBindImageTexture(1, offset_grid_->getId(), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32UI);
+    count_grid_->bind(1);
 
-    scan_prog_->uniform("gridRes", grid_res_);
+    linear_scan_prog_->uniform("countGrid", 1);
+    linear_scan_prog_->uniform("gridRes", grid_res_);
+
     util::runProg(1);
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    count_grid_->unbind(0);
 }
 
 /**
@@ -165,18 +167,23 @@ void Sort::runLinearScanProg() {
 void Sort::runScanProg() {
     gl::ScopedGlslProg prog(scan_prog_);
 
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(glGetUniformLocation(scan_prog_->getHandle(), "countGrid"), 0);
-    glBindImageTexture(0, count_grid_->getId(), 0, GL_TRUE, 0, GL_READ_ONLY, GL_R32UI);
+    gl::ScopedBuffer scoped_count_buffer(count_buffer_);
+    count_buffer_->bindBase(0);
 
     glActiveTexture(GL_TEXTURE0 + 1);
     glUniform1i(glGetUniformLocation(scan_prog_->getHandle(), "offsetGrid"), 1);
     glBindImageTexture(1, offset_grid_->getId(), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32UI);
 
+    count_grid_->bind(2);
+
+    scan_prog_->uniform("countGrid", 2);
     scan_prog_->uniform("gridRes", grid_res_);
-    gl::ScopedBuffer scoped_count_buffer(count_buffer_);
+
     util::runProg(ivec3(ceil(num_bins_ / 4.0f)));
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+
+    count_grid_->unbind(2);
+    count_buffer_->unbindBase();
 }
 
 /**
@@ -191,19 +198,19 @@ void Sort::runReorderProg(gl::SsboRef in_particles, gl::SsboRef out_particles) {
     gl::ScopedBuffer scoped_out_particles(out_particles);
     out_particles->bindBase(1);
 
-    glActiveTexture(GL_TEXTURE0 + 2);
-    glUniform1i(glGetUniformLocation(reorder_prog_->getHandle(), "countGrid"), 2);
-    glBindImageTexture(2, count_grid_->getId(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-
-    glActiveTexture(GL_TEXTURE0 + 3);
-    glUniform1i(glGetUniformLocation(reorder_prog_->getHandle(), "offsetGrid"), 3);
-    glBindImageTexture(3, offset_grid_->getId(), 0, GL_TRUE, 0, GL_READ_ONLY, GL_R32UI);
+    count_grid_->bind(2);
+    offset_grid_->bind(3);
+    reorder_prog_->uniform("countGrid", 2);
+    reorder_prog_->uniform("offsetGrid", 3);
 
     reorder_prog_->uniform("binSize", bin_size_);
     reorder_prog_->uniform("numItems", num_items_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+
+    count_grid_->unbind(2);
+    offset_grid_->unbind(3);
 
     in_particles->unbindBase();
     out_particles->unbindBase();
@@ -226,12 +233,12 @@ void Sort::run(gl::SsboRef in_particles, gl::SsboRef out_particles) {
     runCountProg(in_particles);
     // runCpuCount(in_particles);
 
-    // clearOffsetGrid();
-    // if (use_linear_scan_) {
-    //     runLinearScanProg();
-    // } else {
-    //     runScanProg();
-    // }
+    clearOffsetGrid();
+    if (use_linear_scan_) {
+        runLinearScanProg();
+    } else {
+        runScanProg();
+    }
 
     // clearCountGrid();
     // runReorderProg(in_particles, out_particles);

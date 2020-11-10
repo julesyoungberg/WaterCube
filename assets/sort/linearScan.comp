@@ -4,12 +4,12 @@
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-layout(binding = 0, r32ui) uniform restrict readonly uimage3D countGrid;
-layout(binding = 1, r32ui) uniform restrict writeonly uimage3D offsetGrid;
+layout(binding = 0, r32ui) uniform restrict uimage3D offsetGrid;
+layout(binding = 1, r32ui) uniform restrict readonly uimage3D countGrid;
 uniform int gridRes;
 
 void main() {
-    uint prefix = 1000;
+    uint prefix = 0;
 
     for (int z = 0; z < gridRes; z++) {
         for (int y = 0; y < gridRes; y++) {

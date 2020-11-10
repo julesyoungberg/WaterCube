@@ -27,7 +27,8 @@ void main() {
     const uint count = imageLoad(countGrid, coord).x;
     const uint offset = imageLoad(offsetGrid, coord).x;
 
-    const vec3 color = vec3(0, float(count) / float(numItems), float(offset) / float(numItems));
+    const float n = float(numItems);
+    const vec3 color = vec3(0, float(count) / n, float(offset) / n);
     const bool invalid = any(lessThan(color, vec3(0))) || any(isnan(color)) || any(isinf(color));
 
     vPosition = coordToPoint(coord) + vec3(binSize / 2.0);

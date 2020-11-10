@@ -438,9 +438,9 @@ void Fluid::update(double time) {
     // runDensityProg(out_particles);
     // runUpdateProg(out_particles, float(time));
 
-    if (render_mode_ == 5) {
-        marching_cube_->update(out_particles, num_particles_, 0.5f);
-    }
+    // if (render_mode_ == 5) {
+    //     marching_cube_->update(out_particles, num_particles_, 0.5f);
+    // }
 }
 
 void Fluid::renderGeometry() {
