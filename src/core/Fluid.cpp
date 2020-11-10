@@ -2,10 +2,21 @@
 
 using namespace core;
 
-Fluid::Fluid(const std::string& name)
-    : BaseObject(name), size_(1.0f), num_particles_(1000), grid_res_(7), position_(0), gravity_(0), // -9.8f),
-      particle_mass_(0.02f), kernel_radius_(0.1828f), viscosity_coefficient_(0.035f), stiffness_(250.0f),
-      rest_density_(998.27f), rest_pressure_(0), render_mode_(3), particle_radius_(0.0457f) {}
+Fluid::Fluid(const std::string& name) : BaseObject(name) {
+    size_ = 1.0f;
+    num_particles_ = 1000;
+    grid_res_ = 8;
+    position_ = vec3(0);
+    gravity_ = -0.05f;
+    particle_mass_ = 0.05f;
+    kernel_radius_ = 0.1828f;
+    viscosity_coefficient_ = 0.035f;
+    stiffness_ = 250.0f;
+    rest_pressure_ = 0;
+    render_mode_ = 3;
+    particle_radius_ = 0.05f; // 0.0457f;
+    rest_density_ = 400;      // 998.27f
+}
 
 Fluid::~Fluid() {}
 
@@ -243,7 +254,7 @@ FluidRef Fluid::setup() {
     num_bins_ = int(pow(grid_res_, 3));
     distance_field_size_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
-    kernel_radius_ = bin_size_;
+    kernel_radius_ = bin_size_ / 2.0f;
 
     // Parti of equation (8) from Harada
     pressure_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
@@ -386,7 +397,9 @@ void Fluid::update(double time) {
     distance_field_->bind(3);
     wall_weight_function_->unbind(4);
 
-    marching_cube_->update(num_particles_, 0.5f);
+    if (render_mode_ == 5) {
+        marching_cube_->update(num_particles_, 0.5f);
+    }
 }
 
 void Fluid::renderGeometry() {
@@ -419,9 +432,11 @@ void Fluid::draw() {
     vec3 offset = vec3(-half, -half, -half);
     gl::translate(offset.x, offset.y, offset.z);
 
-    // renderGeometry();
-
-    marching_cube_->draw();
+    if (render_mode_ != 5) {
+        renderGeometry();
+    } else {
+        marching_cube_->draw();
+    }
 
     container_->draw();
 

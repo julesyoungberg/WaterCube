@@ -59,7 +59,7 @@ void MarchingCube::prepareBuffers() {
     density_field_ = gl::Texture3d::create(res, res, res, density_format);
 
     util::log("\tcreating density particles");
-    particles_.resize(pow(res, 3));
+    particles_.resize(int(pow(res, 3)));
     for (int z = 0; z < res; z++) {
         for (int y = 0; y < res; y++) {
             for (int x = 0; x < res; x++) {
@@ -115,6 +115,7 @@ void MarchingCube::setup(const int resolution) {
     resolution_ = resolution;
     prepareBuffers();
     compileShaders();
+    clearDensity();
 }
 
 void MarchingCube::runClearProg() {
@@ -169,7 +170,7 @@ void MarchingCube::runMarchingCubeProg(float threshold, const ivec3 thread) {
 }
 
 void MarchingCube::update(int num_items, float threshold) {
-    const ivec3 thread = ivec3(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE));
+    const ivec3 thread = ivec3(int(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE)));
 
     density_field_->bind(0);
 
@@ -195,6 +196,7 @@ void MarchingCube::render() {
 }
 
 void MarchingCube::renderDensity() {
+    gl::pointSize(2);
     gl::ScopedBuffer particle_buffer(particle_buffer_);
     particle_buffer_->bindBase(0);
 

@@ -2,7 +2,11 @@
 
 using namespace core;
 
-Sort::Sort() : num_items_(0), num_bins_(1) {}
+Sort::Sort() {
+    num_items_ = 0;
+    num_bins_ = 1;
+    use_linear_scan_ = false;
+}
 
 Sort::~Sort() {}
 
@@ -51,6 +55,9 @@ void Sort::compileShaders() {
     util::log("\tcompiling sorter count shader");
     count_prog_ = util::compileComputeShader("sort/count.comp");
 
+    util::log("\tcompiling sorter linear scan shader");
+    linear_scan_prog_ = util::compileComputeShader("sort/linearScan.comp");
+
     util::log("\tcompiling sorter scan shader");
     scan_prog_ = util::compileComputeShader("sort/scan.comp");
 
@@ -82,6 +89,15 @@ void Sort::runCountProg() {
     runProg();
 }
 
+void Sort::runLinearScanProg() {
+    clearCount();
+    gl::ScopedGlslProg prog(linear_scan_prog_);
+    scan_prog_->uniform("countGrid", 0);
+    scan_prog_->uniform("offsetGrid", 1);
+    scan_prog_->uniform("gridRes", grid_res_);
+    util::runProg(1);
+}
+
 /**
  * Run bucket scan compute shader
  */
@@ -111,7 +127,13 @@ void Sort::run() {
     offset_grid_->bind(1);
 
     runCountProg();
-    runScanProg();
+
+    if (use_linear_scan_) {
+        runLinearScanProg();
+    } else {
+        runScanProg();
+    }
+
     runReorderProg();
 
     count_grid_->unbind(0);

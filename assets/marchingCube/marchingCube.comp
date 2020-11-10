@@ -100,7 +100,7 @@ void main() {
 	// Find the point of intersection of the surface with each edge
 	vec3 edgeVertex[12];
 	for (int i = 0; i < 12; i++) {
-		//if there is an intersection on this edge
+		// if there is an intersection on this edge
 		if ((edgeFlags & (1 << i)) != 0) {
 			ivec2 edge = edgeConnection[i];
 			float offset = getOffset(cube[edge.x], cube[edge.y]);

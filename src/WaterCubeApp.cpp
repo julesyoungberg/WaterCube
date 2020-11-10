@@ -39,7 +39,7 @@ public:
 void WaterCubeApp::setup() {
     run_once_ = false;
     running_ = true;
-    size_ = 5.0f;
+    size_ = 1.0f;
     prev_time_ = 0.0;
     first_frame_ = true;
 

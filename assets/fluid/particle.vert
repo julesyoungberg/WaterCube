@@ -3,7 +3,7 @@
 
 const float FLOAT_MIN = 1.175494351e-38;
 const float GRID_EPS = 0.000001;
-const float MAX_DENSITY = 0.2;
+const float MAX_DENSITY = 2.0;
 const vec3 PARTICLE_COLOR = vec3(0.0, 0.0, 0.6);
 
 layout(location = 0) in int particleID;
@@ -45,9 +45,9 @@ void main() {
             vColor = vec3(speed, speed, 0);
             break;
         case 3:
-            const float norm = uintBitsToFloat(floatBitsToUint(p.density)) / MAX_DENSITY;
+            const float norm = p.density / MAX_DENSITY;
             invalid = (p.density <= 0.0) || isnan(p.density) || isinf(p.density);
-            vColor = mix(vec3(0, 0, norm), vec3(1, 0, 0), float(invalid));
+            vColor = mix(vec3(norm), vec3(1, 0, 0), float(invalid));
             break;
         case 4:
             const ivec3 binCoord = ivec3(floor(p.position / binSize));

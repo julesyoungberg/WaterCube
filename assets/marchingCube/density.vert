@@ -21,8 +21,9 @@ vec3 coordToPoint(ivec3 c) {
 void main() {
     const ivec3 position = particles[particleID];
     const float density = uintBitsToFloat(imageLoad(densityField, position).x);
+    const bool invalid = (density < 0.0) || isnan(density) || isinf(density);
     vPosition = coordToPoint(position);
-    vColor = vec3(density);
+    vColor = mix(vec3(density), vec3(1, 0, 0), float(invalid));
     gl_PointSize = 1;
     gl_Position = ciModelViewProjection * vec4(vPosition, 1);
 }

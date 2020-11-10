@@ -39,8 +39,9 @@ public:
 protected:
     int num_items_, num_bins_, grid_res_;
     float bin_size_;
+    bool use_linear_scan_;
 
-    gl::GlslProgRef count_prog_, scan_prog_, reorder_prog_;
+    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_;
     gl::SsboRef position_buffer_, count_buffer_;
     gl::Texture3dRef count_grid_, offset_grid_;
 
@@ -50,6 +51,7 @@ private:
 
     void runProg();
     void runCountProg();
+    void runLinearScanProg();
     void runScanProg();
     void runReorderProg();
 
