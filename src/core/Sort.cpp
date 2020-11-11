@@ -98,19 +98,15 @@ void Sort::compileShaders() {
 }
 
 void Sort::clearCountGrid() {
-    const std::vector<GLubyte> empty_data(num_bins_, 0);
-    gl::ScopedTextureBind tbScope(count_grid_->getTarget(), count_grid_->getId());
-    glTexSubImage3D(count_grid_->getTarget(), 0, 0, 0, 0, grid_res_, grid_res_, grid_res_, GL_RED, GL_UNSIGNED_INT,
-                    empty_data.data());
-    // glClearTexImage(count_grid_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, clear_value.data());
-    // glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
+    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
+    std::vector<std::uint32_t> data(num_bins_, 0);
+    count_grid_ = gl::Texture3d::create(data.data(), GL_RED_INTEGER, grid_res_, grid_res_, grid_res_, format);
 }
 
 void Sort::clearOffsetGrid() {
-    const std::uint32_t clear_value = 0;
-    gl::ScopedTextureBind tbScope(offset_grid_->getTarget(), offset_grid_->getId());
-    glClearTexImage(offset_grid_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
-    glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
+    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
+    std::vector<std::uint32_t> data(num_bins_, 0);
+    offset_grid_ = gl::Texture3d::create(data.data(), GL_RED_INTEGER, grid_res_, grid_res_, grid_res_, format);
 }
 
 void Sort::clearCount() {
@@ -220,7 +216,7 @@ void Sort::run(gl::SsboRef in_particles, gl::SsboRef out_particles) {
     clearCountGrid();
 
     runCountProg(in_particles);
-    clearCountGrid();
+    // clearCountGrid();
     // runCpuCount(in_particles);
 
     gl::ScopedTextureBind tbScope(count_grid_->getTarget(), count_grid_->getId());
@@ -238,11 +234,11 @@ void Sort::run(gl::SsboRef in_particles, gl::SsboRef out_particles) {
     // util::log("%s", o.c_str());
 
     clearOffsetGrid();
-    // if (use_linear_scan_) {
-    //     runLinearScanProg();
-    // } else {
-    //     runScanProg();
-    // }
+    if (use_linear_scan_) {
+        runLinearScanProg();
+    } else {
+        runScanProg();
+    }
 
     // clearCountGrid();
     // runReorderProg(in_particles, out_particles);
