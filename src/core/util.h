@@ -46,9 +46,13 @@ gl::GlslProgRef compileComputeShader(char* filename);
 
 std::vector<Particle> getParticles(gl::SsboRef particle_buffer, int num_items);
 
+void setParticles(gl::SsboRef particle_buffer, std::vector<Particle> particles);
+
 std::vector<uint32_t> getUints(gl::Texture1dRef tex, int num_items);
 
 std::vector<uint32_t> getUints(gl::Texture3dRef tex, int num_items);
+
+std::vector<vec3> getVecs(gl::Texture3dRef, int num_items);
 
 } // namespace util
 

@@ -21,7 +21,7 @@ vec3 coordToPoint(ivec3 c) {
 
 void main() {
     const ivec3 coord = grid[gridID];
-    vColor = imageLoad(tex, coord).xyz;
+    vColor = imageLoad(tex, coord).xyz / 0.1;
     vPosition = coordToPoint(coord) + vec3(binSize / 2.0);
     gl_Position = ciModelViewProjection * vec4(vPosition, 1);
 }

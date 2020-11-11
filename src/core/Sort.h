@@ -70,11 +70,13 @@ private:
     std::vector<Particle> getParticles(gl::SsboRef particle_buffer);
 
     // CPU STUFF
-    std::vector<int> count(std::vector<Particle> particles);
-    std::vector<int> countOffsets(std::vector<int> counts);
-    std::vector<Particle> reorder(std::vector<Particle> in_particles, std::vector<int> offsets);
-    void saveCountsToTexture(std::vector<int> counts);
-    void saveOffsetsToTexture(std::vector<int> offsets);
+    std::vector<uint32_t> count(std::vector<Particle> particles);
+    std::vector<uint32_t> countOffsets(std::vector<uint32_t> counts);
+    std::vector<Particle> reorder(std::vector<Particle> in_particles, std::vector<uint32_t> offsets);
+    void saveCountsToTexture(std::vector<uint32_t> counts);
+    void saveOffsetsToTexture(std::vector<uint32_t> offsets);
+
+    std::vector<uint32_t> cpuSort(std::vector<Particle> particles, std::vector<uint32_t> offsets);
 
     SortRef thisRef() { return std::make_shared<Sort>(*this); }
 };

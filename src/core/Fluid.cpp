@@ -13,7 +13,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 5;
+    render_mode_ = 1;
     particle_radius_ = 0.05f; // 0.0457f;
     rest_density_ = 4;        // 998.27f
 }
@@ -464,11 +464,19 @@ void Fluid::update(double time) {
 
     sort_->run(in_particles, out_particles);
 
-    // runBinVelocityProg(out_particles);
+    runBinVelocityProg(out_particles);
+
+    auto velocities = util::getVecs(velocity_field_, num_bins_);
+    util::log("bin velocities: ");
+    for (int i = 0; i < 100; i++) {
+        vec3 v = velocities[i];
+        util::log("<%f, %f, %f>", v.x, v.y, v.z);
+    }
+
     // runDensityProg(out_particles);
     // runUpdateProg(out_particles, float(time));
 
-    // if (render_mode_ == 5) {
+    // if (render_mode_ == 7) {
     //     marching_cube_->update(out_particles, num_particles_, 0.5f);
     // }
 }
