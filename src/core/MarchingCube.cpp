@@ -129,8 +129,10 @@ void MarchingCube::runClearProg() {
 
 void MarchingCube::clearDensity() {
     const std::uint32_t clear_value = 0;
+    density_field_->bind(0);
     glClearTexImage(density_field_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
     glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
+    density_field_->unbind(0);
 }
 
 void MarchingCube::runBinDensityProg(gl::SsboRef particles, int num_items) {

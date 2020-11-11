@@ -188,8 +188,8 @@ void Fluid::prepareBuffers() {
     int n = num_particles_;
 
     util::log("\tcreating particle buffers");
-    particle_buffer1_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
-    particle_buffer2_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_STATIC_DRAW);
+    particle_buffer1_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_DYNAMIC_DRAW);
+    particle_buffer2_ = gl::Ssbo::create(n * sizeof(Particle), initial_particles_.data(), GL_DYNAMIC_DRAW);
 
     util::log("\tcreating boundary buffer - boundaries: %d", boundaries_.size());
     boundary_buffer_ = gl::Ssbo::create(boundaries_.size() * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
@@ -218,6 +218,30 @@ void Fluid::prepareBuffers() {
     distance_field_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture3d_format);
 
     prepareWallWeightFunction();
+
+    util::log("\tcreating grid particles");
+    grid_particles_.resize(int(pow(grid_res_, 3)));
+    for (int z = 0; z < grid_res_; z++) {
+        for (int y = 0; y < grid_res_; y++) {
+            for (int x = 0; x < grid_res_; x++) {
+                grid_particles_.push_back(ivec3(x, y, z));
+            }
+        }
+    }
+    grid_buffer_ = gl::Ssbo::create(grid_particles_.size() * sizeof(ivec3), grid_particles_.data(), GL_STATIC_DRAW);
+
+    util::log("\tcreating grid particles ids vbo");
+    std::vector<GLuint> gids(grid_particles_.size());
+    curr_id = 0;
+    std::generate(gids.begin(), gids.end(), [&curr_id]() -> GLuint { return curr_id++; });
+    grid_ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
+
+    util::log("\tcreating grid particles attributes vao");
+    grid_attributes_ = gl::Vao::create();
+    gl::ScopedBuffer scopedDids(grid_ids_vbo_);
+    gl::ScopedVao grid_vao(grid_attributes_);
+    gl::enableVertexAttribArray(0);
+    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 }
 
 /**
@@ -243,6 +267,12 @@ void Fluid::compileShaders() {
                                               .vertex(loadAsset("fluid/particle.vert"))
                                               .fragment(loadAsset("fluid/particle.frag"))
                                               .attribLocation("particleID", 0));
+
+    util::log("\tcompiling render grid shader");
+    render_grid_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
+                                                 .vertex(loadAsset("fluid/grid.vert"))
+                                                 .fragment(loadAsset("fluid/grid.frag"))
+                                                 .attribLocation("gridID", 0));
 }
 
 /**
@@ -464,6 +494,28 @@ void Fluid::renderGeometry() {
     particle_buffer->unbindBase();
 }
 
+void Fluid::renderGrid() {
+    gl::pointSize(10);
+
+    gl::ScopedGlslProg render(render_grid_prog_);
+    gl::ScopedVao vao(grid_attributes_);
+
+    gl::ScopedBuffer grid_buffer(grid_buffer_);
+    grid_buffer_->bindBase(0);
+
+    velocity_field_->bind(1);
+
+    render_grid_prog_->uniform("tex", 1);
+    render_grid_prog_->uniform("binSize", bin_size_);
+    render_grid_prog_->uniform("gridRes", grid_res_);
+    render_grid_prog_->uniform("size", size_);
+
+    gl::context()->setDefaultShaderVars();
+    gl::drawArrays(GL_POINTS, 0, grid_particles_.size());
+
+    velocity_field_->unbind(1);
+}
+
 /**
  * Draw simulation logic
  */
@@ -478,6 +530,8 @@ void Fluid::draw() {
     if (render_mode_ == 5) {
         sort_->renderGrid(size_);
     } else if (render_mode_ == 6) {
+        renderGrid();
+    } else if (render_mode_ == 7) {
         marching_cube_->draw();
     } else {
         renderGeometry();

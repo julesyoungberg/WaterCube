@@ -30,6 +30,8 @@ public:
     void prepareBuffers();
     void compileShaders();
     void run(gl::SsboRef in_particles, gl::SsboRef out_particles);
+    std::vector<Particle> runCpu(std::vector<Particle> in_particles);
+    void runCpu(gl::SsboRef in_particles_buffer, gl::SsboRef out_particles_buffer);
     void renderGrid(float size);
 
     gl::Texture3dRef getCountGrid() { return count_grid_; }
@@ -61,7 +63,13 @@ private:
     void runScanProg();
     void runReorderProg(gl::SsboRef in_particles, gl::SsboRef out_particles);
 
-    void runCpuCount(gl::SsboRef particle_buffer);
+    std::vector<Particle> getParticles(gl::SsboRef particle_buffer);
+
+    std::vector<int> count(std::vector<Particle> particles);
+    std::vector<int> countOffsets(std::vector<int> counts);
+    std::vector<Particle> reorder(std::vector<Particle> in_particles, std::vector<int> offsets);
+    void saveCountsToTexture(std::vector<int> counts);
+    void saveOffsetsToTexture(std::vector<int> offsets);
 
     SortRef thisRef() { return std::make_shared<Sort>(*this); }
 };

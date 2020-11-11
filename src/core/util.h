@@ -44,6 +44,8 @@ void runProg(int work_groups);
 
 gl::GlslProgRef compileComputeShader(char* filename);
 
+std::vector<Particle> getParticles(gl::SsboRef particle_buffer, int num_items);
+
 } // namespace util
 
 } // namespace core

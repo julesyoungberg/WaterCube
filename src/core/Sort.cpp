@@ -98,19 +98,19 @@ void Sort::compileShaders() {
 }
 
 void Sort::clearCountGrid() {
-    const std::uint32_t clear_value = 0;
-    count_grid_->bind(0);
-    glClearTexImage(count_grid_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
-    glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-    count_grid_->unbind(0);
+    const std::vector<GLubyte> empty_data(num_bins_, 0);
+    gl::ScopedTextureBind tbScope(count_grid_->getTarget(), count_grid_->getId());
+    glTexSubImage3D(count_grid_->getTarget(), 0, 0, 0, 0, grid_res_, grid_res_, grid_res_, GL_RED, GL_UNSIGNED_INT,
+                    empty_data.data());
+    // glClearTexImage(count_grid_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, clear_value.data());
+    // glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
 }
 
 void Sort::clearOffsetGrid() {
     const std::uint32_t clear_value = 0;
-    offset_grid_->bind(0);
+    gl::ScopedTextureBind tbScope(offset_grid_->getTarget(), offset_grid_->getId());
     glClearTexImage(offset_grid_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
     glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-    offset_grid_->unbind(0);
 }
 
 void Sort::clearCount() {
@@ -216,32 +216,115 @@ void Sort::runReorderProg(gl::SsboRef in_particles, gl::SsboRef out_particles) {
     out_particles->unbindBase();
 }
 
-void Sort::runCpuCount(gl::SsboRef particle_buffer) {
-    GLuint particles_buffer;
-    std::vector<Particle> particles(num_items_);
-    glGetBufferSubData(particle_buffer->getTarget(), 0, num_items_ * sizeof(Particle), particles.data());
-    for (auto const& p : particles) {
-        const ivec3 coord = ivec3(p.position / bin_size_);
-        util::log("particle: <%f, %f, %f> - bin: <%d, %d, %d>", p.position.x, p.position.y, p.position.z, coord.x,
-                  coord.y, coord.z);
-    }
-}
-
 void Sort::run(gl::SsboRef in_particles, gl::SsboRef out_particles) {
     clearCountGrid();
 
     runCountProg(in_particles);
+    clearCountGrid();
     // runCpuCount(in_particles);
 
-    clearOffsetGrid();
-    if (use_linear_scan_) {
-        runLinearScanProg();
-    } else {
-        runScanProg();
+    gl::ScopedTextureBind tbScope(count_grid_->getTarget(), count_grid_->getId());
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    std::vector<uint32_t> counts(num_bins_);
+    glGetTexImage(count_grid_->getTarget(), 0, GL_RED_INTEGER, GL_UNSIGNED_INT, counts.data());
+
+    std::string c = "counts: ";
+    // std::string o = "offsets: ";
+    for (int i = 0; i < 100; i++) {
+        c += std::to_string(counts[i]) + ", ";
+        // o += std::to_string(offsets[i]) + ", ";
     }
+    util::log("%s", c.c_str());
+    // util::log("%s", o.c_str());
+
+    clearOffsetGrid();
+    // if (use_linear_scan_) {
+    //     runLinearScanProg();
+    // } else {
+    //     runScanProg();
+    // }
 
     // clearCountGrid();
     // runReorderProg(in_particles, out_particles);
+}
+
+std::vector<int> Sort::count(std::vector<Particle> particles) {
+    std::vector<int> counts(int(pow(grid_res_, 3)), 0);
+
+    for (auto const& p : particles) {
+        // util::log("particle: <%f, %f, %f>", p.position.x, p.position.y, p.position.z);
+        const ivec3 coord = ivec3(p.position / bin_size_);
+        const int index = coord.z * grid_res_ * grid_res_ + coord.y * grid_res_ + coord.x;
+        // util::log("binCoord: <%d, %d, %d> - %d", coord.x, coord.y, coord.z, index);
+        counts[index] += 1;
+    }
+
+    return counts;
+}
+
+std::vector<int> Sort::countOffsets(std::vector<int> counts) {
+    std::vector<int> offsets(int(counts.size()), 0);
+    int numNonZero = 0;
+
+    for (int i = 1; i < int(counts.size()); i++) {
+        offsets[i] = offsets[i - 1] + counts[i - 1];
+        if (counts[i - 1] > 0) {
+            numNonZero++;
+        }
+    }
+
+    util::log("num non zero: %d of %d", numNonZero, num_bins_);
+
+    return offsets;
+}
+
+std::vector<Particle> Sort::reorder(std::vector<Particle> in_particles, std::vector<int> offsets) {
+    std::vector<int> counts(int(pow(grid_res_, 3)), 0);
+    std::vector<Particle> reordered(int(in_particles.size()));
+
+    for (auto const& p : in_particles) {
+        const ivec3 coord = ivec3(p.position / bin_size_);
+        const int index = coord.z * grid_res_ * grid_res_ + coord.y * grid_res_ + coord.x;
+        const int binOffset = offsets[index];
+        const int binIndex = counts[index]++;
+        reordered[binOffset + binIndex] = p;
+    }
+
+    return reordered;
+}
+
+void Sort::saveCountsToTexture(std::vector<int> counts) {
+    auto format = gl::Texture3d::Format().internalFormat(GL_R32F);
+    count_grid_ = gl::Texture3d::create(counts.data(), GL_R32F, grid_res_, grid_res_, grid_res_, format);
+}
+
+void Sort::saveOffsetsToTexture(std::vector<int> offsets) {
+    auto format = gl::Texture3d::Format().internalFormat(GL_R32F);
+    offset_grid_ = gl::Texture3d::create(offsets.data(), GL_R32F, grid_res_, grid_res_, grid_res_, format);
+}
+
+std::vector<Particle> Sort::runCpu(std::vector<Particle> in_particles) {
+    auto counts = count(in_particles);
+    saveCountsToTexture(counts);
+    auto offsets = countOffsets(counts);
+    // std::string c = "counts: ";
+    // std::string o = "offsets: ";
+    // for (int i = 0; i < 100; i++) {
+    //     c += std::to_string(counts[i]) + ", ";
+    //     o += std::to_string(offsets[i]) + ", ";
+    // }
+    // util::log("%s", c.c_str());
+    // util::log("%s", o.c_str());
+    saveOffsetsToTexture(offsets);
+    auto reordered = reorder(in_particles, offsets);
+    return reordered;
+}
+
+void Sort::runCpu(gl::SsboRef in_particles_buffer, gl::SsboRef out_particles_buffer) {
+    auto in_particles = util::getParticles(in_particles_buffer, num_items_);
+    auto reordered = runCpu(in_particles);
+    glBufferData(out_particles_buffer->getTarget(), reordered.size() * sizeof(Particle), reordered.data(),
+                 GL_DYNAMIC_DRAW);
 }
 
 void Sort::renderGrid(float size) {
