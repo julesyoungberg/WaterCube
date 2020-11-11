@@ -43,6 +43,14 @@ std::vector<Particle> util::getParticles(gl::SsboRef particle_buffer, int num_it
     return particles;
 }
 
+std::vector<uint32_t> util::getUints(gl::Texture1dRef tex, int num_items) {
+    gl::ScopedTextureBind scoped_tex(tex->getTarget(), tex->getId());
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    std::vector<uint32_t> data(num_items);
+    glGetTexImage(tex->getTarget(), 0, GL_RED_INTEGER, GL_UNSIGNED_INT, data.data());
+    return data;
+}
+
 std::vector<uint32_t> util::getUints(gl::Texture3dRef tex, int num_items) {
     gl::ScopedTextureBind scoped_tex(tex->getTarget(), tex->getId());
     glPixelStorei(GL_PACK_ALIGNMENT, 1);

@@ -9,8 +9,8 @@ layout(std430, binding = 0) restrict readonly buffer Grid {
     ivec3 grid[];
 };
 
-layout(binding = 0, r32ui) uniform restrict readonly uimage3D countGrid;
-layout(binding = 1, r32ui) uniform restrict readonly uimage3D offsetGrid;
+layout(binding = 1, r32ui) uniform restrict readonly uimage3D countGrid;
+layout(binding = 2, r32ui) uniform restrict readonly uimage3D offsetGrid;
 uniform mat4 ciModelViewProjection;
 uniform float binSize;
 uniform int gridRes;
@@ -27,8 +27,8 @@ void main() {
     const uint count = imageLoad(countGrid, coord).x;
     const uint offset = imageLoad(offsetGrid, coord).x;
 
-    const float n = float(numItems);
-    const vec3 color = vec3(0, float(count) / n, float(offset) / n);
+    const float n = float(numItems) / 1000;
+    const vec3 color = vec3(0, float(count) / n, float(offset) / (n / 2));
     const bool invalid = any(lessThan(color, vec3(0))) || any(isnan(color)) || any(isinf(color));
 
     vPosition = coordToPoint(coord) + vec3(binSize / 2.0);

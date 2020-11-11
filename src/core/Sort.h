@@ -46,8 +46,9 @@ protected:
 
     std::vector<ivec3> grid_particles_;
 
-    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_;
+    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_, sort_prog_;
     gl::SsboRef position_buffer_, count_buffer_, grid_buffer_;
+    gl::Texture1dRef id_map_;
     gl::Texture3dRef count_grid_, offset_grid_;
     gl::VboRef grid_ids_vbo_;
     gl::VaoRef grid_attributes_;
@@ -56,15 +57,19 @@ private:
     void clearCountGrid();
     void clearOffsetGrid();
     void clearCount();
+    void printGrids();
 
+    // GPU STUFF
     void runProg();
     void runCountProg(gl::SsboRef particles);
     void runLinearScanProg();
     void runScanProg();
     void runReorderProg(gl::SsboRef in_particles, gl::SsboRef out_particles);
+    void runSortProg(gl::SsboRef particles);
 
     std::vector<Particle> getParticles(gl::SsboRef particle_buffer);
 
+    // CPU STUFF
     std::vector<int> count(std::vector<Particle> particles);
     std::vector<int> countOffsets(std::vector<int> counts);
     std::vector<Particle> reorder(std::vector<Particle> in_particles, std::vector<int> offsets);

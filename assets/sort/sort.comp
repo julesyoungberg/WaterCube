@@ -11,15 +11,12 @@ struct Particle {
     float pressure;
 };
 
-layout(std430, binding = 0) buffer Particles1 {
-    Particle inParticles[];
+layout(std430, binding = 0) buffer Particles {
+    Particle particles[];
 };
 
-layout(std430, binding = 1) buffer Particles2 {
-    Particle outParticles[];
-};
-
-layout(binding = 2, r32ui) uniform restrict uimage3D countGrid;
+layout(binding = 1, r32ui) uniform restrict uimage3D countGrid;
+layout(binding = 2, r32ui) uniform restrict uimage1D sortedIds;
 layout(binding = 3, r32ui) uniform restrict readonly uimage3D offsetGrid;
 uniform float binSize;
 uniform int numItems;
@@ -30,10 +27,10 @@ void main() {
         return;
     }
 
-    const Particle p = inParticles[particleID];
+    const Particle p = particles[particleID];
     const ivec3 binCoord = ivec3(p.position / binSize);
     const uint globalOffset = imageLoad(offsetGrid, binCoord).x;
     const uint localOffset = imageAtomicAdd(countGrid, binCoord, 1);
-    const uint globalIndex = globalOffset + localOffset;
-    outParticles[globalIndex] = p;
+    const int globalIndex = int(globalOffset) + int(localOffset);
+    imageStore(sortedIds, globalIndex, ivec4(particleID));
 }
