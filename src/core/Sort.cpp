@@ -295,7 +295,7 @@ void Sort::run(gl::SsboRef in_particles, gl::SsboRef out_particles) {
         runScanProg();
     }
 
-    printGrids();
+    // printGrids();
 
     clearCountGrid();
     runReorderProg(in_particles, out_particles);

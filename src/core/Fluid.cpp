@@ -466,19 +466,19 @@ void Fluid::update(double time) {
 
     runBinVelocityProg(out_particles);
 
-    auto velocities = util::getVecs(velocity_field_, num_bins_);
-    util::log("bin velocities: ");
-    for (int i = 0; i < 100; i++) {
-        vec3 v = velocities[i];
-        util::log("<%f, %f, %f>", v.x, v.y, v.z);
-    }
-
-    // runDensityProg(out_particles);
-    // runUpdateProg(out_particles, float(time));
-
-    // if (render_mode_ == 7) {
-    //     marching_cube_->update(out_particles, num_particles_, 0.5f);
+    // auto velocities = util::getVecs(velocity_field_, num_bins_);
+    // util::log("bin velocities: ");
+    // for (int i = 0; i < 100; i++) {
+    //     vec3 v = velocities[i];
+    //     util::log("<%f, %f, %f>", v.x, v.y, v.z);
     // }
+
+    runDensityProg(out_particles);
+    runUpdateProg(out_particles, float(time));
+
+    if (render_mode_ == 7) {
+        marching_cube_->update(out_particles, num_particles_, 0.5f);
+    }
 }
 
 void Fluid::renderGeometry() {
@@ -540,7 +540,9 @@ void Fluid::draw() {
     } else if (render_mode_ == 6) {
         renderGrid();
     } else if (render_mode_ == 7) {
-        marching_cube_->draw();
+        marching_cube_->renderDensity();
+    } else if (render_mode_ == 8) {
+        marching_cube_->render();
     } else {
         renderGeometry();
     }

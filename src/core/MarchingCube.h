@@ -31,7 +31,8 @@ public:
 
     void setup(const int resolution);
     void update(gl::SsboRef particles, int num_items, float threshold = 0.5f);
-    void draw();
+    void render();
+    void renderDensity();
 
     void updateField(float time, float scale);
 
@@ -65,9 +66,6 @@ private:
     void runBinDensityProg(gl::SsboRef particles, int num_items);
     void runNormalizeDensityProg(const ivec3 thread);
     void runMarchingCubeProg(float threshold, const ivec3 thread);
-
-    void render();
-    void renderDensity();
 
     MarchingCubeRef thisRef() { return std::make_shared<MarchingCube>(*this); }
 };

@@ -249,9 +249,4 @@ void MarchingCube::renderDensity() {
     particle_buffer_->unbindBase();
 }
 
-void MarchingCube::draw() {
-    // render();
-    renderDensity();
-}
-
 MarchingCubeRef MarchingCube::create() { return std::make_shared<MarchingCube>(); }
