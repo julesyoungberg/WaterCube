@@ -219,20 +219,15 @@ void Sort::runReorderProg(GLuint in_particles, GLuint out_particles) {
     gl::ScopedGlslProg prog(reorder_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, in_particles);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, out_particles);
-
-    count_grid_->bind(2);
-    offset_grid_->bind(3);
-    reorder_prog_->uniform("countGrid", 2);
-    reorder_prog_->uniform("offsetGrid", 3);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, count_buffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, offset_buffer_);
 
     reorder_prog_->uniform("binSize", bin_size_);
     reorder_prog_->uniform("numItems", num_items_);
+    reorder_prog_->uniform("gridRes", grid_res_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-
-    count_grid_->bind(2);
-    offset_grid_->unbind(3);
 }
 
 void Sort::runSortProg(gl::SsboRef particles) {
@@ -312,14 +307,13 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
 
     // printGrids();
 
-    // clearCountGrid();
-    // runReorderProg(in_particles, out_particles);
+    clearCountGrid();
+    runReorderProg(in_particles, out_particles);
 
-    // auto p1 = util::getParticles(in_particles, num_items_);
-    // auto p2 = util::getParticles(out_particles, num_items_);
-    // util::log("previous: <%f, %f, %f>", p1[100].position.x, p1[100].position.y,
-    // p1[100].position.z); util::log("next: <%f, %f, %f>", p2[100].position.x, p2[100].position.y,
-    // p2[100].position.z);
+    auto p1 = util::getParticles(in_particles, num_items_);
+    auto p2 = util::getParticles(out_particles, num_items_);
+    util::log("previous: <%f, %f, %f>", p1[100].position.x, p1[100].position.y, p1[100].position.z);
+    util::log("next: <%f, %f, %f>", p2[100].position.x, p2[100].position.y, p2[100].position.z);
 }
 
 std::vector<uint32_t> Sort::count(std::vector<Particle> particles) {

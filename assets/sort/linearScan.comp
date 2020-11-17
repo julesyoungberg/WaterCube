@@ -2,11 +2,11 @@
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
 
-layout(std430, binding = 0) restrict buffer Counts {
+layout(std430, binding = 0) restrict readonly buffer Counts {
     uint counts[];
 };
 
-layout(std430, binding = 1) restrict buffer Offsets {
+layout(std430, binding = 1) restrict writeonly buffer Offsets {
     uint offsets[];
 };
 

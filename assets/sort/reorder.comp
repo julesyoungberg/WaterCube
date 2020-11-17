@@ -1,6 +1,4 @@
 #version 460 core
-#extension GL_ARB_compute_shader : enable
-#extension GL_ARB_shader_storage_buffer_object : enable
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
@@ -11,18 +9,25 @@ struct Particle {
     float pressure;
 };
 
-layout(std430, binding = 0) buffer Particles1 {
+layout(std430, binding = 0) restrict readonly buffer Particles1 {
     Particle inParticles[];
 };
 
-layout(std430, binding = 1) buffer Particles2 {
+layout(std430, binding = 1) restrict writeonly buffer Particles2 {
     Particle outParticles[];
 };
 
-layout(binding = 2, r32ui) uniform restrict uimage3D countGrid;
-layout(binding = 3, r32ui) uniform restrict readonly uimage3D offsetGrid;
+layout(std430, binding = 2) buffer Counts {
+    uint counts[];
+};
+
+layout(std430, binding = 3) restrict readonly buffer Offsets {
+    uint offsets[];
+};
+
 uniform float binSize;
 uniform int numItems;
+uniform int gridRes;
 
 void main() {
     const uint particleID = gl_GlobalInvocationID.x;
@@ -31,9 +36,10 @@ void main() {
     }
 
     const Particle p = inParticles[particleID];
-    const ivec3 binCoord = ivec3(p.position / binSize);
-    const uint globalOffset = imageLoad(offsetGrid, binCoord).x;
-    const uint localOffset = imageAtomicAdd(countGrid, binCoord, 1);
+    const ivec3 c = ivec3(p.position / binSize);
+    const uint index = c.z * gridRes * gridRes + c.y * gridRes + c.x;
+    const uint globalOffset = offsets[index];
+    const uint localOffset = atomicAdd(counts[index], 1);
     const uint globalIndex = globalOffset + localOffset;
     outParticles[globalIndex] = p;
 }
