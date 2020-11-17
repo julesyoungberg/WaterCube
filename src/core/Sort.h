@@ -29,7 +29,7 @@ public:
 
     void prepareBuffers();
     void compileShaders();
-    void run(gl::SsboRef in_particles, gl::SsboRef out_particles);
+    void run(GLuint in_particles, GLuint out_particles);
     std::vector<Particle> runCpu(std::vector<Particle> in_particles);
     void runCpu(gl::SsboRef in_particles_buffer, gl::SsboRef out_particles_buffer);
     void renderGrid(float size);
@@ -46,7 +46,8 @@ protected:
 
     std::vector<ivec3> grid_particles_;
 
-    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_, sort_prog_;
+    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_,
+        sort_prog_;
     gl::SsboRef position_buffer_, count_buffer_, grid_buffer_;
     gl::Texture1dRef id_map_;
     gl::Texture3dRef count_grid_, offset_grid_;
@@ -61,7 +62,7 @@ private:
 
     // GPU STUFF
     void runProg();
-    void runCountProg(gl::SsboRef particles);
+    void runCountProg(GLuint particle_buffer);
     void runLinearScanProg();
     void runScanProg();
     void runReorderProg(gl::SsboRef in_particles, gl::SsboRef out_particles);
@@ -72,7 +73,8 @@ private:
     // CPU STUFF
     std::vector<uint32_t> count(std::vector<Particle> particles);
     std::vector<uint32_t> countOffsets(std::vector<uint32_t> counts);
-    std::vector<Particle> reorder(std::vector<Particle> in_particles, std::vector<uint32_t> offsets);
+    std::vector<Particle> reorder(std::vector<Particle> in_particles,
+                                  std::vector<uint32_t> offsets);
     void saveCountsToTexture(std::vector<uint32_t> counts);
     void saveOffsetsToTexture(std::vector<uint32_t> offsets);
 

@@ -13,7 +13,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 1;
+    render_mode_ = 5;
     particle_radius_ = 0.05f; // 0.0457f;
     rest_density_ = 4;        // 998.27f
 }
@@ -468,11 +468,11 @@ void Fluid::runUpdateProg(gl::SsboRef particles, float time_step) {
  * Update simulation logic - run compute shaders
  */
 void Fluid::update(double time) {
-    // odd_frame_ = !odd_frame_;
-    // gl::SsboRef in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
-    // gl::SsboRef out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
+    odd_frame_ = !odd_frame_;
+    GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
+    GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
 
-    // sort_->run(in_particles, out_particles);
+    sort_->run(in_particles, out_particles);
 
     // runBinVelocityProg(out_particles);
 
@@ -540,17 +540,17 @@ void Fluid::draw() {
     vec3 offset = vec3(-half, -half, -half);
     gl::translate(offset.x, offset.y, offset.z);
 
-    // if (render_mode_ == 5) {
-    //     sort_->renderGrid(size_);
-    // } else if (render_mode_ == 6) {
-    //     renderGrid();
-    // } else if (render_mode_ == 7) {
-    //     marching_cube_->renderDensity();
-    // } else if (render_mode_ == 8) {
-    //     marching_cube_->render();
-    // } else {
-    renderGeometry();
-    // }
+    if (render_mode_ == 5) {
+        sort_->renderGrid(size_);
+    } else if (render_mode_ == 6) {
+        renderGrid();
+    } else if (render_mode_ == 7) {
+        marching_cube_->renderDensity();
+    } else if (render_mode_ == 8) {
+        marching_cube_->render();
+    } else {
+        renderGeometry();
+    }
 
     // auto particles = util::getParticles(particle_buffer1_id_, num_particles_);
     // util::log("particles");
