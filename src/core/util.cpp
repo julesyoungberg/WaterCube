@@ -27,7 +27,9 @@ void util::log(char* format, ...) {
 /**
  * Generic run shader on particles - one for each
  */
-void util::runProg(ivec3 work_groups) { gl::dispatchCompute(work_groups.x, work_groups.y, work_groups.z); }
+void util::runProg(ivec3 work_groups) {
+    gl::dispatchCompute(work_groups.x, work_groups.y, work_groups.z);
+}
 
 void util::runProg(int work_groups) { runProg(ivec3(work_groups, 1, 1)); }
 
@@ -38,22 +40,32 @@ gl::GlslProgRef util::compileComputeShader(char* filename) {
 std::vector<Particle> util::getParticles(gl::SsboRef particle_buffer, int num_items) {
     gl::ScopedBuffer scoped_particles(particle_buffer);
     std::vector<Particle> particles(num_items);
-    glGetBufferSubData(particle_buffer->getTarget(), 0, num_items * sizeof(Particle), particles.data());
+    glGetBufferSubData(particle_buffer->getTarget(), 0, num_items * sizeof(Particle),
+                       particles.data());
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     return particles;
 }
 
 std::vector<Particle> util::getParticles(GLuint buffer, int num_items) {
     std::vector<Particle> particles(num_items);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, buffer);
+    gl::ScopedBuffer scoped_buffer(GL_SHADER_STORAGE_BUFFER, buffer);
     glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, num_items * sizeof(Particle), particles.data());
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
     return particles;
 }
 
 void util::setParticles(gl::SsboRef particle_buffer, std::vector<Particle> particles) {
-    glBufferData(particle_buffer->getTarget(), particles.size() * sizeof(Particle), particles.data(), GL_DYNAMIC_DRAW);
+    glBufferData(particle_buffer->getTarget(), particles.size() * sizeof(Particle),
+                 particles.data(), GL_DYNAMIC_DRAW);
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+}
+
+std::vector<uint32_t> util::getUints(GLuint buffer, int num_items) {
+    std::vector<uint32_t> data(num_items, 0);
+    gl::ScopedBuffer scoped_buffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, num_items * sizeof(uint32_t), data.data());
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    return data;
 }
 
 std::vector<uint32_t> util::getUints(gl::Texture1dRef tex, int num_items) {

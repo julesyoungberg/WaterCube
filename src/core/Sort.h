@@ -30,12 +30,10 @@ public:
     void prepareBuffers();
     void compileShaders();
     void run(GLuint in_particles, GLuint out_particles);
-    std::vector<Particle> runCpu(std::vector<Particle> in_particles);
-    void runCpu(gl::SsboRef in_particles_buffer, gl::SsboRef out_particles_buffer);
     void renderGrid(float size);
 
-    gl::Texture3dRef getCountGrid() { return count_grid_; }
-    gl::Texture3dRef getOffsetGrid() { return offset_grid_; }
+    GLuint getCountBuffer() { return count_buffer_; }
+    GLuint getOffsetBuffer() { return offset_buffer_; }
 
     static SortRef create();
 
@@ -46,19 +44,15 @@ protected:
 
     std::vector<ivec4> grid_particles_;
 
-    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_,
-        sort_prog_;
+    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_;
     gl::SsboRef position_buffer_, global_count_buffer_, grid_buffer_;
     gl::Texture1dRef id_map_;
-    gl::Texture3dRef count_grid_, offset_grid_;
     gl::VboRef grid_ids_vbo_;
     gl::VaoRef grid_attributes_;
 
     GLuint count_buffer_, offset_buffer_;
 
 private:
-    void clearCountGrid();
-    void clearOffsetGrid();
     void clearCount();
     void clearCountBuffer();
     void clearOffsetBuffer();
@@ -71,19 +65,6 @@ private:
     void runLinearScanProg();
     void runScanProg();
     void runReorderProg(GLuint in_particles, GLuint out_particles);
-    void runSortProg(gl::SsboRef particles);
-
-    std::vector<Particle> getParticles(gl::SsboRef particle_buffer);
-
-    // CPU STUFF
-    std::vector<uint32_t> count(std::vector<Particle> particles);
-    std::vector<uint32_t> countOffsets(std::vector<uint32_t> counts);
-    std::vector<Particle> reorder(std::vector<Particle> in_particles,
-                                  std::vector<uint32_t> offsets);
-    void saveCountsToTexture(std::vector<uint32_t> counts);
-    void saveOffsetsToTexture(std::vector<uint32_t> offsets);
-
-    std::vector<uint32_t> cpuSort(std::vector<Particle> particles, std::vector<uint32_t> offsets);
 
     SortRef thisRef() { return std::make_shared<Sort>(*this); }
 };

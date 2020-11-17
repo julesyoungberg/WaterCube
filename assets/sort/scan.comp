@@ -8,8 +8,15 @@ layout(binding = 0) restrict buffer Count {
     uint globalCount;
 };
 
-layout(binding = 1, r32ui) uniform restrict writeonly uimage3D offsetGrid;
-layout(binding = 2, r32ui) uniform restrict readonly uimage3D countGrid;
+layout(std430, binding = 1) restrict readonly buffer Counts {
+    uint counts[];
+};
+
+layout(std430, binding = 2) restrict writeonly buffer Offsets {
+    uint offsets[];
+};
+
+
 uniform int gridRes;
 
 shared uint localCount;
@@ -17,8 +24,8 @@ shared uint globalBaseOffset;
 
 // Compute the prefix sum for each bin
 void main() {
-    const ivec3 binCoord = ivec3(gl_GlobalInvocationID);
-    if (any(greaterThanEqual(binCoord, ivec3(gridRes)))) {
+    const ivec3 c = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThanEqual(c, ivec3(gridRes)))) {
         return;
     }
 
@@ -27,11 +34,11 @@ void main() {
         localCount = 0;
     }
 
-    // 
     barrier();
 
     // Step 2: add bin count to local prerfix sum
-    const uint binCount = imageLoad(countGrid, binCoord).x;
+    const uint index = c.z * gridRes * gridRes + c.y * gridRes + c.x;
+    const uint binCount = counts[index];
     const uint localOffset = atomicAdd(localCount, binCount);
 
     barrier();
@@ -45,5 +52,5 @@ void main() {
 
     // Step 4: 
     const uint globalOffset = globalBaseOffset + localOffset;
-    imageStore(offsetGrid, binCoord, uvec4(globalOffset));
+    offsets[index] = globalOffset;
 }

@@ -363,10 +363,10 @@ void Fluid::runBinVelocityProg(gl::SsboRef particles) {
     gl::ScopedBuffer scoped_particles(particles);
     particles->bindBase(0);
 
-    sort_->getCountGrid()->bind(1);
-    sort_->getOffsetGrid()->bind(2);
-    bin_velocity_prog_->uniform("countGrid", 1);
-    bin_velocity_prog_->uniform("offsetGrid", 2);
+    // sort_->getCountGrid()->bind(1);
+    // sort_->getOffsetGrid()->bind(2);
+    // bin_velocity_prog_->uniform("countGrid", 1);
+    // bin_velocity_prog_->uniform("offsetGrid", 2);
 
     glActiveTexture(GL_TEXTURE0 + 3);
     glUniform1i(glGetUniformLocation(bin_velocity_prog_->getHandle(), "velocityField"), 3);
@@ -377,8 +377,8 @@ void Fluid::runBinVelocityProg(gl::SsboRef particles) {
     util::runProg(ivec3(ceil(num_bins_ / 4.0f)));
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
-    sort_->getCountGrid()->unbind(1);
-    sort_->getOffsetGrid()->unbind(2);
+    // sort_->getCountGrid()->unbind(1);
+    // sort_->getOffsetGrid()->unbind(2);
 
     particles->unbindBase();
 }
@@ -392,10 +392,10 @@ void Fluid::runDensityProg(gl::SsboRef particles) {
     gl::ScopedBuffer scoped_particles(particles);
     particles->bindBase(0);
 
-    sort_->getCountGrid()->bind(1);
-    sort_->getOffsetGrid()->bind(2);
-    distance_field_->bind(3);
-    wall_weight_function_->bind(4);
+    // sort_->getCountGrid()->bind(1);
+    // sort_->getOffsetGrid()->bind(2);
+    // distance_field_->bind(3);
+    // wall_weight_function_->bind(4);
 
     density_prog_->uniform("countGrid", 1);
     density_prog_->uniform("offsetGrid", 2);
@@ -415,10 +415,10 @@ void Fluid::runDensityProg(gl::SsboRef particles) {
     runProg();
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 
-    sort_->getCountGrid()->unbind(1);
-    sort_->getOffsetGrid()->unbind(2);
-    distance_field_->unbind(3);
-    wall_weight_function_->unbind(4);
+    // sort_->getCountGrid()->unbind(1);
+    // sort_->getOffsetGrid()->unbind(2);
+    // distance_field_->unbind(3);
+    // wall_weight_function_->unbind(4);
 
     particles->unbindBase();
 }
@@ -432,10 +432,10 @@ void Fluid::runUpdateProg(gl::SsboRef particles, float time_step) {
     gl::ScopedBuffer scoped_particles(particles);
     particles->bindBase(0);
 
-    sort_->getCountGrid()->bind(1);
-    sort_->getOffsetGrid()->bind(2);
-    velocity_field_->bind(3);
-    distance_field_->bind(4);
+    // sort_->getCountGrid()->bind(1);
+    // sort_->getOffsetGrid()->bind(2);
+    // velocity_field_->bind(3);
+    // distance_field_->bind(4);
 
     update_prog_->uniform("countGrid", 1);
     update_prog_->uniform("offsetGrid", 2);
@@ -456,10 +456,10 @@ void Fluid::runUpdateProg(gl::SsboRef particles, float time_step) {
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 
-    sort_->getCountGrid()->unbind(1);
-    sort_->getOffsetGrid()->unbind(2);
-    velocity_field_->unbind(3);
-    distance_field_->unbind(4);
+    // sort_->getCountGrid()->unbind(1);
+    // sort_->getOffsetGrid()->unbind(2);
+    // velocity_field_->unbind(3);
+    // distance_field_->unbind(4);
 
     particles->unbindBase();
 }

@@ -50,6 +50,8 @@ std::vector<Particle> getParticles(GLuint buffer, int num_items);
 
 void setParticles(gl::SsboRef particle_buffer, std::vector<Particle> particles);
 
+std::vector<uint32_t> getUints(GLuint buffer, int num_items);
+
 std::vector<uint32_t> getUints(gl::Texture1dRef tex, int num_items);
 
 std::vector<uint32_t> getUints(gl::Texture3dRef tex, int num_items);

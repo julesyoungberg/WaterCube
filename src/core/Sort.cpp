@@ -70,15 +70,9 @@ void Sort::prepareBuffers() {
     global_count_buffer_->bindBase(8);
 
     util::log("\tcreating count and offset grids");
-    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    count_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
-    offset_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
-
     std::vector<uint32_t> zeros(num_items_, 0);
-
     glCreateBuffers(1, &count_buffer_);
     glNamedBufferStorage(count_buffer_, num_items_ * sizeof(uint32_t), zeros.data(), 0);
-
     glCreateBuffers(1, &offset_buffer_);
     glNamedBufferStorage(offset_buffer_, num_items_ * sizeof(uint32_t), zeros.data(), 0);
 
@@ -110,28 +104,11 @@ void Sort::compileShaders() {
     util::log("\tcompiling sorter reorder shader");
     reorder_prog_ = util::compileComputeShader("sort/reorder.comp");
 
-    util::log("\tcompiling sorter shader");
-    sort_prog_ = util::compileComputeShader("sort/sort.comp");
-
     util::log("\tcompiling render grid shader");
     render_grid_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
                                                  .vertex(loadAsset("sort/grid.vert"))
                                                  .fragment(loadAsset("sort/grid.frag"))
                                                  .attribLocation("gridID", 0));
-}
-
-void Sort::clearCountGrid() {
-    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    std::vector<std::uint32_t> data(num_bins_, 0);
-    count_grid_ =
-        gl::Texture3d::create(data.data(), GL_RED_INTEGER, grid_res_, grid_res_, grid_res_, format);
-}
-
-void Sort::clearOffsetGrid() {
-    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    std::vector<std::uint32_t> data(num_bins_, 0);
-    offset_grid_ =
-        gl::Texture3d::create(data.data(), GL_RED_INTEGER, grid_res_, grid_res_, grid_res_, format);
 }
 
 void Sort::clearCount() {
@@ -196,20 +173,13 @@ void Sort::runScanProg() {
     gl::ScopedBuffer scoped_count_buffer(global_count_buffer_);
     global_count_buffer_->bindBase(0);
 
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(glGetUniformLocation(scan_prog_->getHandle(), "offsetGrid"), 1);
-    glBindImageTexture(1, offset_grid_->getId(), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32UI);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, count_buffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, offset_buffer_);
 
-    count_grid_->bind(2);
-
-    scan_prog_->uniform("countGrid", 2);
     scan_prog_->uniform("gridRes", grid_res_);
 
     util::runProg(ivec3(ceil(num_bins_ / 4.0f)));
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-    count_grid_->unbind(2);
-    global_count_buffer_->unbindBase();
 }
 
 /**
@@ -230,31 +200,9 @@ void Sort::runReorderProg(GLuint in_particles, GLuint out_particles) {
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
-void Sort::runSortProg(gl::SsboRef particles) {
-    gl::ScopedGlslProg prog(sort_prog_);
-
-    gl::ScopedBuffer scoped_particles(particles);
-    particles->bindBase(0);
-
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(glGetUniformLocation(sort_prog_->getHandle(), "countGrid"), 1);
-    glBindImageTexture(1, count_grid_->getId(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-
-    glActiveTexture(GL_TEXTURE0 + 1);
-    glUniform1i(glGetUniformLocation(sort_prog_->getHandle(), "sortedIds"), 2);
-    glBindImageTexture(2, id_map_->getId(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-
-    count_prog_->uniform("binSize", bin_size_);
-    count_prog_->uniform("numItems", num_items_);
-    runProg();
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-
-    particles->unbindBase();
-}
-
 void Sort::printGrids() {
-    std::vector<uint32_t> counts = util::getUints(count_grid_, num_bins_);
-    std::vector<uint32_t> offsets = util::getUints(offset_grid_, num_bins_);
+    std::vector<uint32_t> counts = util::getUints(count_buffer_, num_bins_);
+    std::vector<uint32_t> offsets = util::getUints(offset_buffer_, num_bins_);
 
     std::string c = "counts: ";
     std::string o = "offsets: ";
@@ -266,38 +214,10 @@ void Sort::printGrids() {
     util::log("%s", o.c_str());
 }
 
-std::vector<uint32_t> Sort::cpuSort(std::vector<Particle> particles,
-                                    std::vector<uint32_t> offsets) {
-    std::vector<uint32_t> counts(int(pow(grid_res_, 3)), 0);
-    std::vector<uint32_t> reordered(num_items_, 0);
-
-    for (uint32_t i = 0; i < num_items_; i++) {
-        const Particle p = particles[i];
-        const ivec3 coord = ivec3(p.position / bin_size_);
-        const int index = coord.z * grid_res_ * grid_res_ + coord.y * grid_res_ + coord.x;
-        const uint32_t binOffset = offsets[index];
-        const uint32_t binIndex = counts[index]++;
-        reordered[binOffset + binIndex] = i;
-        if (i == 1000) {
-            util::log("binOffset: %d, binIndex: %d - globalIndex: %d, i: %d", binOffset, binIndex,
-                      binOffset + binIndex, i);
-        }
-    }
-
-    std::string s = "reordered: ";
-    for (int i = 0; i > 0; i--) {
-        s += std::to_string(reordered[i]) + ", ";
-    }
-    util::log("%s", s.c_str());
-
-    return reordered;
-}
-
 void Sort::run(GLuint in_particles, GLuint out_particles) {
     clearCountBuffer();
     runCountProg(in_particles);
 
-    // clearOffsetGrid();
     clearOffsetBuffer();
     if (use_linear_scan_) {
         runLinearScanProg();
@@ -305,96 +225,8 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
         runScanProg();
     }
 
-    // printGrids();
-
-    clearCountGrid();
+    clearCountBuffer();
     runReorderProg(in_particles, out_particles);
-
-    auto p1 = util::getParticles(in_particles, num_items_);
-    auto p2 = util::getParticles(out_particles, num_items_);
-    util::log("previous: <%f, %f, %f>", p1[100].position.x, p1[100].position.y, p1[100].position.z);
-    util::log("next: <%f, %f, %f>", p2[100].position.x, p2[100].position.y, p2[100].position.z);
-}
-
-std::vector<uint32_t> Sort::count(std::vector<Particle> particles) {
-    std::vector<uint32_t> counts(int(pow(grid_res_, 3)), 0);
-
-    for (auto const& p : particles) {
-        // util::log("particle: <%f, %f, %f>", p.position.x, p.position.y, p.position.z);
-        const ivec3 coord = ivec3(p.position / bin_size_);
-        const int index = coord.z * grid_res_ * grid_res_ + coord.y * grid_res_ + coord.x;
-        // util::log("binCoord: <%d, %d, %d> - %d", coord.x, coord.y, coord.z, index);
-        counts[index] += 1;
-    }
-
-    return counts;
-}
-
-std::vector<uint32_t> Sort::countOffsets(std::vector<uint32_t> counts) {
-    std::vector<uint32_t> offsets(int(counts.size()), 0);
-    int numNonZero = 0;
-
-    for (int i = 1; i < int(counts.size()); i++) {
-        offsets[i] = offsets[i - 1] + counts[i - 1];
-        if (counts[i - 1] > 0) {
-            numNonZero++;
-        }
-    }
-
-    util::log("num non zero: %d of %d", numNonZero, num_bins_);
-
-    return offsets;
-}
-
-std::vector<Particle> Sort::reorder(std::vector<Particle> in_particles,
-                                    std::vector<uint32_t> offsets) {
-    std::vector<uint32_t> counts(int(pow(grid_res_, 3)), 0);
-    std::vector<Particle> reordered(int(in_particles.size()));
-
-    for (auto const& p : in_particles) {
-        const ivec3 coord = ivec3(p.position / bin_size_);
-        const int index = coord.z * grid_res_ * grid_res_ + coord.y * grid_res_ + coord.x;
-        const int binOffset = offsets[index];
-        const int binIndex = counts[index]++;
-        reordered[binOffset + binIndex] = p;
-    }
-
-    return reordered;
-}
-
-void Sort::saveCountsToTexture(std::vector<uint32_t> counts) {
-    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    count_grid_ =
-        gl::Texture3d::create(counts.data(), GL_R32UI, grid_res_, grid_res_, grid_res_, format);
-}
-
-void Sort::saveOffsetsToTexture(std::vector<uint32_t> offsets) {
-    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    offset_grid_ =
-        gl::Texture3d::create(offsets.data(), GL_R32UI, grid_res_, grid_res_, grid_res_, format);
-}
-
-std::vector<Particle> Sort::runCpu(std::vector<Particle> in_particles) {
-    auto counts = count(in_particles);
-    saveCountsToTexture(counts);
-    auto offsets = countOffsets(counts);
-    // std::string c = "counts: ";
-    // std::string o = "offsets: ";
-    // for (int i = 0; i < 100; i++) {
-    //     c += std::to_string(counts[i]) + ", ";
-    //     o += std::to_string(offsets[i]) + ", ";
-    // }
-    // util::log("%s", c.c_str());
-    // util::log("%s", o.c_str());
-    saveOffsetsToTexture(offsets);
-    auto reordered = reorder(in_particles, offsets);
-    return reordered;
-}
-
-void Sort::runCpu(gl::SsboRef in_particles_buffer, gl::SsboRef out_particles_buffer) {
-    auto in_particles = util::getParticles(in_particles_buffer, num_items_);
-    auto reordered = runCpu(in_particles);
-    util::setParticles(out_particles_buffer, reordered);
 }
 
 void Sort::renderGrid(float size) {
