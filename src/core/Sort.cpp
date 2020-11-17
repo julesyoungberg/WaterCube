@@ -37,11 +37,11 @@ void Sort::prepareGridParticles() {
     for (int z = 0; z < grid_res_; z++) {
         for (int y = 0; y < grid_res_; y++) {
             for (int x = 0; x < grid_res_; x++) {
-                grid_particles_.push_back(ivec3(x, y, z));
+                grid_particles_.push_back(ivec4(x, y, z, 0));
             }
         }
     }
-    grid_buffer_ = gl::Ssbo::create(grid_particles_.size() * sizeof(ivec3), grid_particles_.data(),
+    grid_buffer_ = gl::Ssbo::create(grid_particles_.size() * sizeof(ivec4), grid_particles_.data(),
                                     GL_STATIC_DRAW);
 
     util::log("\tcreating grid particles ids vbo");

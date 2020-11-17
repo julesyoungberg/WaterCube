@@ -44,7 +44,7 @@ protected:
     float bin_size_;
     bool use_linear_scan_;
 
-    std::vector<ivec3> grid_particles_;
+    std::vector<ivec4> grid_particles_;
 
     gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_,
         sort_prog_;
