@@ -65,14 +65,22 @@ void Sort::prepareBuffers() {
     util::log("preparing sort buffers");
 
     util::log("\tcreating count buffer");
-    count_buffer_ = gl::Ssbo::create(sizeof(int), nullptr, GL_DYNAMIC_STORAGE_BIT);
-    gl::ScopedBuffer scoped_count_buffer(count_buffer_);
-    count_buffer_->bindBase(8);
+    global_count_buffer_ = gl::Ssbo::create(sizeof(int), nullptr, GL_DYNAMIC_STORAGE_BIT);
+    gl::ScopedBuffer scoped_count_buffer(global_count_buffer_);
+    global_count_buffer_->bindBase(8);
 
     util::log("\tcreating count and offset grids");
     auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
     count_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
     offset_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
+
+    std::vector<uint32_t> zeros(num_items_, 0);
+
+    glCreateBuffers(1, &count_buffer_);
+    glNamedBufferStorage(count_buffer_, num_items_ * sizeof(uint32_t), zeros.data(), 0);
+
+    glCreateBuffers(1, &offset_buffer_);
+    glNamedBufferStorage(offset_buffer_, num_items_ * sizeof(uint32_t), zeros.data(), 0);
 
     prepareGridParticles();
 
@@ -128,9 +136,25 @@ void Sort::clearOffsetGrid() {
 
 void Sort::clearCount() {
     const std::uint32_t clear_value = 0;
-    gl::ScopedBuffer count_buffer(count_buffer_);
-    glClearBufferData(count_buffer_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
+    gl::ScopedBuffer count_buffer(global_count_buffer_);
+    glClearBufferData(global_count_buffer_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
                       &clear_value);
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+}
+
+void Sort::clearCountBuffer() {
+    std::vector<uint32_t> initial(num_items_, 0);
+    gl::ScopedBuffer buffer(GL_SHADER_STORAGE_BUFFER, count_buffer_);
+    glClearNamedBufferData(count_buffer_, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
+                           initial.data());
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+}
+
+void Sort::clearOffsetBuffer() {
+    std::vector<uint32_t> initial(num_items_, 0);
+    gl::ScopedBuffer buffer(GL_SHADER_STORAGE_BUFFER, count_buffer_);
+    glClearNamedBufferData(offset_buffer_, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
+                           initial.data());
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
@@ -142,33 +166,25 @@ void Sort::runProg() { util::runProg(int(ceil(float(num_items_) / float(WORK_GRO
 void Sort::runCountProg(GLuint particle_buffer) {
     gl::ScopedGlslProg prog(count_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
-
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(glGetUniformLocation(count_prog_->getHandle(), "countGrid"), 1);
-    glBindImageTexture(1, count_grid_->getId(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, count_buffer_);
 
     count_prog_->uniform("binSize", bin_size_);
     count_prog_->uniform("numItems", num_items_);
+    count_prog_->uniform("gridRes", grid_res_);
+
     runProg();
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void Sort::runLinearScanProg() {
     gl::ScopedGlslProg prog(linear_scan_prog_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, count_buffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, offset_buffer_);
 
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(glGetUniformLocation(linear_scan_prog_->getHandle(), "offsetGrid"), 0);
-    glBindImageTexture(0, offset_grid_->getId(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
-
-    count_grid_->bind(1);
-
-    linear_scan_prog_->uniform("countGrid", 1);
     linear_scan_prog_->uniform("gridRes", grid_res_);
 
     util::runProg(1);
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
-
-    count_grid_->unbind(0);
+    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 /**
@@ -177,8 +193,8 @@ void Sort::runLinearScanProg() {
 void Sort::runScanProg() {
     gl::ScopedGlslProg prog(scan_prog_);
 
-    gl::ScopedBuffer scoped_count_buffer(count_buffer_);
-    count_buffer_->bindBase(0);
+    gl::ScopedBuffer scoped_count_buffer(global_count_buffer_);
+    global_count_buffer_->bindBase(0);
 
     glActiveTexture(GL_TEXTURE0);
     glUniform1i(glGetUniformLocation(scan_prog_->getHandle(), "offsetGrid"), 1);
@@ -193,7 +209,7 @@ void Sort::runScanProg() {
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 
     count_grid_->unbind(2);
-    count_buffer_->unbindBase();
+    global_count_buffer_->unbindBase();
 }
 
 /**
@@ -283,10 +299,11 @@ std::vector<uint32_t> Sort::cpuSort(std::vector<Particle> particles,
 }
 
 void Sort::run(GLuint in_particles, GLuint out_particles) {
-    clearCountGrid();
+    clearCountBuffer();
     runCountProg(in_particles);
 
-    clearOffsetGrid();
+    // clearOffsetGrid();
+    clearOffsetBuffer();
     if (use_linear_scan_) {
         runLinearScanProg();
     } else {
@@ -395,10 +412,8 @@ void Sort::renderGrid(float size) {
     gl::ScopedBuffer grid_buffer(grid_buffer_);
     grid_buffer_->bindBase(0);
 
-    count_grid_->bind(1);
-    offset_grid_->bind(2);
-    render_grid_prog_->uniform("countGrid", 1);
-    render_grid_prog_->uniform("offsetGrid", 2);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, count_buffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, offset_buffer_);
 
     render_grid_prog_->uniform("binSize", bin_size_);
     render_grid_prog_->uniform("gridRes", grid_res_);
@@ -407,9 +422,6 @@ void Sort::renderGrid(float size) {
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, grid_particles_.size());
-
-    count_grid_->unbind(1);
-    offset_grid_->unbind(2);
 }
 
 SortRef Sort::create() { return std::make_shared<Sort>(); }

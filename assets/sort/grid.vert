@@ -1,5 +1,4 @@
 #version 460 core
-#extension GL_ARB_shader_storage_buffer_object : require
 
 layout(location = 0) in int gridID;
 out vec3 vColor;
@@ -9,8 +8,14 @@ layout(std430, binding = 0) restrict readonly buffer Grid {
     ivec4 grid[];
 };
 
-layout(binding = 1, r32ui) uniform restrict readonly uimage3D countGrid;
-layout(binding = 2, r32ui) uniform restrict readonly uimage3D offsetGrid;
+layout(std430, binding = 1) restrict buffer Counts {
+    uint counts[];
+};
+
+layout(std430, binding = 2) restrict buffer Offsets {
+    uint offsets[];
+};
+
 uniform mat4 ciModelViewProjection;
 uniform float binSize;
 uniform int gridRes;
@@ -23,12 +28,13 @@ vec3 coordToPoint(ivec3 c) {
 
 void main() {
     const ivec3 coord = grid[gridID].xyz;
+    const uint index = coord.z * gridRes * gridRes + coord.y * gridRes + coord.x;
 
-    const uint count = imageLoad(countGrid, coord).x;
-    const uint offset = imageLoad(offsetGrid, coord).x;
+    const uint count = counts[index];
+    const uint offset = offsets[index];
 
-    const float n = float(numItems) / 1000;
-    const vec3 color = vec3(0, float(count) / n, float(offset) / (n / 2));
+    const float n = float(numItems) / 100.0;
+    const vec3 color = vec3(0, float(count) / n, float(offset) / n);
     const bool invalid = any(lessThan(color, vec3(0))) || any(isnan(color)) || any(isinf(color));
 
     vPosition = coordToPoint(coord) + vec3(binSize / 2.0);

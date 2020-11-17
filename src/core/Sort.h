@@ -48,16 +48,20 @@ protected:
 
     gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_,
         sort_prog_;
-    gl::SsboRef position_buffer_, count_buffer_, grid_buffer_;
+    gl::SsboRef position_buffer_, global_count_buffer_, grid_buffer_;
     gl::Texture1dRef id_map_;
     gl::Texture3dRef count_grid_, offset_grid_;
     gl::VboRef grid_ids_vbo_;
     gl::VaoRef grid_attributes_;
 
+    GLuint count_buffer_, offset_buffer_;
+
 private:
     void clearCountGrid();
     void clearOffsetGrid();
     void clearCount();
+    void clearCountBuffer();
+    void clearOffsetBuffer();
     void printGrids();
     void prepareGridParticles();
 
