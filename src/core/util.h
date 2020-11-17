@@ -19,18 +19,18 @@ const int WORK_GROUP_SIZE = 128;
 
 struct Plane {
     Plane() : normal(0), point(0) {}
-    vec3 normal;
-    vec3 point;
+    vec4 normal;
+    vec4 point;
 };
 
 /**
  * Particle representation
  */
 struct Particle {
-    Particle() : position(0), velocity(0), density(0), pressure(0) {}
+    Particle() : position(0), density(0), velocity(0), pressure(0) {}
     vec3 position;
-    vec3 velocity;
     float density;
+    vec3 velocity;
     float pressure;
 };
 
@@ -45,6 +45,8 @@ void runProg(int work_groups);
 gl::GlslProgRef compileComputeShader(char* filename);
 
 std::vector<Particle> getParticles(gl::SsboRef particle_buffer, int num_items);
+
+std::vector<Particle> getParticles(GLuint buffer, int num_items);
 
 void setParticles(gl::SsboRef particle_buffer, std::vector<Particle> particles);
 

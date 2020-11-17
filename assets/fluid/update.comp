@@ -6,8 +6,8 @@ layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
 struct Particle {
     vec3 position;
-    vec3 velocity;
     float density;
+    vec3 velocity;
     float pressure;
 };
 
@@ -107,8 +107,7 @@ void main() {
             pressureForce += particleMass * averagePressure * mPressureWeight;
 
             // get smoothed velocity from velocity field
-            const vec3 filteredVelocity = texture(velocityField, other.position / size).xyz;
-            const vec3 velocityDiff = filteredVelocity - other.velocity;
+            const vec3 velocityDiff = p.velocity - other.velocity;
         
             // Equation (7) from Harada
             viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);

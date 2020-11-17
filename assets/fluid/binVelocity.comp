@@ -6,8 +6,8 @@ layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
 
 struct Particle {
     vec3 position;
-    vec3 velocity;
     float density;
+    vec3 velocity;
     float pressure;
 };
 

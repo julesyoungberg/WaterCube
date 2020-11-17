@@ -1,43 +1,42 @@
 #version 460 core
-#extension GL_ARB_shader_storage_buffer_object : require
 
 const float FLOAT_MIN = 1.175494351e-38;
 const float GRID_EPS = 0.000001;
 const float MAX_DENSITY = 70.0;
 const vec3 PARTICLE_COLOR = vec3(0.0, 0.0, 0.6);
 
-layout(location = 0) in int particleID;
 out vec3 vColor;
 out vec3 vPosition;
 
 struct Particle {
     vec3 position;
-    vec3 velocity;
     float density;
+    vec3 velocity;
     float pressure;
 };
 
-layout(std430, binding = 0) restrict readonly buffer Particles {
+layout(binding = 0, std430) restrict readonly buffer Particles {
     Particle particles[];
 };
 
 uniform mat4 ciModelViewProjection;
 uniform mat4 ciViewMatrix;
 uniform int renderMode;
+uniform float size;
 uniform float binSize;
 uniform int gridRes;
 uniform float pointRadius;
 uniform float pointScale;
 
 void main() {
-	Particle p = particles[particleID];
+	Particle p = particles[gl_VertexID];
     vPosition = p.position;
     bool invalid;
 
     switch(renderMode) {
         case 1:
             const float w = max(p.velocity.x, p.velocity.y);
-            invalid = any(isnan(p.velocity)) || any(isinf(p.velocity));
+            invalid = any(isnan(p.velocity)) || any(isinf(p.velocity)) || any(lessThan(p.position, vec3(0))) || any(greaterThan(p.position, vec3(size)));
             vColor = mix(p.velocity / w, vec3(1, 0, 0), float(invalid));
             break;
         case 2:
