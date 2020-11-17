@@ -31,22 +31,7 @@ SortRef Sort::positionBuffer(gl::SsboRef buffer) {
     return thisRef();
 }
 
-/**
- * Prepares shared memory buffers
- */
-void Sort::prepareBuffers() {
-    util::log("preparing sort buffers");
-
-    util::log("\tcreating count buffer");
-    count_buffer_ = gl::Ssbo::create(sizeof(int), nullptr, GL_DYNAMIC_STORAGE_BIT);
-    gl::ScopedBuffer scoped_count_buffer(count_buffer_);
-    count_buffer_->bindBase(8);
-
-    util::log("\tcreating count and offset grids");
-    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    count_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
-    offset_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
-
+void Sort::prepareGridParticles() {
     util::log("\tcreating grid particles");
     grid_particles_.resize(int(pow(grid_res_, 3)));
     for (int z = 0; z < grid_res_; z++) {
@@ -71,10 +56,29 @@ void Sort::prepareBuffers() {
     gl::ScopedVao grid_vao(grid_attributes_);
     gl::enableVertexAttribArray(0);
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
+}
+
+/**
+ * Prepares shared memory buffers
+ */
+void Sort::prepareBuffers() {
+    util::log("preparing sort buffers");
+
+    util::log("\tcreating count buffer");
+    count_buffer_ = gl::Ssbo::create(sizeof(int), nullptr, GL_DYNAMIC_STORAGE_BIT);
+    gl::ScopedBuffer scoped_count_buffer(count_buffer_);
+    count_buffer_->bindBase(8);
+
+    util::log("\tcreating count and offset grids");
+    auto format = gl::Texture3d::Format().internalFormat(GL_R32UI);
+    count_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
+    offset_grid_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, format);
+
+    prepareGridParticles();
 
     util::log("\tcreating id map");
     std::vector<uint32_t> sids(num_items_);
-    uint32_t id = 0;
+    uint32_t curr_id = 0;
     std::generate(sids.begin(), sids.end(), [&curr_id]() -> GLuint { return curr_id++; });
     auto id_format = gl::Texture1d::Format().internalFormat(GL_R32UI);
     id_map_ = gl::Texture1d::create(sids.data(), GL_R32F, num_items_, id_format);

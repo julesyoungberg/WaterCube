@@ -59,6 +59,7 @@ private:
     void clearOffsetGrid();
     void clearCount();
     void printGrids();
+    void prepareGridParticles();
 
     // GPU STUFF
     void runProg();
