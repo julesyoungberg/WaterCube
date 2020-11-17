@@ -199,14 +199,10 @@ void Sort::runScanProg() {
 /**
  * Run reorder compute shader
  */
-void Sort::runReorderProg(gl::SsboRef in_particles, gl::SsboRef out_particles) {
+void Sort::runReorderProg(GLuint in_particles, GLuint out_particles) {
     gl::ScopedGlslProg prog(reorder_prog_);
-
-    gl::ScopedBuffer scoped_in_particles(in_particles);
-    in_particles->bindBase(0);
-
-    gl::ScopedBuffer scoped_out_particles(out_particles);
-    out_particles->bindBase(1);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, in_particles);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, out_particles);
 
     count_grid_->bind(2);
     offset_grid_->bind(3);
@@ -221,9 +217,6 @@ void Sort::runReorderProg(gl::SsboRef in_particles, gl::SsboRef out_particles) {
 
     count_grid_->bind(2);
     offset_grid_->unbind(3);
-
-    in_particles->bindBase(0);
-    out_particles->bindBase(1);
 }
 
 void Sort::runSortProg(gl::SsboRef particles) {
@@ -293,17 +286,23 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
     clearCountGrid();
     runCountProg(in_particles);
 
-    // clearOffsetGrid();
-    // if (use_linear_scan_) {
-    //     runLinearScanProg();
-    // } else {
-    //     runScanProg();
-    // }
+    clearOffsetGrid();
+    if (use_linear_scan_) {
+        runLinearScanProg();
+    } else {
+        runScanProg();
+    }
 
     // printGrids();
 
     // clearCountGrid();
     // runReorderProg(in_particles, out_particles);
+
+    // auto p1 = util::getParticles(in_particles, num_items_);
+    // auto p2 = util::getParticles(out_particles, num_items_);
+    // util::log("previous: <%f, %f, %f>", p1[100].position.x, p1[100].position.y,
+    // p1[100].position.z); util::log("next: <%f, %f, %f>", p2[100].position.x, p2[100].position.y,
+    // p2[100].position.z);
 }
 
 std::vector<uint32_t> Sort::count(std::vector<Particle> particles) {

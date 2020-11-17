@@ -66,7 +66,7 @@ private:
     void runCountProg(GLuint particle_buffer);
     void runLinearScanProg();
     void runScanProg();
-    void runReorderProg(gl::SsboRef in_particles, gl::SsboRef out_particles);
+    void runReorderProg(GLuint in_particles, GLuint out_particles);
     void runSortProg(gl::SsboRef particles);
 
     std::vector<Particle> getParticles(gl::SsboRef particle_buffer);
