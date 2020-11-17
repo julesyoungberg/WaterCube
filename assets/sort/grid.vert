@@ -6,7 +6,7 @@ out vec3 vColor;
 out vec3 vPosition;
 
 layout(std430, binding = 0) restrict readonly buffer Grid {
-    ivec3 grid[];
+    ivec4 grid[];
 };
 
 layout(binding = 1, r32ui) uniform restrict readonly uimage3D countGrid;
@@ -22,7 +22,7 @@ vec3 coordToPoint(ivec3 c) {
 } 
 
 void main() {
-    const ivec3 coord = grid[gridID];
+    const ivec3 coord = grid[gridID].xyz;
 
     const uint count = imageLoad(countGrid, coord).x;
     const uint offset = imageLoad(offsetGrid, coord).x;
