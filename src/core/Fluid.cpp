@@ -124,8 +124,8 @@ void Fluid::generateInitialParticles() {
         p.position = (Rand::randVec3() * 0.5f + 0.5f) * size_;
         p.velocity = Rand::randVec3() * 0.1f;
 
-        if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.z > size_ || p.position.y > size_ ||
-            p.position.z > size_) {
+        if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.z > size_ ||
+            p.position.y > size_ || p.position.z > size_) {
             util::log("ERROR: <%f, %f, %f>", p.position.x, p.position.y, p.position.z);
         }
     }
@@ -159,8 +159,8 @@ void Fluid::generateBoundaryPlanes() {
         p.normal = vec4(normal, 1);
         p.point = vec4(point, 1);
 
-        util::log("\t%d - normal: <%f, %f, %f>, point: <%f, %f, %f>", i, p.normal.x, p.normal.y, p.normal.z, p.point.x,
-                  p.point.y, p.point.z);
+        util::log("\t%d - normal: <%f, %f, %f>, point: <%f, %f, %f>", i, p.normal.x, p.normal.y,
+                  p.normal.z, p.point.x, p.point.y, p.point.z);
 
         boundaries_[i] = p;
     }
@@ -183,7 +183,8 @@ void Fluid::prepareWallWeightFunction() {
     util::log("\t\tcreating buffer");
 
     auto texture_format = gl::Texture1d::Format().internalFormat(GL_R32F);
-    wall_weight_function_ = gl::Texture1d::create(values.data(), GL_R32F, divisions + 1, texture_format);
+    wall_weight_function_ =
+        gl::Texture1d::create(values.data(), GL_R32F, divisions + 1, texture_format);
 }
 
 void Fluid::prepareParticleBuffers() {
@@ -210,6 +211,30 @@ void Fluid::prepareParticleBuffers() {
     glVertexArrayAttribFormat(vao2_, 0, 3, GL_FLOAT, GL_FALSE, 0);
 }
 
+void Fluid::prepareGridParticles() {
+    util::log("\tcreating grid particles");
+
+    // generate particles
+    int n = int(pow(grid_res_, 3));
+    grid_particles_.resize(n);
+    for (int z = 0; z < grid_res_; z++) {
+        for (int y = 0; y < grid_res_; y++) {
+            for (int x = 0; x < grid_res_; x++) {
+                grid_particles_.push_back(ivec4(x, y, z, 1));
+            }
+        }
+    }
+
+    // create buffer
+    glCreateBuffers(1, &grid_buffer_);
+    glNamedBufferStorage(grid_buffer_, n * sizeof(ivec4), grid_particles_.data(), 0);
+    glCreateVertexArrays(1, &grid_vao_);
+    glEnableVertexArrayAttrib(grid_vao_, 0);
+    glVertexArrayVertexBuffer(grid_vao_, 0, grid_buffer_, 0, sizeof(ivec4));
+    glVertexArrayAttribBinding(grid_vao_, 0, 0);
+    glVertexArrayAttribFormat(grid_vao_, 0, 3, GL_FLOAT, GL_FALSE, 0);
+}
+
 /**
  * Prepares shared memory buffers
  */
@@ -217,41 +242,19 @@ void Fluid::prepareBuffers() {
     util::log("preparing fluid buffers");
 
     util::log("\tcreating boundary buffer - boundaries: %d", boundaries_.size());
-    boundary_buffer_ = gl::Ssbo::create(boundaries_.size() * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
-
-    prepareParticleBuffers();
+    boundary_buffer_ =
+        gl::Ssbo::create(boundaries_.size() * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
 
     util::log("\tcreating velocity field");
     auto texture3d_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
     velocity_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture3d_format);
     util::log("\tcreating disance field");
-    distance_field_ = gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture3d_format);
+    distance_field_ =
+        gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture3d_format);
 
+    prepareParticleBuffers();
     prepareWallWeightFunction();
-
-    util::log("\tcreating grid particles");
-    grid_particles_.resize(int(pow(grid_res_, 3)));
-    for (int z = 0; z < grid_res_; z++) {
-        for (int y = 0; y < grid_res_; y++) {
-            for (int x = 0; x < grid_res_; x++) {
-                grid_particles_.push_back(ivec3(x, y, z));
-            }
-        }
-    }
-    grid_buffer_ = gl::Ssbo::create(grid_particles_.size() * sizeof(ivec3), grid_particles_.data(), GL_STATIC_DRAW);
-
-    util::log("\tcreating grid particles ids vbo");
-    std::vector<GLuint> gids(grid_particles_.size());
-    GLuint curr_id = 0;
-    std::generate(gids.begin(), gids.end(), [&curr_id]() -> GLuint { return curr_id++; });
-    grid_ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, gids, GL_STATIC_DRAW);
-
-    util::log("\tcreating grid particles attributes vao");
-    grid_attributes_ = gl::Vao::create();
-    gl::ScopedBuffer scopedDids(grid_ids_vbo_);
-    gl::ScopedVao grid_vao(grid_attributes_);
-    gl::enableVertexAttribArray(0);
-    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
+    prepareGridParticles();
 }
 
 /**
@@ -273,14 +276,14 @@ void Fluid::compileShaders() {
     update_prog_ = util::compileComputeShader("fluid/update.comp");
 
     util::log("\tcompiling fluid geometry shader");
-    geometry_prog_ = gl::GlslProg::create(
-        gl::GlslProg::Format().vertex(loadAsset("fluid/particle.vert")).fragment(loadAsset("fluid/particle.frag")));
+    geometry_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
+                                              .vertex(loadAsset("fluid/particle.vert"))
+                                              .fragment(loadAsset("fluid/particle.frag")));
 
     util::log("\tcompiling render grid shader");
     render_grid_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
                                                  .vertex(loadAsset("fluid/grid.vert"))
-                                                 .fragment(loadAsset("fluid/grid.frag"))
-                                                 .attribLocation("gridID", 0));
+                                                 .fragment(loadAsset("fluid/grid.frag")));
 }
 
 /**
@@ -293,9 +296,10 @@ FluidRef Fluid::setup() {
     distance_field_size_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
     kernel_radius_ = bin_size_;
-    util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_, kernel_radius_);
+    util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_,
+              kernel_radius_);
 
-    // Parti of equation (8) from Harada
+    // Part of equation (8) from Harada
     pressure_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
     // Part of equation (9) from Harada
     viscosity_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
@@ -310,15 +314,13 @@ FluidRef Fluid::setup() {
     ivec3 count = gl::getMaxComputeWorkGroupCount();
     CI_ASSERT(count.x >= num_work_groups_);
 
-    util::log("creating buffers");
     prepareBuffers();
+    compileShaders();
 
     util::log("initializing sorter");
     sort_ = Sort::create()->numItems(num_particles_)->gridRes(grid_res_)->binSize(bin_size_);
     sort_->prepareBuffers();
     sort_->compileShaders();
-
-    compileShaders();
 
     util::log("initializing marching cube");
     marching_cube_ = MarchingCube::create()->size(size_);
@@ -491,7 +493,8 @@ void Fluid::update(double time) {
 
 void Fluid::renderGeometry() {
     gl::ScopedGlslProg render(geometry_prog_);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, odd_frame_ ? particle_buffer2_ : particle_buffer1_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
+                     odd_frame_ ? particle_buffer2_ : particle_buffer1_);
     glBindVertexArray(odd_frame_ ? vao2_ : vao1_);
 
     geometry_prog_->uniform("renderMode", render_mode_);
@@ -510,10 +513,8 @@ void Fluid::renderGrid() {
     gl::pointSize(10);
 
     gl::ScopedGlslProg render(render_grid_prog_);
-    gl::ScopedVao vao(grid_attributes_);
-
-    gl::ScopedBuffer grid_buffer(grid_buffer_);
-    grid_buffer_->bindBase(0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, grid_buffer_);
+    glBindVertexArray(grid_vao_);
 
     velocity_field_->bind(1);
 
@@ -560,7 +561,8 @@ void Fluid::draw() {
     //     gl::vertex(p.position.x, p.position.y, p.position.z);
     //     gl::end();
 
-    //     if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.x > size_ || p.position.y > size_
+    //     if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.x > size_ ||
+    //     p.position.y > size_
     //     ||
     //         p.position.z > size_) {
     //         util::log("ERROR: <%f, %f, %f>", p.position.x, p.position.y, p.position.z);

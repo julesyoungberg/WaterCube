@@ -80,28 +80,27 @@ protected:
     ContainerRef container_;
     std::vector<Particle> initial_particles_;
     std::vector<Plane> boundaries_;
-    std::vector<ivec3> grid_particles_;
+    std::vector<ivec4> grid_particles_;
 
     gl::GlslProgRef distance_field_prog_, bin_velocity_prog_, density_prog_, update_prog_;
     gl::GlslProgRef geometry_prog_, render_grid_prog_;
 
-    gl::SsboRef boundary_buffer_, grid_buffer_;
+    gl::SsboRef boundary_buffer_;
     gl::Texture1dRef wall_weight_function_;
     gl::Texture3dRef velocity_field_, distance_field_;
-    gl::VboRef ids_vbo_, grid_ids_vbo_;
-    gl::VaoRef attributes1_, attributes2_, grid_attributes_;
 
     SortRef sort_;
     MarchingCubeRef marching_cube_;
 
-    GLuint particle_buffer1_, particle_buffer2_;
-    GLuint vao1_, vao2_;
+    GLuint particle_buffer1_, particle_buffer2_, grid_buffer_;
+    GLuint vao1_, vao2_, grid_vao_;
 
 private:
     void generateInitialParticles();
     void generateBoundaryPlanes();
     void prepareWallWeightFunction();
     void prepareParticleBuffers();
+    void prepareGridParticles();
     void prepareBuffers();
 
     void compileShaders();
