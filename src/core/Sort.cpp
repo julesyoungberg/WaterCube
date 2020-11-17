@@ -161,7 +161,7 @@ void Sort::runLinearScanProg() {
     linear_scan_prog_->uniform("gridRes", grid_res_);
 
     util::runProg(1);
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 /**
@@ -179,7 +179,7 @@ void Sort::runScanProg() {
     scan_prog_->uniform("gridRes", grid_res_);
 
     util::runProg(ivec3(ceil(num_bins_ / 4.0f)));
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 /**
@@ -197,7 +197,7 @@ void Sort::runReorderProg(GLuint in_particles, GLuint out_particles) {
     reorder_prog_->uniform("gridRes", grid_res_);
 
     runProg();
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
+    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 void Sort::printGrids() {

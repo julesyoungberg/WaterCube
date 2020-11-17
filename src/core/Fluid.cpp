@@ -13,7 +13,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 5;
+    render_mode_ = 6;
     particle_radius_ = 0.05f; // 0.0457f;
     rest_density_ = 4;        // 998.27f
 }
@@ -213,26 +213,29 @@ void Fluid::prepareParticleBuffers() {
 
 void Fluid::prepareGridParticles() {
     util::log("\tcreating grid particles");
-
-    // generate particles
-    int n = int(pow(grid_res_, 3));
-    grid_particles_.resize(n);
+    grid_particles_.resize(int(pow(grid_res_, 3)));
     for (int z = 0; z < grid_res_; z++) {
         for (int y = 0; y < grid_res_; y++) {
             for (int x = 0; x < grid_res_; x++) {
-                grid_particles_.push_back(ivec4(x, y, z, 1));
+                grid_particles_.push_back(ivec4(x, y, z, 0));
             }
         }
     }
+    grid_buffer_ = gl::Ssbo::create(grid_particles_.size() * sizeof(ivec4), grid_particles_.data(),
+                                    GL_STATIC_DRAW);
 
-    // create buffer
-    glCreateBuffers(1, &grid_buffer_);
-    glNamedBufferStorage(grid_buffer_, n * sizeof(ivec4), grid_particles_.data(), 0);
-    glCreateVertexArrays(1, &grid_vao_);
-    glEnableVertexArrayAttrib(grid_vao_, 0);
-    glVertexArrayVertexBuffer(grid_vao_, 0, grid_buffer_, 0, sizeof(ivec4));
-    glVertexArrayAttribBinding(grid_vao_, 0, 0);
-    glVertexArrayAttribFormat(grid_vao_, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    util::log("\tcreating grid particles ids vbo");
+    std::vector<GLuint> ids(grid_particles_.size());
+    GLuint curr_id = 0;
+    std::generate(ids.begin(), ids.end(), [&curr_id]() -> GLuint { return curr_id++; });
+    grid_ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
+
+    util::log("\tcreating grid particles attributes vao");
+    grid_attributes_ = gl::Vao::create();
+    gl::ScopedBuffer scopedDids(grid_ids_vbo_);
+    gl::ScopedVao grid_vao(grid_attributes_);
+    gl::enableVertexAttribArray(0);
+    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 }
 
 /**
@@ -283,7 +286,8 @@ void Fluid::compileShaders() {
     util::log("\tcompiling render grid shader");
     render_grid_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
                                                  .vertex(loadAsset("fluid/grid.vert"))
-                                                 .fragment(loadAsset("fluid/grid.frag")));
+                                                 .fragment(loadAsset("fluid/grid.frag"))
+                                                 .attribLocation("gridID", 0));
 }
 
 /**
@@ -357,16 +361,12 @@ void Fluid::runDistanceFieldProg() {
 /**
  * Run bin velocity compute shader
  */
-void Fluid::runBinVelocityProg(gl::SsboRef particles) {
+void Fluid::runBinVelocityProg(GLuint particles) {
     gl::ScopedGlslProg prog(bin_velocity_prog_);
 
-    gl::ScopedBuffer scoped_particles(particles);
-    particles->bindBase(0);
-
-    // sort_->getCountGrid()->bind(1);
-    // sort_->getOffsetGrid()->bind(2);
-    // bin_velocity_prog_->uniform("countGrid", 1);
-    // bin_velocity_prog_->uniform("offsetGrid", 2);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
     glActiveTexture(GL_TEXTURE0 + 3);
     glUniform1i(glGetUniformLocation(bin_velocity_prog_->getHandle(), "velocityField"), 3);
@@ -376,11 +376,6 @@ void Fluid::runBinVelocityProg(gl::SsboRef particles) {
 
     util::runProg(ivec3(ceil(num_bins_ / 4.0f)));
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-
-    // sort_->getCountGrid()->unbind(1);
-    // sort_->getOffsetGrid()->unbind(2);
-
-    particles->unbindBase();
 }
 
 /**
@@ -474,7 +469,7 @@ void Fluid::update(double time) {
 
     sort_->run(in_particles, out_particles);
 
-    // runBinVelocityProg(out_particles);
+    runBinVelocityProg(out_particles);
 
     // auto velocities = util::getVecs(velocity_field_, num_bins_);
     // util::log("bin velocities: ");
@@ -513,8 +508,10 @@ void Fluid::renderGrid() {
     gl::pointSize(10);
 
     gl::ScopedGlslProg render(render_grid_prog_);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, grid_buffer_);
-    glBindVertexArray(grid_vao_);
+    gl::ScopedVao vao(grid_attributes_);
+
+    gl::ScopedBuffer grid_buffer(grid_buffer_);
+    grid_buffer_->bindBase(0);
 
     velocity_field_->bind(1);
 
@@ -525,8 +522,6 @@ void Fluid::renderGrid() {
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, grid_particles_.size());
-
-    velocity_field_->unbind(1);
 }
 
 /**
