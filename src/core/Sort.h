@@ -38,6 +38,20 @@ public:
     static SortRef create();
 
 protected:
+    void clearCount();
+    void clearCountBuffer();
+    void clearOffsetBuffer();
+    void printGrids();
+    void prepareGridParticles();
+
+    void runProg();
+    void runCountProg(GLuint particle_buffer);
+    void runLinearScanProg();
+    void runScanProg();
+    void runReorderProg(GLuint in_particles, GLuint out_particles);
+
+    SortRef thisRef() { return std::make_shared<Sort>(*this); }
+
     int num_items_, num_bins_, grid_res_;
     float bin_size_;
     bool use_linear_scan_;
@@ -51,22 +65,6 @@ protected:
     gl::VaoRef grid_attributes_;
 
     GLuint count_buffer_, offset_buffer_;
-
-private:
-    void clearCount();
-    void clearCountBuffer();
-    void clearOffsetBuffer();
-    void printGrids();
-    void prepareGridParticles();
-
-    // GPU STUFF
-    void runProg();
-    void runCountProg(GLuint particle_buffer);
-    void runLinearScanProg();
-    void runScanProg();
-    void runReorderProg(GLuint in_particles, GLuint out_particles);
-
-    SortRef thisRef() { return std::make_shared<Sort>(*this); }
 };
 
 } // namespace core

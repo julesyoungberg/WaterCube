@@ -63,6 +63,25 @@ public:
     static FluidRef create(const std::string& name) { return std::make_shared<Fluid>(name); }
 
 protected:
+    void generateInitialParticles();
+    void generateBoundaryPlanes();
+    void prepareWallWeightFunction();
+    void prepareParticleBuffers();
+    void prepareGridParticles();
+    void prepareBuffers();
+
+    void compileShaders();
+
+    void runProg();
+    void runDistanceFieldProg();
+    void runBinVelocityProg(gl::SsboRef particles);
+    void runDensityProg(gl::SsboRef particles);
+    void runUpdateProg(gl::SsboRef particles, float time_step);
+    void renderGeometry();
+    void renderGrid();
+
+    FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
+
     int num_particles_, grid_res_;
     int num_work_groups_, distance_field_size_, num_bins_;
     int render_mode_;
@@ -94,26 +113,6 @@ protected:
 
     GLuint particle_buffer1_, particle_buffer2_, grid_buffer_;
     GLuint vao1_, vao2_, grid_vao_;
-
-private:
-    void generateInitialParticles();
-    void generateBoundaryPlanes();
-    void prepareWallWeightFunction();
-    void prepareParticleBuffers();
-    void prepareGridParticles();
-    void prepareBuffers();
-
-    void compileShaders();
-
-    void runProg();
-    void runDistanceFieldProg();
-    void runBinVelocityProg(gl::SsboRef particles);
-    void runDensityProg(gl::SsboRef particles);
-    void runUpdateProg(gl::SsboRef particles, float time_step);
-    void renderGeometry();
-    void renderGrid();
-
-    FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
 };
 
 } // namespace core
