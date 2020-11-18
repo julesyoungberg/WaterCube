@@ -13,7 +13,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 7;
+    render_mode_ = 8;
     particle_radius_ = 0.05f; // 0.0457f;
     rest_density_ = 998.27f;
 }
@@ -546,23 +546,6 @@ void Fluid::draw() {
     } else {
         renderGeometry();
     }
-
-    // auto particles = util::getParticles(particle_buffer1_id_, num_particles_);
-    // util::log("particles");
-    // for (auto const& p : particles) {
-    //     gl::pointSize(2);
-    //     gl::color(p.velocity.x, p.velocity.y, p.velocity.z);
-    //     gl::begin(GL_POINTS);
-    //     gl::vertex(p.position.x, p.position.y, p.position.z);
-    //     gl::end();
-
-    //     if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.x > size_ ||
-    //     p.position.y > size_
-    //     ||
-    //         p.position.z > size_) {
-    //         util::log("ERROR: <%f, %f, %f>", p.position.x, p.position.y, p.position.z);
-    //     }
-    // }
 
     container_->draw();
 
