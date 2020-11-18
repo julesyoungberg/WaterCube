@@ -7,15 +7,15 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     num_particles_ = 1000;
     grid_res_ = 8;
     position_ = vec3(0);
-    gravity_ = 0; // -0.05f;
+    gravity_ = -4.5f;
     particle_mass_ = 0.05f;
     kernel_radius_ = 0.1828f;
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 6;
+    render_mode_ = 4;
     particle_radius_ = 0.05f; // 0.0457f;
-    rest_density_ = 4;        // 998.27f
+    rest_density_ = 998.27f;
 }
 
 Fluid::~Fluid() {}
@@ -354,8 +354,6 @@ void Fluid::runDistanceFieldProg() {
 
     util::runProg(ivec3(ceil(distance_field_size_ / 4.0f)));
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-
-    boundary_buffer_->unbindBase();
 }
 
 /**
@@ -381,19 +379,16 @@ void Fluid::runBinVelocityProg(GLuint particles) {
 /**
  * Run density compute shader
  */
-void Fluid::runDensityProg(gl::SsboRef particles) {
+void Fluid::runDensityProg(GLuint particles) {
     gl::ScopedGlslProg prog(density_prog_);
 
-    gl::ScopedBuffer scoped_particles(particles);
-    particles->bindBase(0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
-    // sort_->getCountGrid()->bind(1);
-    // sort_->getOffsetGrid()->bind(2);
-    // distance_field_->bind(3);
-    // wall_weight_function_->bind(4);
+    distance_field_->bind(3);
+    wall_weight_function_->bind(4);
 
-    density_prog_->uniform("countGrid", 1);
-    density_prog_->uniform("offsetGrid", 2);
     density_prog_->uniform("distanceField", 3);
     density_prog_->uniform("wallWeight", 4);
     density_prog_->uniform("size", size_);
@@ -409,37 +404,27 @@ void Fluid::runDensityProg(gl::SsboRef particles) {
 
     runProg();
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-
-    // sort_->getCountGrid()->unbind(1);
-    // sort_->getOffsetGrid()->unbind(2);
-    // distance_field_->unbind(3);
-    // wall_weight_function_->unbind(4);
-
-    particles->unbindBase();
 }
 
 /**
  * Run update compute shader
  */
-void Fluid::runUpdateProg(gl::SsboRef particles, float time_step) {
+void Fluid::runUpdateProg(GLuint particles, float time_step) {
     gl::ScopedGlslProg prog(update_prog_);
 
-    gl::ScopedBuffer scoped_particles(particles);
-    particles->bindBase(0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
-    // sort_->getCountGrid()->bind(1);
-    // sort_->getOffsetGrid()->bind(2);
-    // velocity_field_->bind(3);
-    // distance_field_->bind(4);
+    distance_field_->bind(3);
+    // velocity_field_->bind(4);
 
-    update_prog_->uniform("countGrid", 1);
-    update_prog_->uniform("offsetGrid", 2);
-    update_prog_->uniform("velocityField", 3);
-    update_prog_->uniform("distanceField", 4);
+    update_prog_->uniform("distanceField", 3);
+    // update_prog_->uniform("velocityField", 4);
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", time_step);
+    update_prog_->uniform("dt", 0.000012f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", vec3(0, gravity_, 0));
     update_prog_->uniform("particleMass", particle_mass_);
@@ -450,13 +435,6 @@ void Fluid::runUpdateProg(gl::SsboRef particles, float time_step) {
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-    // sort_->getCountGrid()->unbind(1);
-    // sort_->getOffsetGrid()->unbind(2);
-    // velocity_field_->unbind(3);
-    // distance_field_->unbind(4);
-
-    particles->unbindBase();
 }
 
 /**
@@ -469,17 +447,10 @@ void Fluid::update(double time) {
 
     sort_->run(in_particles, out_particles);
 
-    runBinVelocityProg(out_particles);
+    // runBinVelocityProg(out_particles);
 
-    // auto velocities = util::getVecs(velocity_field_, num_bins_);
-    // util::log("bin velocities: ");
-    // for (int i = 0; i < 100; i++) {
-    //     vec3 v = velocities[i];
-    //     util::log("<%f, %f, %f>", v.x, v.y, v.z);
-    // }
-
-    // runDensityProg(out_particles);
-    // runUpdateProg(out_particles, float(time));
+    runDensityProg(out_particles);
+    runUpdateProg(out_particles, float(time));
 
     // if (render_mode_ == 7) {
     //     marching_cube_->update(out_particles, num_particles_, 0.5f);

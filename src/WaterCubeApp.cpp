@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(10e3);
+const int NUM_PARTICLES = static_cast<int>(20e3);
 
 class WaterCubeApp : public App {
 public:
@@ -92,7 +92,8 @@ void WaterCubeApp::draw() {
 
     vec2 window = app::getWindowSize();
     gl::setMatricesWindow(window);
-    gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps", vec2(window.x - 64.0f, 100.0f));
+    gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps",
+                   vec2(window.x - 64.0f, 100.0f));
 }
 
 void WaterCubeApp::keyDown(KeyEvent event) {
@@ -105,4 +106,5 @@ void WaterCubeApp::keyDown(KeyEvent event) {
     }
 }
 
-CINDER_APP(WaterCubeApp, RendererGl, [](App::Settings* settings) { settings->setWindowSize(1920, 1080); })
+CINDER_APP(WaterCubeApp, RendererGl,
+           [](App::Settings* settings) { settings->setWindowSize(1920, 1080); })

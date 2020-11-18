@@ -75,8 +75,8 @@ protected:
     void runProg();
     void runDistanceFieldProg();
     void runBinVelocityProg(GLuint particles);
-    void runDensityProg(gl::SsboRef particles);
-    void runUpdateProg(gl::SsboRef particles, float time_step);
+    void runDensityProg(GLuint particles);
+    void runUpdateProg(GLuint particles, float time_step);
     void renderGeometry();
     void renderGrid();
 

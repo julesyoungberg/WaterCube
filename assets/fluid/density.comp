@@ -15,8 +15,14 @@ layout(std430, binding = 0) restrict buffer Particles {
     Particle particles[];
 };
 
-layout(binding = 1, r32ui) uniform restrict readonly uimage3D countGrid;
-layout(binding = 2, r32ui) uniform restrict readonly uimage3D offsetGrid;
+layout(std430, binding = 1) restrict readonly buffer Counts {
+    uint counts[];
+};
+
+layout(std430, binding = 2) restrict readonly buffer Offsets {
+    uint offsets[];
+};
+
 layout(binding = 3) uniform sampler3D distanceField;
 layout(binding = 4) uniform sampler1D wallWeight;
 uniform float size;
@@ -55,25 +61,23 @@ void main() {
     }
 
     Particle p = particles[particleID];
-    const ivec3 binCoord = ivec3(p.position / binSize);
+    const ivec3 coord = ivec3(p.position / binSize);
 
     float density = particleMass * pow(kernelRadius * kernelRadius, 3) * kernelWeight;
 
     // search the particles of each neighboring bin
     #pragma unroll 1
     for (uint binIndex = 0; binIndex < 27; binIndex++) {
-        const ivec3 neighborCoord = binCoord + NEIGHBORHOOD[binIndex];
+        const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
 
         // don't go out of bounds
-        if (
-            any(lessThan(neighborCoord, ivec3(0))) || 
-            any(greaterThanEqual(neighborCoord, ivec3(gridRes)))
-        ) {
+        if (any(lessThan(nc, ivec3(0))) || any(greaterThanEqual(nc, ivec3(gridRes)))) {
             continue;
         }
 
-        const uint count = imageLoad(countGrid, neighborCoord).x;
-        const uint offset = imageLoad(offsetGrid, neighborCoord).x;
+        const uint index = nc.z * gridRes * gridRes + nc.y * gridRes + nc.z;
+        const uint count = counts[index];
+        const uint offset = offsets[index];
 
         // search the particles of this bin
         for (uint localIndex = 0; localIndex < count; localIndex++) {
