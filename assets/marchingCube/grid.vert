@@ -4,8 +4,8 @@ layout(location = 0) in int gridID;
 out vec3 oNormal;
 
 struct Grid {
-	vec3 position;
-	vec3 normal;
+	vec4 position;
+	vec4 normal;
 };
 
 layout(std430, binding = 0) buffer grids {
@@ -16,6 +16,6 @@ uniform mat4 ciModelViewProjection;
 
 void main() {
     Grid grid = grid[gridID];
-	gl_Position = ciModelViewProjection * vec4(grid.position, 1);
-	oNormal = grid.normal;
+	gl_Position = ciModelViewProjection * vec4(grid.position.xyz, 1);
+	oNormal = grid.normal.xyz;
 }

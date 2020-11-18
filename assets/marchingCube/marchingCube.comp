@@ -5,8 +5,8 @@
 layout(local_size_x = THREAD, local_size_y = THREAD, local_size_z = THREAD) in;
 
 struct Grid {
-	vec3 position;
-	vec3 normal;
+	vec4 position;
+	vec4 normal;
 };
 
 layout(std430, binding = 0) restrict buffer grids {
@@ -127,17 +127,17 @@ void main() {
 			uint ic = idx * 15 + (3 * i + 2);
 
 			vec3 position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 0)]];
-			grid[ia].position = coordToPoint(position);
+			grid[ia].position = vec4(coordToPoint(position), 0);
 
 			position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 1)]];
-			grid[ib].position = coordToPoint(position);
+			grid[ib].position = vec4(coordToPoint(position), 0);
 
 			position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 2)]];
-			grid[ic].position = coordToPoint(position);
+			grid[ic].position = vec4(coordToPoint(position), 0);
 
-			vec3 ab = grid[ia].position - grid[ib].position;
-			vec3 ac = grid[ia].position - grid[ic].position;
-			vec3 normal = normalize(cross(ab, ac));
+			vec4 ab = grid[ia].position - grid[ib].position;
+			vec4 ac = grid[ia].position - grid[ic].position;
+			vec4 normal = vec4(normalize(cross(ab.xyz, ac.xyz)), 0);
 			grid[ia].normal = grid[ib].normal = grid[ic].normal = normal;
 		}
 	}
