@@ -101,7 +101,8 @@ protected:
     std::vector<Plane> boundaries_;
     std::vector<ivec4> grid_particles_;
 
-    gl::GlslProgRef distance_field_prog_, bin_velocity_prog_, density_prog_, update_prog_;
+    gl::GlslProgRef distance_field_prog_, bin_velocity_prog_;
+    gl::GlslProgRef density_prog_, update_prog_;
     gl::GlslProgRef geometry_prog_, render_grid_prog_;
 
     gl::SsboRef boundary_buffer_, grid_buffer_;

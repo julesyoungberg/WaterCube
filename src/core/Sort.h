@@ -58,7 +58,8 @@ protected:
 
     std::vector<ivec4> grid_particles_;
 
-    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_, reorder_prog_, render_grid_prog_;
+    gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_;
+    gl::GlslProgRef reorder_prog_, render_grid_prog_;
     gl::SsboRef position_buffer_, global_count_buffer_, grid_buffer_;
     gl::Texture1dRef id_map_;
     gl::VboRef grid_ids_vbo_;
