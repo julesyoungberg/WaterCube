@@ -31,6 +31,9 @@ SortRef Sort::positionBuffer(gl::SsboRef buffer) {
     return thisRef();
 }
 
+/**
+ * prepare debugging grid particles
+ */
 void Sort::prepareGridParticles() {
     util::log("\tcreating grid particles");
     grid_particles_.resize(int(pow(grid_res_, 3)));
@@ -111,6 +114,9 @@ void Sort::compileShaders() {
                                                  .attribLocation("gridID", 0));
 }
 
+/**
+ * clear global count buffer
+ */
 void Sort::clearCount() {
     const std::uint32_t clear_value = 0;
     gl::ScopedBuffer count_buffer(global_count_buffer_);
@@ -119,6 +125,9 @@ void Sort::clearCount() {
     gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
+/**
+ * clear counter buffer
+ */
 void Sort::clearCountBuffer() {
     std::vector<uint32_t> initial(num_items_, 0);
     gl::ScopedBuffer buffer(GL_SHADER_STORAGE_BUFFER, count_buffer_);
@@ -127,6 +136,9 @@ void Sort::clearCountBuffer() {
     gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
+/**
+ * clear offset buffer
+ */
 void Sort::clearOffsetBuffer() {
     std::vector<uint32_t> initial(num_items_, 0);
     gl::ScopedBuffer buffer(GL_SHADER_STORAGE_BUFFER, count_buffer_);
@@ -134,8 +146,6 @@ void Sort::clearOffsetBuffer() {
                            initial.data());
     gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
-
-void Sort::runProg() { util::runProg(int(ceil(float(num_items_) / float(WORK_GROUP_SIZE)))); }
 
 /**
  * Run bucket count compute shader
@@ -153,6 +163,10 @@ void Sort::runCountProg(GLuint particle_buffer) {
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
+/**
+ * Run a single shader to scan the counts and compute prefix sums (offsets)
+ * PERFORMANCE BOTTLENECK
+ */
 void Sort::runLinearScanProg() {
     gl::ScopedGlslProg prog(linear_scan_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, count_buffer_);
@@ -200,6 +214,9 @@ void Sort::runReorderProg(GLuint in_particles, GLuint out_particles) {
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
+/**
+ * print current values in count and offset buffers
+ */
 void Sort::printGrids() {
     std::vector<uint32_t> counts = util::getUints(count_buffer_, num_bins_);
     std::vector<uint32_t> offsets = util::getUints(offset_buffer_, num_bins_);
@@ -214,6 +231,9 @@ void Sort::printGrids() {
     util::log("%s", o.c_str());
 }
 
+/**
+ * main logic - sort in_particles and store result in out_particles
+ */
 void Sort::run(GLuint in_particles, GLuint out_particles) {
     clearCountBuffer();
     runCountProg(in_particles);
@@ -229,6 +249,9 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
     runReorderProg(in_particles, out_particles);
 }
 
+/**
+ * render debugging grid
+ */
 void Sort::renderGrid(float size) {
     gl::pointSize(10);
 
@@ -249,5 +272,3 @@ void Sort::renderGrid(float size) {
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, grid_particles_.size());
 }
-
-SortRef Sort::create() { return std::make_shared<Sort>(); }

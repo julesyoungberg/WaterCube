@@ -16,8 +16,8 @@ using namespace ci;
 using namespace ci::app;
 
 struct Grid {
-    vec3 position;
-    vec3 normal;
+    vec4 position;
+    vec4 normal;
 };
 
 typedef std::shared_ptr<class MarchingCube> MarchingCubeRef;
@@ -36,7 +36,7 @@ public:
 
     void updateField(float time, float scale);
 
-    static MarchingCubeRef create();
+    static MarchingCubeRef create() { return std::make_shared<MarchingCube>(); }
 
 private:
     void prepareGridBuffer();

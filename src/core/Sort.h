@@ -35,7 +35,7 @@ public:
     GLuint getCountBuffer() { return count_buffer_; }
     GLuint getOffsetBuffer() { return offset_buffer_; }
 
-    static SortRef create();
+    static SortRef create() { return std::make_shared<Sort>(); }
 
 protected:
     void clearCount();
@@ -44,7 +44,7 @@ protected:
     void printGrids();
     void prepareGridParticles();
 
-    void runProg();
+    void runProg() { util::runProg(int(ceil(float(num_items_) / float(WORK_GROUP_SIZE)))); }
     void runCountProg(GLuint particle_buffer);
     void runLinearScanProg();
     void runScanProg();

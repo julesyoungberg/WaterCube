@@ -15,7 +15,14 @@ MarchingCubeRef MarchingCube::size(float s) {
     return thisRef();
 }
 
+/**
+ * Prepare resulting triangle buffer
+ */
 void MarchingCube::prepareGridBuffer() {
+    // The size of the buffer that holds the verts.
+    // This is the maximum number of verts that the
+    // marching cube can produce, 5 triangles for each voxel.
+    count_ = resolution_ * resolution_ * resolution_ * (3 * 5);
     util::log("\tcreating grid buffer");
     grids_.resize(count_, Grid());
     grid_buffer_ = gl::Ssbo::create(grids_.size() * sizeof(Grid), grids_.data(), GL_STATIC_DRAW);
@@ -34,6 +41,9 @@ void MarchingCube::prepareGridBuffer() {
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 }
 
+/**
+ * prepare debug particles
+ */
 void MarchingCube::prepareDensityParticles() {
     util::log("\tcreating density particles");
     particles_.resize(int(pow(resolution_, 3)));
@@ -61,12 +71,11 @@ void MarchingCube::prepareDensityParticles() {
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 }
 
+/**
+ * create GPU buffers with initial data
+ */
 void MarchingCube::prepareBuffers() {
     util::log("preparing marching cube buffers");
-    // The size of the buffer that holds the verts.
-    // This is the maximum number of verts that the
-    // marching cube can produce, 5 triangles for each voxel.
-    count_ = resolution_ * resolution_ * resolution_ * (3 * 5);
 
     prepareGridBuffer();
 
@@ -97,6 +106,9 @@ void MarchingCube::prepareBuffers() {
     prepareDensityParticles();
 }
 
+/**
+ * compile shader programs
+ */
 void MarchingCube::compileShaders() {
     util::log("compiling marching cube shaders");
 
@@ -126,6 +138,9 @@ void MarchingCube::compileShaders() {
                                  .attribLocation("particleID", 0));
 }
 
+/**
+ * setup given a grid resolution
+ */
 void MarchingCube::setup(const int resolution) {
     resolution_ = resolution;
     prepareBuffers();
@@ -133,6 +148,9 @@ void MarchingCube::setup(const int resolution) {
     clearDensity();
 }
 
+/**
+ * run clear program to clear the grid
+ */
 void MarchingCube::runClearProg() {
     const auto thread = count_ / CLEAR_GROUP_SIZE;
     grid_buffer_->bindBase(0);
@@ -142,6 +160,9 @@ void MarchingCube::runClearProg() {
     util::runProg(thread);
 }
 
+/**
+ * clear density buffer
+ */
 void MarchingCube::clearDensity() {
     std::vector<uint32_t> zeros(int(pow(resolution_, 3)), 0);
     gl::ScopedBuffer buffer(density_buffer_);
@@ -150,6 +171,9 @@ void MarchingCube::clearDensity() {
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
+/**
+ * compute density for points on the grid
+ */
 void MarchingCube::runBinDensityProg(GLuint particle_buffer, int num_items) {
     gl::ScopedGlslProg prog(bin_density_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
@@ -177,6 +201,9 @@ void MarchingCube::runNormalizeDensityProg(const ivec3 thread) {
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
+/**
+ * run main marching cube algorithm
+ */
 void MarchingCube::runMarchingCubeProg(float threshold, const ivec3 thread) {
     gl::ScopedGlslProg prog(marching_cube_prog_);
     gl::ScopedVao vao(grid_attributes_);
@@ -202,6 +229,9 @@ void MarchingCube::runMarchingCubeProg(float threshold, const ivec3 thread) {
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
+/**
+ * update routine
+ */
 void MarchingCube::update(GLuint particle_buffer, int num_items, float threshold) {
     const ivec3 thread = ivec3(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE));
 
@@ -238,7 +268,9 @@ void MarchingCube::update(GLuint particle_buffer, int num_items, float threshold
     util::log("%s", s.c_str());
     runMarchingCubeProg(threshold, thread);
 }
-
+/**
+ * render resulting surface
+ */
 void MarchingCube::render() {
     gl::ScopedDepthTest depthTest(true);
 
@@ -252,6 +284,9 @@ void MarchingCube::render() {
     gl::drawElements(GL_TRIANGLES, count_, GL_UNSIGNED_INT, nullptr);
 }
 
+/**
+ * render debug density grid
+ */
 void MarchingCube::renderDensity() {
     gl::pointSize(10);
 
@@ -270,5 +305,3 @@ void MarchingCube::renderDensity() {
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, particles_.size());
 }
-
-MarchingCubeRef MarchingCube::create() { return std::make_shared<MarchingCube>(); }

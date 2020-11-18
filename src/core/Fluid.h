@@ -72,7 +72,7 @@ protected:
 
     void compileShaders();
 
-    void runProg();
+    void runProg() { util::runProg(num_work_groups_); }
     void runDistanceFieldProg();
     void runBinVelocityProg(GLuint particles);
     void runDensityProg(GLuint particles);

@@ -5,7 +5,7 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name) {
     size_ = 1.0f;
     num_particles_ = 1000;
-    grid_res_ = 8;
+    grid_res_ = 14;
     position_ = vec3(0);
     gravity_ = -4.5f;
     particle_mass_ = 0.05f;
@@ -100,6 +100,9 @@ FluidRef Fluid::gravity(float g) {
     return thisRef();
 }
 
+/**
+ * setup GUI configuration parameters
+ */
 void Fluid::addParams(params::InterfaceGlRef p) {
     p->addParam("Number of Particles", &num_particles_, "min=100 step=100");
     p->addParam("Render Mode", &render_mode_, "min=0 max=4 step=1");
@@ -131,9 +134,13 @@ void Fluid::generateInitialParticles() {
     }
 }
 
+/**
+ * generates a vector of planes representing the container boundaries
+ */
 void Fluid::generateBoundaryPlanes() {
     util::log("creating boundaries");
 
+    // walls of the unit cube
     std::vector<std::vector<ivec3>> walls = {
         {ivec3(0, 0, 0), ivec3(1, 0, 0), ivec3(1, 1, 0), ivec3(0, 1, 0)},
         {ivec3(0, 0, 1), ivec3(1, 0, 1), ivec3(1, 1, 1), ivec3(0, 1, 1)},
@@ -145,6 +152,7 @@ void Fluid::generateBoundaryPlanes() {
 
     boundaries_.resize(walls.size());
 
+    // compute planes from wall definitions
     for (int i = 0; i < walls.size(); i++) {
         auto const wall = walls[i];
 
@@ -166,9 +174,13 @@ void Fluid::generateBoundaryPlanes() {
     }
 }
 
+/**
+ * generate a 1d map from distance to force weight
+ */
 void Fluid::prepareWallWeightFunction() {
     util::log("\tpreparing wall weight function");
 
+    // calculate discrete weights for interpolation on the GPU
     int divisions = 10;
     float step = kernel_radius_ / float(divisions);
     std::vector<float> values(divisions + 1, 0);
@@ -187,6 +199,9 @@ void Fluid::prepareWallWeightFunction() {
         gl::Texture1d::create(values.data(), GL_R32F, divisions + 1, texture_format);
 }
 
+/**
+ * prepare main particle buffers
+ */
 void Fluid::prepareParticleBuffers() {
     util::log("\tcreating particle buffers");
 
@@ -211,6 +226,9 @@ void Fluid::prepareParticleBuffers() {
     glVertexArrayAttribFormat(vao2_, 0, 3, GL_FLOAT, GL_FALSE, 0);
 }
 
+/**
+ * prepare debugging grid particles
+ */
 void Fluid::prepareGridParticles() {
     util::log("\tcreating grid particles");
     grid_particles_.resize(int(pow(grid_res_, 3)));
@@ -328,7 +346,7 @@ FluidRef Fluid::setup() {
 
     util::log("initializing marching cube");
     marching_cube_ = MarchingCube::create()->size(size_);
-    marching_cube_->setup(8);
+    marching_cube_->setup(grid_res_);
 
     runDistanceFieldProg();
 
@@ -336,8 +354,9 @@ FluidRef Fluid::setup() {
     return std::make_shared<Fluid>(*this);
 }
 
-void Fluid::runProg() { util::runProg(num_work_groups_); }
-
+/**
+ * compute distance field on the GPU
+ */
 void Fluid::runDistanceFieldProg() {
     gl::ScopedGlslProg prog(distance_field_prog_);
 
@@ -457,6 +476,9 @@ void Fluid::update(double time) {
     }
 }
 
+/**
+ * render particles
+ */
 void Fluid::renderGeometry() {
     gl::ScopedGlslProg render(geometry_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
@@ -475,6 +497,9 @@ void Fluid::renderGeometry() {
     gl::drawArrays(GL_POINTS, 0, num_particles_);
 }
 
+/**
+ * render debugging grid
+ */
 void Fluid::renderGrid() {
     gl::pointSize(10);
 
