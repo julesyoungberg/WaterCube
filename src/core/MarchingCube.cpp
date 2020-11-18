@@ -1,6 +1,6 @@
 #include "MarchingCube.h"
 
-#include "glm/glm.hpp"
+#include <glm/gtx/string_cast.hpp>
 
 #include "util.h"
 
@@ -135,18 +135,25 @@ void MarchingCube::compileShaders() {
     util::log("\tcompiling clear prog");
     clear_prog_ = util::compileComputeShader("marchingCube/clear.comp");
 
-    util::log("\tcompiling render prog");
-    render_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
-                                            .vertex(loadAsset("marchingCube/grid.vert"))
-                                            .fragment(loadAsset("marchingCube/grid.frag"))
-                                            .attribLocation("gridID", 0));
-
     util::log("\tcompiling render density prog");
     render_density_prog_ =
         gl::GlslProg::create(gl::GlslProg::Format()
                                  .vertex(loadAsset("marchingCube/density.vert"))
                                  .fragment(loadAsset("marchingCube/density.frag"))
                                  .attribLocation("particleID", 0));
+
+    util::log("\tcompiling render grid prog");
+    render_grid_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
+                                                 .vertex(loadAsset("marchingCube/grid.vert"))
+                                                 .fragment(loadAsset("marchingCube/grid.frag"))
+                                                 .attribLocation("gridID", 0));
+
+    util::log("\tcompiling render surface prog");
+    render_surface_prog_ =
+        gl::GlslProg::create(gl::GlslProg::Format()
+                                 .vertex(loadAsset("marchingCube/surface.vert"))
+                                 .fragment(loadAsset("marchingCube/surface.frag"))
+                                 .attribLocation("gridID", 0));
 }
 
 /**
@@ -239,6 +246,32 @@ void MarchingCube::printDensity() {
     util::log("%s", s.c_str());
 }
 
+std::string vecToString(vec4 v) {
+    std::string s = std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z);
+    return s;
+}
+
+/**
+ * prints grid buffer for debugging
+ */
+void MarchingCube::printGrid() {
+    std::vector<Grid> grid(count_);
+    gl::ScopedBuffer scoped_buffer(grid_buffer_);
+
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count_ * sizeof(Grid), grid.data());
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+
+    std::string s = "grid: ";
+    for (int i = 0; i < 15; i++) {
+        auto p = grid[i].position;
+        auto n = grid[i].normal;
+        std::string ps = glm::to_string(p);
+        std::string ns = glm::to_string(n);
+        s += "(p=<" + ps + ">, n=<" + ns + ">), ";
+    }
+    util::log("%s", s.c_str());
+}
+
 /**
  * update routine
  */
@@ -250,28 +283,14 @@ void MarchingCube::update(GLuint particle_buffer, GLuint count_buffer, GLuint of
 
     runBinDensityProg(particle_buffer, count_buffer, offset_buffer);
     runMarchingCubeProg(thread);
-}
-/**
- * render resulting surface
- */
-void MarchingCube::render() {
-    gl::ScopedDepthTest depthTest(true);
-
-    gl::ScopedGlslProg render(render_prog_);
-    gl::ScopedVao vao(grid_attributes_);
-
-    gl::ScopedBuffer grid_buffer(grid_buffer_);
-    grid_buffer_->bindBase(0);
-
-    gl::context()->setDefaultShaderVars();
-    gl::drawElements(GL_TRIANGLES, count_, GL_UNSIGNED_INT, nullptr);
+    // printGrid();
 }
 
 /**
  * render debug density grid
  */
 void MarchingCube::renderDensity() {
-    gl::pointSize(10);
+    gl::pointSize(5);
 
     gl::ScopedGlslProg render(render_density_prog_);
     gl::ScopedVao vao(particle_attributes_);
@@ -287,4 +306,36 @@ void MarchingCube::renderDensity() {
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, int(particles_.size()));
+}
+
+/**
+ * render debugging grid
+ */
+void MarchingCube::renderGrid() {
+    gl::pointSize(5);
+
+    gl::ScopedGlslProg render(render_grid_prog_);
+    gl::ScopedVao vao(grid_attributes_);
+
+    gl::ScopedBuffer grid_buffer(grid_buffer_);
+    grid_buffer_->bindBase(0);
+
+    gl::context()->setDefaultShaderVars();
+    gl::drawArrays(GL_POINTS, 0, count_);
+}
+
+/**
+ * render resulting surface
+ */
+void MarchingCube::renderSurface() {
+    gl::ScopedDepthTest depthTest(true);
+
+    gl::ScopedGlslProg render(render_surface_prog_);
+    gl::ScopedVao vao(grid_attributes_);
+
+    gl::ScopedBuffer grid_buffer(grid_buffer_);
+    grid_buffer_->bindBase(0);
+
+    gl::context()->setDefaultShaderVars();
+    gl::drawElements(GL_TRIANGLES, count_, GL_UNSIGNED_INT, nullptr);
 }

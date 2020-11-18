@@ -141,14 +141,20 @@ void Fluid::generateBoundaryPlanes() {
     util::log("creating boundaries");
 
     // walls of the unit cube
-    std::vector<std::vector<ivec3>> walls = {
-        {ivec3(0, 0, 0), ivec3(1, 0, 0), ivec3(1, 1, 0), ivec3(0, 1, 0)},
-        {ivec3(0, 0, 1), ivec3(1, 0, 1), ivec3(1, 1, 1), ivec3(0, 1, 1)},
-        {ivec3(0, 1, 0), ivec3(1, 1, 0), ivec3(1, 1, 1), ivec3(0, 1, 1)},
-        {ivec3(0, 0, 0), ivec3(1, 0, 0), ivec3(1, 0, 1), ivec3(0, 0, 1)},
-        {ivec3(0, 0, 0), ivec3(0, 1, 0), ivec3(0, 1, 1), ivec3(0, 0, 1)},
-        {ivec3(1, 0, 0), ivec3(1, 1, 0), ivec3(1, 1, 1), ivec3(1, 0, 1)},
+    std::vector<std::vector<vec3>> walls = {
+        {vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), vec3(0, 1, 0)},
+        {vec3(0, 0, 1), vec3(1, 0, 1), vec3(1, 1, 1), vec3(0, 1, 1)},
+        {vec3(0, 1, 0), vec3(1, 1, 0), vec3(1, 1, 1), vec3(0, 1, 1)},
+        {vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 0, 1), vec3(0, 0, 1)},
+        {vec3(0, 0, 0), vec3(0, 1, 0), vec3(0, 1, 1), vec3(0, 0, 1)},
+        {vec3(1, 0, 0), vec3(1, 1, 0), vec3(1, 1, 1), vec3(1, 0, 1)},
     };
+
+    for (int i = 0; i < walls.size(); i++) {
+        for (int j = 0; j < walls[i].size(); j++) {
+            walls[i][j] = walls[i][j] * size_;
+        }
+    }
 
     boundaries_.resize(walls.size());
 
@@ -317,7 +323,7 @@ FluidRef Fluid::setup() {
     num_bins_ = int(pow(grid_res_, 3));
     distance_field_size_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
-    kernel_radius_ = bin_size_;
+    kernel_radius_ = bin_size_ / 2.0f;
     util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_,
               kernel_radius_);
 
@@ -475,9 +481,7 @@ void Fluid::update(double time) {
     runDensityProg(out_particles);
     runUpdateProg(out_particles, float(time));
 
-    if (render_mode_ == 7 || render_mode_ == 8) {
-        marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
-    }
+    marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**
@@ -542,7 +546,9 @@ void Fluid::draw() {
     } else if (render_mode_ == 7) {
         marching_cube_->renderDensity();
     } else if (render_mode_ == 8) {
-        marching_cube_->render();
+        marching_cube_->renderGrid();
+    } else if (render_mode_ == 9) {
+        marching_cube_->renderSurface();
     } else {
         renderGeometry();
     }

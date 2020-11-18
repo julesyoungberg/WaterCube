@@ -27,15 +27,16 @@ public:
     MarchingCube();
     ~MarchingCube();
 
-    MarchingCubeRef size(float s);
     MarchingCubeRef numItems(int n);
-    MarchingCubeRef threshold(float t);
     MarchingCubeRef resolution(int r);
+    MarchingCubeRef size(float s);
+    MarchingCubeRef threshold(float t);
 
     void setup();
     void update(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer);
-    void render();
     void renderDensity();
+    void renderGrid();
+    void renderSurface();
 
     void updateField(float time, float scale);
 
@@ -53,6 +54,7 @@ private:
     void runBinDensityProg(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer);
     void runMarchingCubeProg(const ivec3 thread);
     void printDensity();
+    void printGrid();
 
     MarchingCubeRef thisRef() { return std::make_shared<MarchingCube>(*this); }
 
@@ -64,7 +66,9 @@ private:
 
     gl::GlslProgRef bin_density_prog_;
     gl::GlslProgRef marching_cube_prog_, clear_prog_;
-    gl::GlslProgRef render_prog_, render_density_prog_;
+    gl::GlslProgRef render_density_prog_;
+    gl::GlslProgRef render_grid_prog_;
+    gl::GlslProgRef render_surface_prog_;
 
     std::vector<Grid> grids_;
     std::vector<int> indices_;
