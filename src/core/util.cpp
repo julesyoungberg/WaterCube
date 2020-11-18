@@ -91,3 +91,8 @@ std::vector<vec3> util::getVecs(gl::Texture3dRef tex, int num_items) {
     glGetTexImage(tex->getTarget(), 0, GL_RGBA32F, GL_UNSIGNED_INT, data.data());
     return data;
 }
+
+float util::uintToFloat(uint32_t u) {
+    float f = *(float*)&u;
+    return f;
+}

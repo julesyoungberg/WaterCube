@@ -452,7 +452,7 @@ void Fluid::update(double time) {
     runDensityProg(out_particles);
     runUpdateProg(out_particles, float(time));
 
-    if (render_mode_ == 7) {
+    if (render_mode_ == 7 || render_mode_ == 8) {
         marching_cube_->update(out_particles, num_particles_, 0.5f);
     }
 }

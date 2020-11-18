@@ -9,7 +9,10 @@ layout(std430, binding = 0) restrict readonly buffer Particles {
     ivec4 particles[];
 };
 
-layout(binding = 1, r32ui) uniform restrict uimage3D densityField;
+layout(std430, binding = 1) buffer Density {
+    uint densities[];
+};
+
 uniform mat4 ciModelViewProjection;
 uniform float size;
 uniform int res;
@@ -19,11 +22,12 @@ vec3 coordToPoint(ivec3 c) {
 } 
 
 void main() {
-    const ivec3 position = particles[particleID].xyz;
-    const float density = uintBitsToFloat(imageLoad(densityField, position).x);
+    const ivec3 c = particles[particleID].xyz;
+    const uint index = c.z * res * res + c.y * res + c.x;
+    const float density = uintBitsToFloat(densities[index]);
     const bool invalid = isnan(density) || isinf(density);
     const float binSize = size / float(res);
-    vPosition = coordToPoint(position) + vec3(binSize / 2);
+    vPosition = coordToPoint(c) + vec3(binSize / 2);
     vColor = mix(vec3(density), vec3(1, 0, 0), float(invalid));
     gl_Position = ciModelViewProjection * vec4(vPosition, 1);
 }

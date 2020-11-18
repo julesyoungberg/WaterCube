@@ -116,7 +116,7 @@ void Sort::clearCount() {
     gl::ScopedBuffer count_buffer(global_count_buffer_);
     glClearBufferData(global_count_buffer_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
                       &clear_value);
-    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 void Sort::clearCountBuffer() {
@@ -124,7 +124,7 @@ void Sort::clearCountBuffer() {
     gl::ScopedBuffer buffer(GL_SHADER_STORAGE_BUFFER, count_buffer_);
     glClearNamedBufferData(count_buffer_, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
                            initial.data());
-    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 void Sort::clearOffsetBuffer() {
@@ -132,7 +132,7 @@ void Sort::clearOffsetBuffer() {
     gl::ScopedBuffer buffer(GL_SHADER_STORAGE_BUFFER, count_buffer_);
     glClearNamedBufferData(offset_buffer_, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
                            initial.data());
-    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 void Sort::runProg() { util::runProg(int(ceil(float(num_items_) / float(WORK_GROUP_SIZE)))); }

@@ -1,5 +1,4 @@
 #version 460 core
-#extension GL_ARB_compute_shader : enable
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
@@ -14,7 +13,10 @@ layout(std430, binding = 0) restrict readonly buffer Particles {
     Particle particles[];
 };
 
-layout(binding = 1, r32ui) uniform restrict uimage3D densityField;
+layout(std430, binding = 1) buffer Density {
+    uint densities[];
+};
+
 uniform float size;
 uniform int numItems;
 uniform int res;
@@ -30,7 +32,8 @@ void main() {
     }
 
     const Particle p = particles[particleID];
-    const ivec3 binCoord = pointToBinCoord(p.position);
-
-    imageAtomicAdd(densityField, binCoord, floatBitsToUint(p.density));
+    const ivec3 c = pointToBinCoord(p.position);
+    const uint index = c.z * res * res + c.y * res + c.x;
+    
+    atomicAdd(densities[index], floatBitsToUint(p.density));
 }

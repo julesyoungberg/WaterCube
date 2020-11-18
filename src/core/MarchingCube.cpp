@@ -1,5 +1,9 @@
 #include "MarchingCube.h"
 
+#include "glm/glm.hpp"
+
+#include "util.h"
+
 using namespace core;
 
 MarchingCube::MarchingCube() {}
@@ -11,13 +15,7 @@ MarchingCubeRef MarchingCube::size(float s) {
     return thisRef();
 }
 
-void MarchingCube::prepareBuffers() {
-    util::log("preparing marching cube buffers");
-    // The size of the buffer that holds the verts.
-    // This is the maximum number of verts that the
-    // marching cube can produce, 5 triangles for each voxel.
-    count_ = resolution_ * resolution_ * resolution_ * (3 * 5);
-
+void MarchingCube::prepareGridBuffer() {
     util::log("\tcreating grid buffer");
     grids_.resize(count_, Grid());
     grid_buffer_ = gl::Ssbo::create(grids_.size() * sizeof(Grid), grids_.data(), GL_STATIC_DRAW);
@@ -34,6 +32,43 @@ void MarchingCube::prepareBuffers() {
     gl::ScopedVao vao(grid_attributes_);
     gl::enableVertexAttribArray(0);
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
+}
+
+void MarchingCube::prepareDensityParticles() {
+    util::log("\tcreating density particles");
+    particles_.resize(int(pow(resolution_, 3)));
+    for (int z = 0; z < resolution_; z++) {
+        for (int y = 0; y < resolution_; y++) {
+            for (int x = 0; x < resolution_; x++) {
+                particles_.push_back(ivec4(x, y, z, 0));
+            }
+        }
+    }
+    particle_buffer_ =
+        gl::Ssbo::create(particles_.size() * sizeof(ivec4), particles_.data(), GL_STATIC_DRAW);
+
+    util::log("\tcreating density particles ids vbo");
+    std::vector<GLuint> dids(particles_.size());
+    GLuint curr_id = 0;
+    std::generate(dids.begin(), dids.end(), [&curr_id]() -> GLuint { return curr_id++; });
+    particle_ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, dids, GL_STATIC_DRAW);
+
+    util::log("\tcreating density attributes vao");
+    particle_attributes_ = gl::Vao::create();
+    gl::ScopedBuffer scopedDids(particle_ids_vbo_);
+    gl::ScopedVao particle_vao(particle_attributes_);
+    gl::enableVertexAttribArray(0);
+    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
+}
+
+void MarchingCube::prepareBuffers() {
+    util::log("preparing marching cube buffers");
+    // The size of the buffer that holds the verts.
+    // This is the maximum number of verts that the
+    // marching cube can produce, 5 triangles for each voxel.
+    count_ = resolution_ * resolution_ * resolution_ * (3 * 5);
+
+    prepareGridBuffer();
 
     util::log("\tcreating cube edge flags buffer");
     auto flags = std::vector<int>(256);
@@ -54,35 +89,12 @@ void MarchingCube::prepareBuffers() {
     triangle_connection_table_buffer_ = gl::Ssbo::create(connection_table.size() * sizeof(int),
                                                          connection_table.data(), GL_STATIC_DRAW);
 
-    util::log("\tcreating density field");
-    auto density_format = gl::Texture3d::Format().internalFormat(GL_R32UI);
-    int res = resolution_;
-    density_field_ = gl::Texture3d::create(res, res, res, density_format);
+    util::log("\tcreating density buffer");
+    std::vector<uint32_t> zeros(int(pow(resolution_, 3)), 0);
+    density_buffer_ =
+        gl::Ssbo::create(zeros.size() * sizeof(uint32_t), zeros.data(), GL_STATIC_DRAW);
 
-    util::log("\tcreating density particles");
-    particles_.resize(int(pow(res, 3)));
-    for (int z = 0; z < res; z++) {
-        for (int y = 0; y < res; y++) {
-            for (int x = 0; x < res; x++) {
-                particles_.push_back(ivec4(x, y, z, 0));
-            }
-        }
-    }
-    particle_buffer_ =
-        gl::Ssbo::create(particles_.size() * sizeof(ivec4), particles_.data(), GL_STATIC_DRAW);
-
-    util::log("\tcreating density particles ids vbo");
-    std::vector<GLuint> dids(particles_.size());
-    curr_id = 0;
-    std::generate(dids.begin(), dids.end(), [&curr_id]() -> GLuint { return curr_id++; });
-    particle_ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, dids, GL_STATIC_DRAW);
-
-    util::log("\tcreating density attributes vao");
-    particle_attributes_ = gl::Vao::create();
-    gl::ScopedBuffer scopedDids(particle_ids_vbo_);
-    gl::ScopedVao particle_vao(particle_attributes_);
-    gl::enableVertexAttribArray(0);
-    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
+    prepareDensityParticles();
 }
 
 void MarchingCube::compileShaders() {
@@ -131,21 +143,19 @@ void MarchingCube::runClearProg() {
 }
 
 void MarchingCube::clearDensity() {
-    const std::uint32_t clear_value = 0;
-    density_field_->bind(0);
-    glClearTexImage(density_field_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
-                    &clear_value);
-    glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
-    density_field_->unbind(0);
+    std::vector<uint32_t> zeros(int(pow(resolution_, 3)), 0);
+    gl::ScopedBuffer buffer(density_buffer_);
+    glClearBufferData(density_buffer_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
+                      zeros.data());
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 void MarchingCube::runBinDensityProg(GLuint particle_buffer, int num_items) {
     gl::ScopedGlslProg prog(bin_density_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
 
-    glActiveTexture(GL_TEXTURE0 + 1);
-    glUniform1i(glGetUniformLocation(bin_density_prog_->getHandle(), "densityField"), 1);
-    glBindImageTexture(1, density_field_->getId(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    gl::ScopedBuffer density_buffer(density_buffer_);
+    density_buffer_->bindBase(1);
 
     bin_density_prog_->uniform("size", size_);
     bin_density_prog_->uniform("numItems", num_items);
@@ -158,9 +168,8 @@ void MarchingCube::runBinDensityProg(GLuint particle_buffer, int num_items) {
 void MarchingCube::runNormalizeDensityProg(const ivec3 thread) {
     gl::ScopedGlslProg prog(normalize_density_prog_);
 
-    glActiveTexture(GL_TEXTURE0);
-    glUniform1i(glGetUniformLocation(bin_density_prog_->getHandle(), "densityField"), 0);
-    glBindImageTexture(0, density_field_->getId(), 0, GL_TRUE, 0, GL_READ_WRITE, GL_R32UI);
+    gl::ScopedBuffer density_buffer(density_buffer_);
+    density_buffer_->bindBase(0);
 
     normalize_density_prog_->uniform("res", resolution_);
 
@@ -181,9 +190,9 @@ void MarchingCube::runMarchingCubeProg(float threshold, const ivec3 thread) {
     gl::ScopedBuffer scoped_table_buffer(triangle_connection_table_buffer_);
     triangle_connection_table_buffer_->bindBase(2);
 
-    density_field_->bind(3);
+    gl::ScopedBuffer scoped_density(density_buffer_);
+    density_buffer_->bindBase(3);
 
-    marching_cube_prog_->uniform("densityField", 3);
     marching_cube_prog_->uniform("size", size_);
     marching_cube_prog_->uniform("res", resolution_);
     marching_cube_prog_->uniform("border", 1);
@@ -191,24 +200,42 @@ void MarchingCube::runMarchingCubeProg(float threshold, const ivec3 thread) {
 
     util::runProg(thread);
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-
-    density_field_->unbind(3);
-
-    grid_buffer_->unbindBase();
-    cube_edge_flags_buffer_->unbindBase();
-    triangle_connection_table_buffer_->unbindBase();
 }
 
 void MarchingCube::update(GLuint particle_buffer, int num_items, float threshold) {
     const ivec3 thread = ivec3(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE));
 
-    density_field_->bind(0);
+    auto densities = util::getUints(density_buffer_->getId(), pow(resolution_, 3));
+    std::string s = "densities: ";
+    for (int i = 0; i < 50; i++) {
+        s += std::to_string(util::uintToFloat(densities[i])) + ", ";
+    }
+    util::log("%s", s.c_str());
 
     runClearProg();
     clearDensity();
 
+    densities = util::getUints(density_buffer_->getId(), pow(resolution_, 3));
+    s = "densities: ";
+    for (int i = 0; i < 50; i++) {
+        s += std::to_string(util::uintToFloat(densities[i])) + ", ";
+    }
+    util::log("%s", s.c_str());
+
     runBinDensityProg(particle_buffer, num_items);
+    densities = util::getUints(density_buffer_->getId(), pow(resolution_, 3));
+    s = "densities: ";
+    for (int i = 0; i < 50; i++) {
+        s += std::to_string(util::uintToFloat(densities[i])) + ", ";
+    }
+    util::log("%s", s.c_str());
     runNormalizeDensityProg(thread);
+    densities = util::getUints(density_buffer_->getId(), pow(resolution_, 3));
+    s = "normalized: ";
+    for (int i = 0; i < 50; i++) {
+        s += std::to_string(util::uintToFloat(densities[i])) + ", ";
+    }
+    util::log("%s", s.c_str());
     runMarchingCubeProg(threshold, thread);
 }
 
@@ -234,9 +261,9 @@ void MarchingCube::renderDensity() {
     gl::ScopedBuffer particle_buffer(particle_buffer_);
     particle_buffer_->bindBase(0);
 
-    density_field_->bind(1);
+    gl::ScopedBuffer density_buffer(density_buffer_);
+    density_buffer_->bindBase(1);
 
-    render_density_prog_->uniform("densityField", 0);
     render_density_prog_->uniform("size", size_);
     render_density_prog_->uniform("res", resolution_);
 

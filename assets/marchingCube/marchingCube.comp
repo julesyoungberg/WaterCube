@@ -1,6 +1,4 @@
 #version 460 core
-#extension GL_ARB_compute_shader : enable
-#extension GL_ARB_shader_storage_buffer_object : enable
 
 #define THREAD 8
 
@@ -23,7 +21,10 @@ layout(std430, binding = 2) restrict readonly buffer TriangleConnectionTable {
 	int triangleConnectionTable[];
 };
 
-layout(binding = 3, r32ui) uniform restrict uimage3D densityField;
+layout(std430, binding = 1) restrict readonly buffer Density {
+    uint densities[];
+};
+
 uniform float threshold;
 uniform float size;
 uniform int res;
@@ -47,16 +48,25 @@ const vec3 vertexOffset[8] = {
 	vec3(0, 0, 1), vec3(1, 0, 1), vec3(1, 1, 1), vec3(0, 1, 1)
 };
 
-void fillCube(uint x, uint y, uint z, out float cube[8]) {
-	cube[0] = uintBitsToFloat(imageLoad(densityField, ivec3(x, y, z)).x);
-	cube[1] = uintBitsToFloat(imageLoad(densityField, ivec3(x + 1, y, z)).x);
-	cube[2] = uintBitsToFloat(imageLoad(densityField, ivec3(x + 1, y + 1, z)).x);
-	cube[3] = uintBitsToFloat(imageLoad(densityField, ivec3(x, y + 1, z)).x);
+uint crdtoi(uint x, uint y, uint z) {
+	return z * res * res + y * res + x;
+}
 
-	cube[4] = uintBitsToFloat(imageLoad(densityField, ivec3(x, y, z + 1)).x);
-	cube[5] = uintBitsToFloat(imageLoad(densityField, ivec3(x + 1, y, z + 1)).x);
-	cube[6] = uintBitsToFloat(imageLoad(densityField, ivec3(x + 1, y + 1, z + 1)).x);
-	cube[7] = uintBitsToFloat(imageLoad(densityField, ivec3(x, y + 1, z + 1)).x);
+float getDensity(uint x, uint y, uint z) {
+	const uint index = crdtoi(x, y, z);
+	return uintBitsToFloat(densities[index]);
+}
+
+void fillCube(uint x, uint y, uint z, out float cube[8]) {
+	cube[0] = getDensity(x, y, z);
+	cube[1] = getDensity(x + 1, y, z);
+	cube[2] = getDensity(x + 1, y + 1, z);
+	cube[3] = getDensity(x, y + 1, z);
+
+	cube[4] = getDensity(x, y, z + 1);
+	cube[5] = getDensity(x + 1, y, z + 1);
+	cube[6] = getDensity(x + 1, y + 1, z + 1);
+	cube[7] = getDensity(x, y + 1, z + 1);
 }
 
 // GetOffset finds the approximate point of intersection of the surface

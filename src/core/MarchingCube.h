@@ -39,6 +39,8 @@ public:
     static MarchingCubeRef create();
 
 private:
+    void prepareGridBuffer();
+    void prepareDensityParticles();
     void prepareBuffers();
     void compileShaders();
 
@@ -62,9 +64,8 @@ private:
     std::vector<int> indices_;
     std::vector<ivec4> particles_;
 
-    gl::SsboRef grid_buffer_, index_buffer_, particle_buffer_;
+    gl::SsboRef grid_buffer_, index_buffer_, particle_buffer_, density_buffer_;
     gl::SsboRef cube_edge_flags_buffer_, triangle_connection_table_buffer_;
-    gl::Texture3dRef density_field_;
     gl::VboRef grid_ids_vbo_, particle_ids_vbo_;
     gl::VaoRef grid_attributes_, particle_attributes_;
 };
