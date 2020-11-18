@@ -13,7 +13,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 8;
+    render_mode_ = 9;
     particle_radius_ = 0.05f; // 0.0457f;
     rest_density_ = 998.27f;
 }
@@ -104,9 +104,9 @@ FluidRef Fluid::gravity(float g) {
  * setup GUI configuration parameters
  */
 void Fluid::addParams(params::InterfaceGlRef p) {
-    p->addParam("Number of Particles", &num_particles_, "min=100 step=100");
+    // p->addParam("Number of Particles", &num_particles_, "min=100 step=100");
     p->addParam("Render Mode", &render_mode_, "min=0 max=4 step=1");
-    p->addParam("Grid Resolution", &grid_res_, "min=1 max=1000 step=1");
+    // p->addParam("Grid Resolution", &grid_res_, "min=1 max=1000 step=1");
     p->addParam("Particle Mass", &particle_mass_, "min=0.001 max=2.0 step=0.001");
     p->addParam("Viscosity", &viscosity_coefficient_, "min=0.001 max=2.0 step=0.001");
     p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=1.0");
@@ -195,7 +195,7 @@ void Fluid::prepareWallWeightFunction() {
 
     for (int i = 0; i <= divisions; i++) {
         float dist = i * step;
-        values[i] = kernel_weight_ * pow(kernel_radius_ * kernel_radius_ - dist * dist, 3);
+        values[i] = 0; // kernel_weight_ * pow(kernel_radius_ * kernel_radius_ - dist * dist, 3);
     }
 
     util::log("\t\tcreating buffer");
@@ -488,6 +488,7 @@ void Fluid::update(double time) {
  * render particles
  */
 void Fluid::renderGeometry() {
+    gl::pointSize(2);
     gl::ScopedGlslProg render(geometry_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
                      odd_frame_ ? particle_buffer2_ : particle_buffer1_);
@@ -509,7 +510,7 @@ void Fluid::renderGeometry() {
  * render debugging grid
  */
 void Fluid::renderGrid() {
-    gl::pointSize(10);
+    gl::pointSize(5);
 
     gl::ScopedGlslProg render(render_grid_prog_);
     gl::ScopedVao vao(grid_attributes_);

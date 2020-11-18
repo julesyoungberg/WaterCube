@@ -253,7 +253,7 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
  * render debugging grid
  */
 void Sort::renderGrid(float size) {
-    gl::pointSize(10);
+    gl::pointSize(5);
 
     gl::ScopedGlslProg render(render_grid_prog_);
     gl::ScopedVao vao(grid_attributes_);

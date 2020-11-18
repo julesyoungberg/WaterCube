@@ -332,5 +332,6 @@ void MarchingCube::renderSurface() {
     grid_buffer_->bindBase(0);
 
     gl::context()->setDefaultShaderVars();
-    gl::drawElements(GL_TRIANGLES, count_, GL_UNSIGNED_INT, nullptr);
+    // gl::drawElements(GL_TRIANGLES, count_, GL_UNSIGNED_INT, nullptr);
+    gl::drawArrays(GL_TRIANGLES, 0, count_);
 }
