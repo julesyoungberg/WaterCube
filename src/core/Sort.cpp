@@ -192,7 +192,7 @@ void Sort::runScanProg() {
 
     scan_prog_->uniform("gridRes", grid_res_);
 
-    util::runProg(ivec3(ceil(num_bins_ / 4.0f)));
+    util::runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
@@ -270,5 +270,5 @@ void Sort::renderGrid(float size) {
     render_grid_prog_->uniform("numItems", num_items_);
 
     gl::context()->setDefaultShaderVars();
-    gl::drawArrays(GL_POINTS, 0, grid_particles_.size());
+    gl::drawArrays(GL_POINTS, 0, int(grid_particles_.size()));
 }

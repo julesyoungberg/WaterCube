@@ -375,7 +375,7 @@ void Fluid::runDistanceFieldProg() {
     distance_field_prog_->uniform("numBoundaries", int(boundaries_.size()));
     distance_field_prog_->uniform("binSize", bin_size_);
 
-    util::runProg(ivec3(ceil(distance_field_size_ / 4.0f)));
+    util::runProg(ivec3(int(ceil(distance_field_size_ / 4.0f))));
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
@@ -395,7 +395,7 @@ void Fluid::runBinVelocityProg(GLuint particles) {
 
     bin_velocity_prog_->uniform("gridRes", grid_res_);
 
-    util::runProg(ivec3(ceil(num_bins_ / 4.0f)));
+    util::runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
@@ -521,7 +521,7 @@ void Fluid::renderGrid() {
     render_grid_prog_->uniform("size", size_);
 
     gl::context()->setDefaultShaderVars();
-    gl::drawArrays(GL_POINTS, 0, grid_particles_.size());
+    gl::drawArrays(GL_POINTS, 0, int(grid_particles_.size()));
 }
 
 /**

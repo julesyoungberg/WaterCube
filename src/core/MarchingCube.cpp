@@ -193,10 +193,9 @@ void MarchingCube::runBinDensityProg(GLuint particle_buffer, GLuint count_buffer
     density_buffer_->bindBase(1);
 
     bin_density_prog_->uniform("size", size_);
-    bin_density_prog_->uniform("numItems", num_items_);
     bin_density_prog_->uniform("res", resolution_);
 
-    util::runProg(ivec3(ceil(float(resolution_ + 1) / 4.0f)));
+    util::runProg(ivec3(int(ceil(float(resolution_ + 1) / 4.0f))));
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
@@ -232,7 +231,7 @@ void MarchingCube::runMarchingCubeProg(const ivec3 thread) {
  * prints density buffer for debugging
  */
 void MarchingCube::printDensity() {
-    auto densities = util::getFloats(density_buffer_->getId(), pow(resolution_, 3));
+    auto densities = util::getFloats(density_buffer_->getId(), int(pow(resolution_, 3)));
     std::string s = "densities: ";
     for (int i = 0; i < 100; i++) {
         s += std::to_string(densities[i]) + ", ";
@@ -244,7 +243,7 @@ void MarchingCube::printDensity() {
  * update routine
  */
 void MarchingCube::update(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer) {
-    const ivec3 thread = ivec3(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE));
+    const ivec3 thread = ivec3(int(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE)));
 
     runClearProg();
     clearDensity();
@@ -287,5 +286,5 @@ void MarchingCube::renderDensity() {
     render_density_prog_->uniform("res", resolution_);
 
     gl::context()->setDefaultShaderVars();
-    gl::drawArrays(GL_POINTS, 0, particles_.size());
+    gl::drawArrays(GL_POINTS, 0, int(particles_.size()));
 }
