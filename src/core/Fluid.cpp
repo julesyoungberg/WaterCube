@@ -13,7 +13,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 4;
+    render_mode_ = 7;
     particle_radius_ = 0.05f; // 0.0457f;
     rest_density_ = 998.27f;
 }
@@ -452,9 +452,9 @@ void Fluid::update(double time) {
     runDensityProg(out_particles);
     runUpdateProg(out_particles, float(time));
 
-    // if (render_mode_ == 7) {
-    //     marching_cube_->update(out_particles, num_particles_, 0.5f);
-    // }
+    if (render_mode_ == 7) {
+        marching_cube_->update(out_particles, num_particles_, 0.5f);
+    }
 }
 
 void Fluid::renderGeometry() {

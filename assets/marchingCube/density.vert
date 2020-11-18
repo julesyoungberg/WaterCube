@@ -6,7 +6,7 @@ out vec3 vColor;
 out vec3 vPosition;
 
 layout(std430, binding = 0) restrict readonly buffer Particles {
-    ivec3 particles[];
+    ivec4 particles[];
 };
 
 layout(binding = 1, r32ui) uniform restrict uimage3D densityField;
@@ -19,10 +19,11 @@ vec3 coordToPoint(ivec3 c) {
 } 
 
 void main() {
-    const ivec3 position = particles[particleID];
+    const ivec3 position = particles[particleID].xyz;
     const float density = uintBitsToFloat(imageLoad(densityField, position).x);
-    const bool invalid = (density < 0.0) || isnan(density) || isinf(density);
-    vPosition = coordToPoint(position);
+    const bool invalid = isnan(density) || isinf(density);
+    const float binSize = size / float(res);
+    vPosition = coordToPoint(position) + vec3(binSize / 2);
     vColor = mix(vec3(density), vec3(1, 0, 0), float(invalid));
     gl_Position = ciModelViewProjection * vec4(vPosition, 1);
 }

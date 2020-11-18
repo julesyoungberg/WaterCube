@@ -30,7 +30,7 @@ public:
     MarchingCubeRef size(float s);
 
     void setup(const int resolution);
-    void update(gl::SsboRef particles, int num_items, float threshold = 0.5f);
+    void update(GLuint particle_buffer, int num_items, float threshold = 0.5f);
     void render();
     void renderDensity();
 
@@ -38,7 +38,19 @@ public:
 
     static MarchingCubeRef create();
 
-protected:
+private:
+    void prepareBuffers();
+    void compileShaders();
+
+    void clearDensity();
+
+    void runClearProg();
+    void runBinDensityProg(GLuint particle_buffer, int num_items);
+    void runNormalizeDensityProg(const ivec3 thread);
+    void runMarchingCubeProg(float threshold, const ivec3 thread);
+
+    MarchingCubeRef thisRef() { return std::make_shared<MarchingCube>(*this); }
+
     int count_;
     int resolution_;
     float size_;
@@ -48,24 +60,11 @@ protected:
 
     std::vector<Grid> grids_;
     std::vector<int> indices_;
-    std::vector<ivec3> particles_;
+    std::vector<ivec4> particles_;
 
     gl::SsboRef grid_buffer_, index_buffer_, particle_buffer_;
     gl::SsboRef cube_edge_flags_buffer_, triangle_connection_table_buffer_;
     gl::Texture3dRef density_field_;
     gl::VboRef grid_ids_vbo_, particle_ids_vbo_;
     gl::VaoRef grid_attributes_, particle_attributes_;
-
-private:
-    void prepareBuffers();
-    void compileShaders();
-
-    void clearDensity();
-
-    void runClearProg();
-    void runBinDensityProg(gl::SsboRef particles, int num_items);
-    void runNormalizeDensityProg(const ivec3 thread);
-    void runMarchingCubeProg(float threshold, const ivec3 thread);
-
-    MarchingCubeRef thisRef() { return std::make_shared<MarchingCube>(*this); }
 };

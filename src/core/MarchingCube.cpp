@@ -40,7 +40,8 @@ void MarchingCube::prepareBuffers() {
     for (int i = 0; i < 256; i++) {
         flags[i] = cubeEdgeFlags[i];
     }
-    cube_edge_flags_buffer_ = gl::Ssbo::create(flags.size() * sizeof(int), flags.data(), GL_STATIC_DRAW);
+    cube_edge_flags_buffer_ =
+        gl::Ssbo::create(flags.size() * sizeof(int), flags.data(), GL_STATIC_DRAW);
 
     util::log("\tcreating triangle connection table buffer");
     auto connection_table = std::vector<int>();
@@ -50,8 +51,8 @@ void MarchingCube::prepareBuffers() {
             connection_table.push_back(row[x]);
         }
     }
-    triangle_connection_table_buffer_ =
-        gl::Ssbo::create(connection_table.size() * sizeof(int), connection_table.data(), GL_STATIC_DRAW);
+    triangle_connection_table_buffer_ = gl::Ssbo::create(connection_table.size() * sizeof(int),
+                                                         connection_table.data(), GL_STATIC_DRAW);
 
     util::log("\tcreating density field");
     auto density_format = gl::Texture3d::Format().internalFormat(GL_R32UI);
@@ -63,11 +64,12 @@ void MarchingCube::prepareBuffers() {
     for (int z = 0; z < res; z++) {
         for (int y = 0; y < res; y++) {
             for (int x = 0; x < res; x++) {
-                particles_.push_back(ivec3(x, y, z));
+                particles_.push_back(ivec4(x, y, z, 0));
             }
         }
     }
-    particle_buffer_ = gl::Ssbo::create(particles_.size() * sizeof(ivec3), particles_.data(), GL_STATIC_DRAW);
+    particle_buffer_ =
+        gl::Ssbo::create(particles_.size() * sizeof(ivec4), particles_.data(), GL_STATIC_DRAW);
 
     util::log("\tcreating density particles ids vbo");
     std::vector<GLuint> dids(particles_.size());
@@ -105,10 +107,11 @@ void MarchingCube::compileShaders() {
                                             .attribLocation("gridID", 0));
 
     util::log("\tcompiling render density prog");
-    render_density_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
-                                                    .vertex(loadAsset("marchingCube/density.vert"))
-                                                    .fragment(loadAsset("marchingCube/density.frag"))
-                                                    .attribLocation("particleID", 0));
+    render_density_prog_ =
+        gl::GlslProg::create(gl::GlslProg::Format()
+                                 .vertex(loadAsset("marchingCube/density.vert"))
+                                 .fragment(loadAsset("marchingCube/density.frag"))
+                                 .attribLocation("particleID", 0));
 }
 
 void MarchingCube::setup(const int resolution) {
@@ -130,16 +133,15 @@ void MarchingCube::runClearProg() {
 void MarchingCube::clearDensity() {
     const std::uint32_t clear_value = 0;
     density_field_->bind(0);
-    glClearTexImage(density_field_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT, &clear_value);
+    glClearTexImage(density_field_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
+                    &clear_value);
     glMemoryBarrier(GL_TEXTURE_UPDATE_BARRIER_BIT);
     density_field_->unbind(0);
 }
 
-void MarchingCube::runBinDensityProg(gl::SsboRef particles, int num_items) {
+void MarchingCube::runBinDensityProg(GLuint particle_buffer, int num_items) {
     gl::ScopedGlslProg prog(bin_density_prog_);
-
-    gl::ScopedBuffer scoped_particles(particles);
-    particles->bindBase(0);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
 
     glActiveTexture(GL_TEXTURE0 + 1);
     glUniform1i(glGetUniformLocation(bin_density_prog_->getHandle(), "densityField"), 1);
@@ -197,7 +199,7 @@ void MarchingCube::runMarchingCubeProg(float threshold, const ivec3 thread) {
     triangle_connection_table_buffer_->unbindBase();
 }
 
-void MarchingCube::update(gl::SsboRef particles, int num_items, float threshold) {
+void MarchingCube::update(GLuint particle_buffer, int num_items, float threshold) {
     const ivec3 thread = ivec3(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE));
 
     density_field_->bind(0);
@@ -205,11 +207,9 @@ void MarchingCube::update(gl::SsboRef particles, int num_items, float threshold)
     runClearProg();
     clearDensity();
 
-    runBinDensityProg(particles, num_items);
+    runBinDensityProg(particle_buffer, num_items);
     runNormalizeDensityProg(thread);
     runMarchingCubeProg(threshold, thread);
-
-    density_field_->unbind(0);
 }
 
 void MarchingCube::render() {
@@ -223,8 +223,6 @@ void MarchingCube::render() {
 
     gl::context()->setDefaultShaderVars();
     gl::drawElements(GL_TRIANGLES, count_, GL_UNSIGNED_INT, nullptr);
-
-    grid_buffer_->unbindBase();
 }
 
 void MarchingCube::renderDensity() {
@@ -244,9 +242,6 @@ void MarchingCube::renderDensity() {
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, particles_.size());
-
-    density_field_->unbind(1);
-    particle_buffer_->unbindBase();
 }
 
 MarchingCubeRef MarchingCube::create() { return std::make_shared<MarchingCube>(); }
