@@ -86,7 +86,7 @@ void main() {
 		return;
 	}
 
-	uint idx = pos.x + pos.y * res + pos.z * res * res;
+	uint idx = crdtoi(pos.x, pos.y, pos.z);
 
 	float cube[8];
 	fillCube(pos.x, pos.y, pos.z, cube);

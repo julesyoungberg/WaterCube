@@ -246,11 +246,6 @@ void MarchingCube::printDensity() {
     util::log("%s", s.c_str());
 }
 
-std::string vecToString(vec4 v) {
-    std::string s = std::to_string(v.x) + ", " + std::to_string(v.y) + ", " + std::to_string(v.z);
-    return s;
-}
-
 /**
  * prints grid buffer for debugging
  */
@@ -262,7 +257,7 @@ void MarchingCube::printGrid() {
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
     std::string s = "grid: ";
-    for (int i = 0; i < 15; i++) {
+    for (int i = 0; i < 10; i++) {
         auto p = grid[i].position;
         auto n = grid[i].normal;
         std::string ps = glm::to_string(p);
