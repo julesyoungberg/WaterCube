@@ -84,15 +84,18 @@ std::vector<uint32_t> util::getUints(gl::Texture3dRef tex, int num_items) {
     return data;
 }
 
+std::vector<float> util::getFloats(GLuint buffer, int num_items) {
+    std::vector<float> data(num_items, 0);
+    gl::ScopedBuffer scoped_buffer(GL_SHADER_STORAGE_BUFFER, buffer);
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, num_items * sizeof(float), data.data());
+    glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+    return data;
+}
+
 std::vector<vec3> util::getVecs(gl::Texture3dRef tex, int num_items) {
     gl::ScopedTextureBind scoped_tex(tex->getTarget(), tex->getId());
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     std::vector<vec3> data(num_items);
     glGetTexImage(tex->getTarget(), 0, GL_RGBA32F, GL_UNSIGNED_INT, data.data());
     return data;
-}
-
-float util::uintToFloat(uint32_t u) {
-    float f = *(float*)&u;
-    return f;
 }

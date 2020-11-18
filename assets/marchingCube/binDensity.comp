@@ -1,6 +1,8 @@
 #version 460 core
 
-layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+
+const float MAX_DENSITY = 250.0;
 
 struct Particle {
     vec3 position;
@@ -14,26 +16,75 @@ layout(std430, binding = 0) restrict readonly buffer Particles {
 };
 
 layout(std430, binding = 1) buffer Density {
-    uint densities[];
+    float densities[];
+};
+
+layout(std430, binding = 2) restrict readonly buffer Counts {
+    uint counts[];
+};
+
+layout(std430, binding = 3) restrict readonly buffer Offsets {
+    uint offsets[];
 };
 
 uniform float size;
 uniform int numItems;
 uniform int res;
 
-ivec3 pointToBinCoord(vec3 p) {
-    return ivec3((p / size) * ivec3(res));
-}
+// neighborhood coordinate offsets
+const ivec3 NEIGHBORHOOD[8] = {
+    ivec3(0, 0, 0), ivec3(0, 0, -1),
+    ivec3(0, -1, 0), ivec3(0, -1, -1), 
+    ivec3(-1, 0, 0), ivec3(-1, 0, -1),
+    ivec3(-1, -1, 0), ivec3(-1, -1, -1)
+};
 
 void main() {
-    const uint particleID = gl_GlobalInvocationID.x;
-    if (particleID >= numItems) {
+    ivec3 coord = ivec3(gl_GlobalInvocationID);
+    if (any(greaterThan(coord, uvec3(res)))) {
         return;
     }
 
-    const Particle p = particles[particleID];
-    const ivec3 c = pointToBinCoord(p.position);
-    const uint index = c.z * res * res + c.y * res + c.x;
-    
-    atomicAdd(densities[index], floatBitsToUint(p.density));
+    const float binSize = size / res;
+    const float radius = binSize / 2.0;
+    const vec3 binPos = vec3(coord) * binSize;
+
+    float density = 0;
+    int total = 0;
+
+    // search neighboring bins
+    #pragma unroll 1
+    for (uint binIndex = 0; binIndex < 8; binIndex++) {
+        const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
+
+        // don't go out of bounds
+        if (any(lessThan(nc, ivec3(0))) || any(greaterThanEqual(nc, ivec3(res)))) {
+            continue;
+        }
+
+        const uint index = nc.z * res * res + nc.y * res + nc.x;
+        const uint count = counts[index];
+        const uint offset = offsets[index];
+
+        // search the particles of this bin
+        for (uint localIndex = 0; localIndex < count; localIndex++) {
+            const uint particleID = offset + localIndex;
+            const Particle p = particles[particleID];
+            const float dist = length(binPos - p.position);
+
+            if (dist > radius) {
+                continue;
+            }
+
+            total++;
+            density += p.density;
+        }
+    }
+
+    if (total > 0) {
+        density /= total;
+    }
+
+    const uint index = coord.z * res * res + coord.y * res + coord.x;
+    densities[index] = density / MAX_DENSITY;
 }

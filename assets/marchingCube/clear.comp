@@ -5,8 +5,8 @@
 layout(local_size_x = THREAD, local_size_y = 1, local_size_z = 1) in;
 
 struct Grid {
-	vec3 position;
-	vec3 normal;
+	vec4 position;
+	vec4 normal;
 };
 
 layout(std430, binding = 0) buffer grids {
@@ -20,6 +20,6 @@ void main() {
 	if (idx >= count) return;
 
 	// init
-	grid[idx].position = vec3(0, 0, 0);
-	grid[idx].normal = vec3(0, 0, 0);
+	grid[idx].position = vec4(0);
+	grid[idx].normal = vec4(0);
 }

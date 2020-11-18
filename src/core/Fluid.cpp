@@ -345,8 +345,12 @@ FluidRef Fluid::setup() {
     sort_->compileShaders();
 
     util::log("initializing marching cube");
-    marching_cube_ = MarchingCube::create()->size(size_);
-    marching_cube_->setup(grid_res_);
+    marching_cube_ = MarchingCube::create()
+                         ->size(size_)
+                         ->numItems(num_particles_)
+                         ->threshold(0.5f)
+                         ->resolution(grid_res_);
+    marching_cube_->setup();
 
     runDistanceFieldProg();
 
@@ -472,7 +476,7 @@ void Fluid::update(double time) {
     runUpdateProg(out_particles, float(time));
 
     if (render_mode_ == 7 || render_mode_ == 8) {
-        marching_cube_->update(out_particles, num_particles_, 0.5f);
+        marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
     }
 }
 

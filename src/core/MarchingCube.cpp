@@ -6,12 +6,27 @@
 
 using namespace core;
 
-MarchingCube::MarchingCube() {}
+MarchingCube::MarchingCube() : threshold_(0.5f) {}
 
 MarchingCube::~MarchingCube() {}
 
 MarchingCubeRef MarchingCube::size(float s) {
     size_ = s;
+    return thisRef();
+}
+
+MarchingCubeRef MarchingCube::numItems(int n) {
+    num_items_ = n;
+    return thisRef();
+}
+
+MarchingCubeRef MarchingCube::threshold(float t) {
+    threshold_ = t;
+    return thisRef();
+}
+
+MarchingCubeRef MarchingCube::resolution(int r) {
+    resolution_ = r;
     return thisRef();
 }
 
@@ -99,9 +114,8 @@ void MarchingCube::prepareBuffers() {
                                                          connection_table.data(), GL_STATIC_DRAW);
 
     util::log("\tcreating density buffer");
-    std::vector<uint32_t> zeros(int(pow(resolution_, 3)), 0);
-    density_buffer_ =
-        gl::Ssbo::create(zeros.size() * sizeof(uint32_t), zeros.data(), GL_STATIC_DRAW);
+    std::vector<float> zeros(int(pow(resolution_ + 1, 3)), 0);
+    density_buffer_ = gl::Ssbo::create(zeros.size() * sizeof(float), zeros.data(), GL_STATIC_DRAW);
 
     prepareDensityParticles();
 }
@@ -114,9 +128,6 @@ void MarchingCube::compileShaders() {
 
     util::log("\tcompiling bin density prog");
     bin_density_prog_ = util::compileComputeShader("marchingCube/binDensity.comp");
-
-    util::log("\tcompiling normalize density prog");
-    normalize_density_prog_ = util::compileComputeShader("marchingCube/normalizeDensity.comp");
 
     util::log("\tcompiling marching cube prog");
     marching_cube_prog_ = util::compileComputeShader("marchingCube/marchingCube.comp");
@@ -141,8 +152,7 @@ void MarchingCube::compileShaders() {
 /**
  * setup given a grid resolution
  */
-void MarchingCube::setup(const int resolution) {
-    resolution_ = resolution;
+void MarchingCube::setup() {
     prepareBuffers();
     compileShaders();
     clearDensity();
@@ -174,7 +184,8 @@ void MarchingCube::clearDensity() {
 /**
  * compute density for points on the grid
  */
-void MarchingCube::runBinDensityProg(GLuint particle_buffer, int num_items) {
+void MarchingCube::runBinDensityProg(GLuint particle_buffer, GLuint count_buffer,
+                                     GLuint offset_bufer) {
     gl::ScopedGlslProg prog(bin_density_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
 
@@ -182,29 +193,17 @@ void MarchingCube::runBinDensityProg(GLuint particle_buffer, int num_items) {
     density_buffer_->bindBase(1);
 
     bin_density_prog_->uniform("size", size_);
-    bin_density_prog_->uniform("numItems", num_items);
+    bin_density_prog_->uniform("numItems", num_items_);
     bin_density_prog_->uniform("res", resolution_);
 
-    util::runProg(int(ceil(float(num_items) / float(WORK_GROUP_SIZE))));
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-}
-
-void MarchingCube::runNormalizeDensityProg(const ivec3 thread) {
-    gl::ScopedGlslProg prog(normalize_density_prog_);
-
-    gl::ScopedBuffer density_buffer(density_buffer_);
-    density_buffer_->bindBase(0);
-
-    normalize_density_prog_->uniform("res", resolution_);
-
-    util::runProg(thread);
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+    util::runProg(ivec3(ceil(float(resolution_ + 1) / 4.0f)));
+    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 /**
  * run main marching cube algorithm
  */
-void MarchingCube::runMarchingCubeProg(float threshold, const ivec3 thread) {
+void MarchingCube::runMarchingCubeProg(const ivec3 thread) {
     gl::ScopedGlslProg prog(marching_cube_prog_);
     gl::ScopedVao vao(grid_attributes_);
 
@@ -222,51 +221,36 @@ void MarchingCube::runMarchingCubeProg(float threshold, const ivec3 thread) {
 
     marching_cube_prog_->uniform("size", size_);
     marching_cube_prog_->uniform("res", resolution_);
-    marching_cube_prog_->uniform("border", 1);
-    marching_cube_prog_->uniform("threshold", threshold);
+    // marching_cube_prog_->uniform("border", 1);
+    marching_cube_prog_->uniform("threshold", threshold_);
 
     util::runProg(thread);
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 /**
- * update routine
+ * prints density buffer for debugging
  */
-void MarchingCube::update(GLuint particle_buffer, int num_items, float threshold) {
-    const ivec3 thread = ivec3(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE));
-
-    auto densities = util::getUints(density_buffer_->getId(), pow(resolution_, 3));
+void MarchingCube::printDensity() {
+    auto densities = util::getFloats(density_buffer_->getId(), pow(resolution_, 3));
     std::string s = "densities: ";
-    for (int i = 0; i < 50; i++) {
-        s += std::to_string(util::uintToFloat(densities[i])) + ", ";
+    for (int i = 0; i < 100; i++) {
+        s += std::to_string(densities[i]) + ", ";
     }
     util::log("%s", s.c_str());
+}
+
+/**
+ * update routine
+ */
+void MarchingCube::update(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer) {
+    const ivec3 thread = ivec3(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE));
 
     runClearProg();
     clearDensity();
 
-    densities = util::getUints(density_buffer_->getId(), pow(resolution_, 3));
-    s = "densities: ";
-    for (int i = 0; i < 50; i++) {
-        s += std::to_string(util::uintToFloat(densities[i])) + ", ";
-    }
-    util::log("%s", s.c_str());
-
-    runBinDensityProg(particle_buffer, num_items);
-    densities = util::getUints(density_buffer_->getId(), pow(resolution_, 3));
-    s = "densities: ";
-    for (int i = 0; i < 50; i++) {
-        s += std::to_string(util::uintToFloat(densities[i])) + ", ";
-    }
-    util::log("%s", s.c_str());
-    runNormalizeDensityProg(thread);
-    densities = util::getUints(density_buffer_->getId(), pow(resolution_, 3));
-    s = "normalized: ";
-    for (int i = 0; i < 50; i++) {
-        s += std::to_string(util::uintToFloat(densities[i])) + ", ";
-    }
-    util::log("%s", s.c_str());
-    runMarchingCubeProg(threshold, thread);
+    runBinDensityProg(particle_buffer, count_buffer, offset_buffer);
+    runMarchingCubeProg(thread);
 }
 /**
  * render resulting surface

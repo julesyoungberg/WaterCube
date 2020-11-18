@@ -21,14 +21,14 @@ layout(std430, binding = 2) restrict readonly buffer TriangleConnectionTable {
 	int triangleConnectionTable[];
 };
 
-layout(std430, binding = 1) restrict readonly buffer Density {
-    uint densities[];
+layout(std430, binding = 3) restrict readonly buffer Density {
+    float densities[];
 };
 
 uniform float threshold;
 uniform float size;
 uniform int res;
-uniform int border;
+// uniform int border;
 
 // edgeConnection lists the index of the endpoint vertices for each of the 12 edges of the cube
 const ivec2 edgeConnection[12] = {
@@ -54,7 +54,7 @@ uint crdtoi(uint x, uint y, uint z) {
 
 float getDensity(uint x, uint y, uint z) {
 	const uint index = crdtoi(x, y, z);
-	return uintBitsToFloat(densities[index]);
+	return densities[index];
 }
 
 void fillCube(uint x, uint y, uint z, out float cube[8]) {
@@ -82,7 +82,7 @@ vec3 coordToPoint(vec3 c) {
 
 void main() {
 	const ivec3 pos = ivec3(gl_GlobalInvocationID);
-	if (any(greaterThanEqual(pos, ivec3(res - border)))) {
+	if (any(greaterThanEqual(pos, ivec3(res)))) {
 		return;
 	}
 
