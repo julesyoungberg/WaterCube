@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(2000);
+const int NUM_PARTICLES = static_cast<int>(10);
 
 class WaterCubeApp : public App {
 public:
@@ -40,7 +40,7 @@ void WaterCubeApp::setup() {
     run_once_ = false;
     running_ = true;
     reset_ = false;
-    size_ = 10.0f;
+    size_ = 1.0f;
     prev_time_ = 0.0;
 
     params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
@@ -56,12 +56,11 @@ void WaterCubeApp::setup() {
     util::log("creating scene");
     scene_ = Scene::create();
 
-    fluid_ = Fluid::create("fluid")
-                 ->size(size_)
-                 ->numParticles(NUM_PARTICLES)
-                 ->cameraPosition(camera_pos);
+    fluid_ = Fluid::create("fluid")->size(size_)->numParticles(NUM_PARTICLES);
     fluid_->addParams(params_);
     fluid_->setup();
+    fluid_->setCameraPosition(camera_pos);
+    fluid_->setLightPosition(vec3(size_ / 2.0f, size_ * 1.5f, size_ / 2.0f));
 
     BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid_);
     CI_ASSERT(scene_->addObject(fluid_ref));

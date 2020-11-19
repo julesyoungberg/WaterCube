@@ -29,11 +29,12 @@ public:
 
     void prepareBuffers();
     void compileShaders();
-    void run(GLuint in_particles, GLuint out_particles);
+    void run(GLuint particle_buffer);
     void renderGrid(float size);
 
     GLuint getCountBuffer() { return count_buffer_; }
     GLuint getOffsetBuffer() { return offset_buffer_; }
+    GLuint getSortedBuffer() { return sorted_buffer_; }
 
     static SortRef create() { return std::make_shared<Sort>(); }
 
@@ -41,6 +42,7 @@ protected:
     void clearCount();
     void clearCountBuffer();
     void clearOffsetBuffer();
+    void clearSortedBuffer();
     void printGrids();
     void prepareGridParticles();
 
@@ -49,6 +51,7 @@ protected:
     void runLinearScanProg();
     void runScanProg();
     void runReorderProg(GLuint in_particles, GLuint out_particles);
+    void runSortProg(GLuint particle_buffer);
 
     SortRef thisRef() { return std::make_shared<Sort>(*this); }
 
@@ -59,13 +62,13 @@ protected:
     std::vector<ivec4> grid_particles_;
 
     gl::GlslProgRef count_prog_, linear_scan_prog_, scan_prog_;
-    gl::GlslProgRef reorder_prog_, render_grid_prog_;
+    gl::GlslProgRef reorder_prog_, sort_prog_, render_grid_prog_;
     gl::SsboRef position_buffer_, global_count_buffer_, grid_buffer_;
     gl::Texture1dRef id_map_;
     gl::VboRef grid_ids_vbo_;
     gl::VaoRef grid_attributes_;
 
-    GLuint count_buffer_, offset_buffer_;
+    GLuint count_buffer_, offset_buffer_, sorted_buffer_;
 };
 
 } // namespace core

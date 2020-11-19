@@ -2,6 +2,7 @@
 
 #include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
+#include <time.h>
 
 using namespace core;
 
@@ -9,10 +10,10 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     num_particles_ = 1000;
-    grid_res_ = 2;
+    grid_res_ = 1;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
-    particle_radius_ = 0.05f; // 0.0457f;
+    particle_radius_ = 0.05f;
     kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
     particle_mass_ = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
@@ -20,7 +21,8 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     stiffness_ = 100.0f;
     rest_pressure_ = 0;
     render_mode_ = 0;
-    sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
+    point_scale_ = 150.0f;
+    // sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
 }
 
 Fluid::~Fluid() {}
@@ -110,11 +112,6 @@ FluidRef Fluid::sortInterval(int i) {
     return thisRef();
 }
 
-FluidRef Fluid::cameraPosition(vec3 p) {
-    camera_position_ = p;
-    return thisRef();
-}
-
 /**
  * setup GUI configuration parameters
  */
@@ -122,7 +119,7 @@ void Fluid::addParams(params::InterfaceGlRef p) {
     // p->addParam("Number of Particles", &num_particles_, "min=100 step=100");
     p->addParam("Render Mode", &render_mode_, "min=0 max=9 step=1");
     // p->addParam("Grid Resolution", &grid_res_, "min=1 max=1000 step=1");
-    p->addParam("Particle Mass", &particle_mass_, "min=0.001 max=2.0 step=0.001");
+    // p->addParam("Particle Mass", &particle_mass_, "min=0.0001 max=2.0 step=0.001");
     p->addParam("Viscosity", &viscosity_coefficient_, "min=0.001 max=2.0 step=0.001");
     p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=1.0");
     p->addParam("Rest Density", &rest_density_, "min=0.0 max=1000.0 step=1.0");
@@ -141,16 +138,36 @@ void Fluid::setRotation(quat r) {
 }
 
 /**
+ * set camera position and update children
+ */
+void Fluid::setCameraPosition(vec3 p) {
+    camera_position_ = p - vec3(size_ / 2.0f);
+    marching_cube_->setCameraPosition(camera_position_);
+}
+
+/**
+ * set light position and update children
+ */
+void Fluid::setLightPosition(vec3 p) {
+    light_position_ = p;
+    marching_cube_->setLightPosition(p);
+}
+
+float getRand() { return (float)rand() / RAND_MAX; }
+
+/**
  * Generates a vector of particles used as the simulations initial state
  */
 void Fluid::generateInitialParticles() {
+    srand((unsigned)time(NULL));
+
     util::log("creating particles");
     int n = num_particles_;
     initial_particles_.assign(n, Particle());
 
     for (auto& p : initial_particles_) {
-        p.position = (Rand::randVec3() * 0.5f + 0.5f) * size_;
-        p.velocity = Rand::randVec3() * 10.0f;
+        p.position = (vec3(getRand(), getRand(), getRand())) * size_;
+        p.velocity = (vec3(getRand(), getRand(), getRand())) * 10.0f;
 
         if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.z > size_ ||
             p.position.y > size_ || p.position.z > size_) {
@@ -307,7 +324,7 @@ FluidRef Fluid::setup() {
     num_bins_ = int(pow(grid_res_, 3));
     distance_field_size_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
-    kernel_radius_ = bin_size_;
+    // kernel_radius_ = bin_size_;
     util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_,
               kernel_radius_);
 
@@ -340,8 +357,7 @@ FluidRef Fluid::setup() {
                          ->numItems(num_particles_)
                          ->threshold(0.5f)
                          ->sortingResolution(grid_res_)
-                         ->subdivisions(5)
-                         ->cameraPosition(camera_position_ - vec3(size_ / 2.0f));
+                         ->subdivisions(5);
     marching_cube_->setup();
 
     runDistanceFieldProg();
@@ -380,6 +396,7 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, sort_->getSortedBuffer());
 
     // distance_field_->bind(3);
     // wall_weight_function_->bind(4);
@@ -409,6 +426,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, sort_->getSortedBuffer());
 
     // distance_field_->bind(3);
     // update_prog_->uniform("distanceField", 3);
@@ -416,7 +434,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.00012f); // time_step);
+    update_prog_->uniform("dt", 0.0003f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", gravity_direction_ * gravity_strength_);
     update_prog_->uniform("particleMass", particle_mass_);
@@ -450,41 +468,43 @@ void Fluid::printParticles(GLuint particle_buffer) {
  * Update simulation logic - run compute shaders
  */
 void Fluid::update(double time) {
-    GLuint in_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
-    GLuint out_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
+    // GLuint in_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
+    // GLuint out_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
 
-    if (first_frame_ || getElapsedFrames() % sort_interval_ == 0) {
-        sort_->run(in_particles, out_particles);
-        odd_frame_ = !odd_frame_;
-        first_frame_ = false;
-    }
+    // if (first_frame_ || getElapsedFrames() % sort_interval_ == 0) {
+    //     sort_->run(in_particles, out_particles);
+    //     odd_frame_ = !odd_frame_;
+    //     first_frame_ = false;
+    // }
 
-    runDensityProg(out_particles);
-    runUpdateProg(out_particles, float(time));
+    sort_->run(particle_buffer1_);
 
-    // printParticles(out_particles);
+    runDensityProg(particle_buffer1_);
+    runUpdateProg(particle_buffer1_, float(time));
 
-    marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
+    printParticles(particle_buffer1_);
+
+    marching_cube_->update(particle_buffer1_, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**
  * render particles
  */
 void Fluid::renderParticles() {
-    const float pointRadius = particle_radius_ * 6.0f;
-    gl::pointSize(5);
+    const float pointRadius = particle_radius_ * point_scale_;
+    gl::pointSize(pointRadius * 2.0f);
 
     gl::ScopedGlslProg render(render_particles_prog_);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
-                     odd_frame_ ? particle_buffer1_ : particle_buffer2_);
-    glBindVertexArray(odd_frame_ ? vao1_ : vao2_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer1_);
+    glBindVertexArray(vao1_);
 
     render_particles_prog_->uniform("renderMode", render_mode_);
     render_particles_prog_->uniform("size", size_);
     render_particles_prog_->uniform("binSize", bin_size_);
     render_particles_prog_->uniform("gridRes", grid_res_);
     render_particles_prog_->uniform("pointRadius", pointRadius);
-    render_particles_prog_->uniform("pointScale", 650.0f);
+    render_particles_prog_->uniform("lightPos", light_position_);
+    render_particles_prog_->uniform("cameraPos", camera_position_);
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, num_particles_);

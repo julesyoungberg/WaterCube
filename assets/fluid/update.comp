@@ -148,30 +148,32 @@ void main() {
     const vec3 acceleration = force / (p.density + 1e-16);
     vec3 vel = p.velocity + acceleration * dt;
     vec3 pos = p.position + vel * dt;
-    const float wallDamping = 0.5;
+    
+    const float wallDamping = 0.3;
+    const float border = particleRadius / 3.0;
 
-    if (pos.x < 0) {
+    if (pos.x < border) {
         vel.x *= -wallDamping;
-        pos.x = 0;
-    } else if (pos.x > size) {
+        pos.x = border;
+    } else if (pos.x > size - border) {
         vel.x *= -wallDamping;
-        pos.x = size;
+        pos.x = size - border;
     }
 
-    if (pos.y < 0) {
+    if (pos.y < border) {
         vel.y *= -wallDamping;
-        pos.y = 0;
-    } else if (pos.y > size) {
+        pos.y = border;
+    } else if (pos.y > size - border) {
         vel.y *= -wallDamping;
-        pos.y = size;
+        pos.y = size - border;
     }
 
-    if (pos.z < 0) {
+    if (pos.z < border) {
         vel.z *= -wallDamping;
-        pos.z = 0;
-    } else if (pos.z > size) {
+        pos.z = border;
+    } else if (pos.z > size - border) {
         vel.z *= -wallDamping;
-        pos.z = size;
+        pos.z = size - border;
     }
 
     p.velocity = vel;

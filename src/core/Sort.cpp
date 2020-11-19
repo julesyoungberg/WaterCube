@@ -11,6 +11,7 @@ Sort::Sort() {
 Sort::~Sort() {
     glDeleteBuffers(1, &count_buffer_);
     glDeleteBuffers(1, &offset_buffer_);
+    glDeleteBuffers(1, &sorted_buffer_);
 }
 
 SortRef Sort::numItems(int n) {
@@ -81,6 +82,8 @@ void Sort::prepareBuffers() {
     glNamedBufferStorage(count_buffer_, num_items_ * sizeof(uint32_t), zeros.data(), 0);
     glCreateBuffers(1, &offset_buffer_);
     glNamedBufferStorage(offset_buffer_, num_items_ * sizeof(uint32_t), zeros.data(), 0);
+    glCreateBuffers(1, &sorted_buffer_);
+    glNamedBufferStorage(sorted_buffer_, num_items_ * sizeof(uint32_t), zeros.data(), 0);
 
     prepareGridParticles();
 
@@ -109,6 +112,9 @@ void Sort::compileShaders() {
 
     util::log("\tcompiling sorter reorder shader");
     reorder_prog_ = util::compileComputeShader("sort/reorder.comp");
+
+    util::log("\tcompiling sorter shader");
+    sort_prog_ = util::compileComputeShader("sort/sort.comp");
 
     util::log("\tcompiling render grid shader");
     render_grid_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
@@ -146,6 +152,17 @@ void Sort::clearOffsetBuffer() {
     std::vector<uint32_t> initial(num_items_, 0);
     gl::ScopedBuffer buffer(GL_SHADER_STORAGE_BUFFER, count_buffer_);
     glClearNamedBufferData(offset_buffer_, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
+                           initial.data());
+    gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
+}
+
+/**
+ * clear sorted buffer
+ */
+void Sort::clearSortedBuffer() {
+    std::vector<uint32_t> initial(num_items_, 0);
+    gl::ScopedBuffer buffer(GL_SHADER_STORAGE_BUFFER, sorted_buffer_);
+    glClearNamedBufferData(sorted_buffer_, GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
                            initial.data());
     gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
@@ -204,6 +221,7 @@ void Sort::runScanProg() {
  */
 void Sort::runReorderProg(GLuint in_particles, GLuint out_particles) {
     gl::ScopedGlslProg prog(reorder_prog_);
+
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, in_particles);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, out_particles);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, count_buffer_);
@@ -212,6 +230,25 @@ void Sort::runReorderProg(GLuint in_particles, GLuint out_particles) {
     reorder_prog_->uniform("binSize", bin_size_);
     reorder_prog_->uniform("numItems", num_items_);
     reorder_prog_->uniform("gridRes", grid_res_);
+
+    runProg();
+    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+/**
+ * Run sort compute shader
+ */
+void Sort::runSortProg(GLuint particle_buffer) {
+    gl::ScopedGlslProg prog(sort_prog_);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, count_buffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, offset_buffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, sorted_buffer_);
+
+    sort_prog_->uniform("binSize", bin_size_);
+    sort_prog_->uniform("numItems", num_items_);
+    sort_prog_->uniform("gridRes", grid_res_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -237,9 +274,9 @@ void Sort::printGrids() {
 /**
  * main logic - sort in_particles and store result in out_particles
  */
-void Sort::run(GLuint in_particles, GLuint out_particles) {
+void Sort::run(GLuint particle_buffer) {
     clearCountBuffer();
-    runCountProg(in_particles);
+    runCountProg(particle_buffer);
 
     clearOffsetBuffer();
     if (use_linear_scan_) {
@@ -249,7 +286,9 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
     }
 
     clearCountBuffer();
-    runReorderProg(in_particles, out_particles);
+    // runReorderProg(in_particles, out_particles);
+    clearSortedBuffer();
+    runSortProg(particle_buffer);
 }
 
 /**

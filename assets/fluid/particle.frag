@@ -1,36 +1,49 @@
 #version 460 core
 
+const float AMBIENT_STRENGTH = 0.4;
+const float SPECULAR_STRENGTH = 0.6;
+const float SHININESS = 32.0;
+const vec3 PARTICLE_COLOR = vec3(0.2, 0.2, 1);
+
 in vec3 vPosition;
 in vec3 vColor;
 out vec4 outColor;
 
-uniform mat4 ciViewProjection;
+uniform vec3 lightPos;
+uniform vec3 cameraPos;
 uniform int renderMode;
-uniform float pointRadius;
 
 void main() {
-    vec4 eyeSpacePos;
-
-    if (renderMode == 0) {
-        eyeSpacePos = vec4(vPosition, 1);
-    } else {
-        vec3 N;
-        N.xy = gl_PointCoord * vec2(2, -2) + vec2(-1, 1);
-        const float r2 = dot(N.xy, N.xy);
-
-        if (r2 > 1) {
-            discard;
-        }
-
-        N.z = sqrt(1.0 - r2);
-
-        eyeSpacePos = vec4(vPosition + N * pointRadius, 1.0);
+    if (renderMode > 0) {
+        outColor = vec4(vColor, 1);
+        return;
     }
 
-    const vec4 clipSpacePos = ciViewProjection * eyeSpacePos;
-    const float ndcDepth = clipSpacePos.z / clipSpacePos.w;
-    const float windowDepth = 0.5 * ndcDepth + 0.5;
+    // calculate normal from texture coordinates
+    vec3 N;
+    N.xy = gl_PointCoord * 2.0 - vec2(1.0);    
+    
+    const float mag = dot(N.xy, N.xy);
+    if (mag > 1.0) discard;   // kill pixels outside circle
+    
+    N.z = sqrt(1.0 - mag);
 
-    gl_FragDepth = windowDepth;
-    outColor = vec4(vColor, 1);
+    // calculate lighting
+    vec3 color = PARTICLE_COLOR;
+	const vec3 lightDir = normalize(lightPos - vPosition);
+
+    // Ambient
+	const vec3 ambient = AMBIENT_STRENGTH * color;
+
+    // Diffuse
+    const float diff = max(0.0, dot(lightDir, N));
+    const vec3 diffuse = diff * color;
+
+    // specular
+    const vec3 viewDir = normalize(cameraPos - vPosition);
+	const vec3 reflectDir = reflect(-lightDir, N);
+	const float spec = pow(max(dot(viewDir, reflectDir), 0.0), SHININESS);
+	const vec3 specular = spec * SPECULAR_STRENGTH * color;
+
+    outColor = vec4(ambient + diffuse + specular, 1);
 }

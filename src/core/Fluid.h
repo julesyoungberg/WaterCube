@@ -53,10 +53,11 @@ public:
     FluidRef gravityStrength(float g);
     FluidRef renderMode(int m);
     FluidRef sortInterval(int i);
-    FluidRef cameraPosition(vec3 p);
 
     void addParams(params::InterfaceGlRef p);
 
+    void setCameraPosition(vec3 p);
+    void setLightPosition(vec3 p);
     void setRotation(quat r);
 
     FluidRef setup();
@@ -95,12 +96,13 @@ protected:
     float viscosity_weight_, pressure_weight_, kernel_weight_;
     float stiffness_;
     float rest_density_, rest_pressure_, gravity_strength_;
+    float point_scale_;
 
     bool odd_frame_, first_frame_;
 
     quat rotation_;
 
-    vec3 position_, camera_position_, gravity_direction_;
+    vec3 position_, camera_position_, gravity_direction_, light_position_;
     ContainerRef container_;
     std::vector<Particle> initial_particles_;
     std::vector<Plane> boundaries_;

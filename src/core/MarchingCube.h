@@ -32,7 +32,9 @@ public:
     MarchingCubeRef subdivisions(int s);
     MarchingCubeRef size(float s);
     MarchingCubeRef threshold(float t);
-    MarchingCubeRef cameraPosition(vec3 p);
+    
+    void setCameraPosition(vec3 p) { camera_position_ = p; }
+    void setLightPosition(vec3 p) { light_position_ = p; }
 
     void setup();
     void update(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer);

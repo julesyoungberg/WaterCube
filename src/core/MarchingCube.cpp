@@ -37,11 +37,6 @@ MarchingCubeRef MarchingCube::subdivisions(int s) {
     return thisRef();
 }
 
-MarchingCubeRef MarchingCube::cameraPosition(vec3 p) {
-    camera_position_ = p;
-    return thisRef();
-}
-
 /**
  * Prepare resulting triangle buffer
  */
@@ -176,7 +171,6 @@ void MarchingCube::compileShaders() {
  */
 void MarchingCube::setup() {
     resolution_ = sorting_resolution_ * subdivisions_;
-    light_position_ = vec3(size_ / 2.0f, size_ * 2.0f, size_ / 2.0f);
     prepareBuffers();
     compileShaders();
 }

@@ -25,7 +25,7 @@ uniform int renderMode;
 uniform float size;
 uniform float binSize;
 uniform int gridRes;
-uniform float pointScale;
+uniform float pointRadius;
 
 void main() {
 	Particle p = particles[gl_VertexID];
@@ -56,4 +56,5 @@ void main() {
     const float dist = max(length(position.xyz), FLOAT_MIN);
 
     gl_Position = ciModelViewProjection * vec4(p.position, 1);
+    gl_PointSize = pointRadius * 2;
 }
