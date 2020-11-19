@@ -78,7 +78,7 @@ void WaterCubeApp::update() {
         return;
     }
 
-    // fluid_->setRotation(scene_rotation_);
+    fluid_->setRotation(scene_rotation_);
 
     double time = getElapsedSeconds();
     scene_->update(time - prev_time_);
