@@ -14,7 +14,7 @@ uniform vec3 lightPos;
 uniform vec3 cameraPos;
 
 void main() {
-	const vec3 color = mix(PARTICLE_COLOR, vec3(0.9, 0.9, 1), vPressure);
+	vec3 color = mix(PARTICLE_COLOR, vec3(1), 0); // step(0.95, vPressure));
 	const vec3 lightDir = normalize(lightPos - vPosition);
 	const vec3 norm = normalize(vNormal);
 
