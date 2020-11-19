@@ -8,7 +8,7 @@ using namespace core;
 
 MarchingCube::MarchingCube()
     : threshold_(0.5f), resolution_(0), sorting_resolution_(0), subdivisions_(0), num_items_(0),
-      size_(0) {}
+      size_(0), light_position_(0), camera_position_(0) {}
 
 MarchingCube::~MarchingCube() {}
 
@@ -34,6 +34,11 @@ MarchingCubeRef MarchingCube::sortingResolution(int r) {
 
 MarchingCubeRef MarchingCube::subdivisions(int s) {
     subdivisions_ = s;
+    return thisRef();
+}
+
+MarchingCubeRef MarchingCube::cameraPosition(vec3 p) {
+    camera_position_ = p;
     return thisRef();
 }
 
@@ -168,6 +173,7 @@ void MarchingCube::compileShaders() {
  */
 void MarchingCube::setup() {
     resolution_ = sorting_resolution_ * subdivisions_;
+    light_position_ = vec3(size_ / 2.0f, size_ * 2.0f, size_ / 2.0f);
     prepareBuffers();
     compileShaders();
     clearDensity();
@@ -345,7 +351,8 @@ void MarchingCube::renderSurface() {
     grid_buffer_->bindBase(0);
 
     render_surface_prog_->uniform("size", size_);
-    render_surface_prog_->uniform("lightPos", vec3(size_ / 2.0f, size_ * 2.0f, size_ / 2.0f));
+    render_surface_prog_->uniform("lightPos", light_position_);
+    render_surface_prog_->uniform("cameraPos", camera_position_);
 
     gl::context()->setDefaultShaderVars();
     // gl::drawElements(GL_TRIANGLES, count_, GL_UNSIGNED_INT, nullptr);

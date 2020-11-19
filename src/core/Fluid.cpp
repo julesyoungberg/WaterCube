@@ -108,6 +108,11 @@ FluidRef Fluid::sortInterval(int i) {
     return thisRef();
 }
 
+FluidRef Fluid::cameraPosition(vec3 p) {
+    camera_position_ = p;
+    return thisRef();
+}
+
 /**
  * setup GUI configuration parameters
  */
@@ -365,7 +370,8 @@ FluidRef Fluid::setup() {
                          ->numItems(num_particles_)
                          ->threshold(0.7f)
                          ->sortingResolution(grid_res_)
-                         ->subdivisions(6);
+                         ->subdivisions(6)
+                         ->cameraPosition(camera_position_ - vec3(size_ / 2.0f));
     marching_cube_->setup();
 
     runDistanceFieldProg();
@@ -569,8 +575,7 @@ void Fluid::draw() {
     gl::enableDepthRead();
     gl::enableDepthWrite();
     gl::pushMatrices();
-    float half = size_ / 2.0f;
-    vec3 offset = vec3(-half, -half, -half);
+    vec3 offset = vec3(-size_ / 2.0f);
     gl::translate(offset.x, offset.y, offset.z);
 
     if (render_mode_ == 5) {

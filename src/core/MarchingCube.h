@@ -32,6 +32,7 @@ public:
     MarchingCubeRef subdivisions(int s);
     MarchingCubeRef size(float s);
     MarchingCubeRef threshold(float t);
+    MarchingCubeRef cameraPosition(vec3 p);
 
     void setup();
     void update(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer);
@@ -66,6 +67,8 @@ private:
     int num_items_;
     float size_;
     float threshold_;
+
+    vec3 light_position_, camera_position_;
 
     gl::GlslProgRef bin_density_prog_;
     gl::GlslProgRef marching_cube_prog_, clear_prog_;

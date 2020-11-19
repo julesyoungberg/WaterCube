@@ -47,7 +47,8 @@ void WaterCubeApp::setup() {
     params_->addParam("Scene Rotation", &scene_rotation_);
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
-    cam_.lookAt(vec3(size_, size_, size_ * 3) / 1.5f, vec3(0, 0, 0));
+    vec3 camera_pos = vec3(size_, size_, size_ * 3) / 1.5f;
+    cam_.lookAt(camera_pos, vec3(0, 0, 0));
 
     gl::enableDepthWrite();
     gl::enableDepthRead();
@@ -55,7 +56,10 @@ void WaterCubeApp::setup() {
     util::log("creating scene");
     scene_ = Scene::create();
 
-    fluid_ = Fluid::create("fluid")->size(size_)->numParticles(NUM_PARTICLES);
+    fluid_ = Fluid::create("fluid")
+                 ->size(size_)
+                 ->numParticles(NUM_PARTICLES)
+                 ->cameraPosition(camera_pos);
     fluid_->addParams(params_);
     fluid_->setup();
 

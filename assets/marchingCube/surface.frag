@@ -1,6 +1,7 @@
 #version 460 core
 
 const float AMBIENT_STRENGTH = 0.3;
+const float SPECULAR_STRENGTH = 0.5;
 const float SHININESS = 25.0;
 const vec3 PARTICLE_COLOR = vec3(0.3, 0.3, 0.9);
 
@@ -10,26 +11,25 @@ out vec4 fColor;
 
 uniform float size;
 uniform vec3 lightPos;
+uniform vec3 cameraPos;
 
 void main() {
 	const vec3 color = PARTICLE_COLOR;
+	const vec3 lightDir = normalize(lightPos - vPosition);
+	const vec3 norm = normalize(vNormal);
 
 	// Ambient
 	const vec3 ambient = AMBIENT_STRENGTH * color;
 
 	// Diffuse
-	const vec3 norm = normalize(vNormal);
-	const vec3 lightDir = normalize(lightPos - vPosition);
 	const float diff = max(dot(norm, lightDir), 0.0);
 	const vec3 diffuse = diff * color;
 
-	// // Specular (Blinn-Phong)
-	// const vec3 incidence = normalize(lightPosEye - eyeSpacePos.xyz);
-	// const vec3 viewDir = normalize(vec3(0.0) - eyeSpacePos.xyz);
-	// const vec3 halfDir = normalize(incidence + viewDir);
-	// const float cosAngle = max(dot(halfDir, normal), 0.0);
-	// const float scoeff = pow(cosAngle, SHININESS);
-	// const vec3 specColor = vec3(1.0) * scoeff;
+	// Specular (Blinn-Phong)
+	const vec3 viewDir = normalize(cameraPos - vPosition);
+	const vec3 reflectDir = reflect(-lightDir, norm);
+	const float spec = pow(max(dot(viewDir, reflectDir), 0.0), SHININESS);
+	const vec3 specular = spec * SPECULAR_STRENGTH * color;
 
 	// Final
 	fColor = vec4(ambient + diffuse, 0.5);

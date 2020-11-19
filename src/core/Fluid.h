@@ -53,6 +53,7 @@ public:
     FluidRef gravity(float g);
     FluidRef renderMode(int m);
     FluidRef sortInterval(int i);
+    FluidRef cameraPosition(vec3 p);
 
     void addParams(params::InterfaceGlRef p);
 
@@ -98,7 +99,7 @@ protected:
 
     bool odd_frame_, first_frame_;
 
-    vec3 position_;
+    vec3 position_, camera_position_;
     ContainerRef container_;
     std::vector<Particle> initial_particles_;
     std::vector<Plane> boundaries_;
