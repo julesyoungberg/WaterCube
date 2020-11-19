@@ -74,9 +74,10 @@ protected:
 
     void runProg() { util::runProg(num_work_groups_); }
     void runDistanceFieldProg();
-    void runBinVelocityProg(GLuint particles);
-    void runDensityProg(GLuint particles);
-    void runUpdateProg(GLuint particles, float time_step);
+    void runBinVelocityProg(GLuint particle_buffer);
+    void runDensityProg(GLuint particle_buffer);
+    void runUpdateProg(GLuint particle_buffer, float time_step);
+    void printParticles(GLuint particle_buffer);
     void renderGeometry();
     void renderGrid();
 

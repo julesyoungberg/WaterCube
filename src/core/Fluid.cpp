@@ -1,5 +1,7 @@
 #include "./Fluid.h"
 
+#include <glm/gtx/string_cast.hpp>
+
 using namespace core;
 
 Fluid::Fluid(const std::string& name) : BaseObject(name) {
@@ -8,14 +10,14 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     grid_res_ = 14;
     position_ = vec3(0);
     gravity_ = -4.5f;
-    particle_mass_ = 0.05f;
+    particle_mass_ = 0.1f;
     kernel_radius_ = 0.1828f;
     viscosity_coefficient_ = 0.035f;
-    stiffness_ = 250.0f;
+    stiffness_ = 2.0f;
     rest_pressure_ = 0;
-    render_mode_ = 9;
-    particle_radius_ = 0.05f; // 0.0457f;
-    rest_density_ = 998.27f;
+    render_mode_ = 1;
+    particle_radius_ = 0.1f; // 0.0457f;
+    rest_density_ = 3000.0f;
 }
 
 Fluid::~Fluid() {}
@@ -105,7 +107,7 @@ FluidRef Fluid::gravity(float g) {
  */
 void Fluid::addParams(params::InterfaceGlRef p) {
     // p->addParam("Number of Particles", &num_particles_, "min=100 step=100");
-    p->addParam("Render Mode", &render_mode_, "min=0 max=4 step=1");
+    p->addParam("Render Mode", &render_mode_, "min=0 max=9 step=1");
     // p->addParam("Grid Resolution", &grid_res_, "min=1 max=1000 step=1");
     p->addParam("Particle Mass", &particle_mass_, "min=0.001 max=2.0 step=0.001");
     p->addParam("Viscosity", &viscosity_coefficient_, "min=0.001 max=2.0 step=0.001");
@@ -125,7 +127,7 @@ void Fluid::generateInitialParticles() {
 
     for (auto& p : initial_particles_) {
         p.position = (Rand::randVec3() * 0.5f + 0.5f) * size_;
-        p.velocity = Rand::randVec3() * 0.1f;
+        p.velocity = Rand::randVec3() * 50.0f;
 
         if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.z > size_ ||
             p.position.y > size_ || p.position.z > size_) {
@@ -195,7 +197,7 @@ void Fluid::prepareWallWeightFunction() {
 
     for (int i = 0; i <= divisions; i++) {
         float dist = i * step;
-        values[i] = 0; // kernel_weight_ * pow(kernel_radius_ * kernel_radius_ - dist * dist, 3);
+        values[i] = kernel_weight_ * pow(kernel_radius_ * kernel_radius_ - dist * dist, 3);
     }
 
     util::log("\t\tcreating buffer");
@@ -388,10 +390,10 @@ void Fluid::runDistanceFieldProg() {
 /**
  * Run bin velocity compute shader
  */
-void Fluid::runBinVelocityProg(GLuint particles) {
+void Fluid::runBinVelocityProg(GLuint particle_buffer) {
     gl::ScopedGlslProg prog(bin_velocity_prog_);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
@@ -408,10 +410,10 @@ void Fluid::runBinVelocityProg(GLuint particles) {
 /**
  * Run density compute shader
  */
-void Fluid::runDensityProg(GLuint particles) {
+void Fluid::runDensityProg(GLuint particle_buffer) {
     gl::ScopedGlslProg prog(density_prog_);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
@@ -438,10 +440,10 @@ void Fluid::runDensityProg(GLuint particles) {
 /**
  * Run update compute shader
  */
-void Fluid::runUpdateProg(GLuint particles, float time_step) {
+void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     gl::ScopedGlslProg prog(update_prog_);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particles);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
@@ -453,7 +455,7 @@ void Fluid::runUpdateProg(GLuint particles, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.000012f); // time_step);
+    update_prog_->uniform("dt", 0.00002f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", vec3(0, gravity_, 0));
     update_prog_->uniform("particleMass", particle_mass_);
@@ -464,6 +466,22 @@ void Fluid::runUpdateProg(GLuint particles, float time_step) {
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+/**
+ * print particles for debugging
+ */
+void Fluid::printParticles(GLuint particle_buffer) {
+    const int n = 1;
+    std::vector<Particle> particles = util::getParticles(particle_buffer, n);
+    util::log("-----Particles-----");
+    for (int i = 0; i < n; i++) {
+        Particle p = particles[i];
+        std::string s = "p=<" + glm::to_string(p.position) + ">";
+        s += " v=<" + glm::to_string(p.velocity) + ">";
+        s += " d=" + std::to_string(p.density) + ", pr=" + std::to_string(p.pressure);
+        util::log("%s", s.c_str());
+    }
 }
 
 /**
@@ -481,14 +499,17 @@ void Fluid::update(double time) {
     runDensityProg(out_particles);
     runUpdateProg(out_particles, float(time));
 
-    marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
+    // printParticles(out_particles);
+
+    // marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**
  * render particles
  */
 void Fluid::renderGeometry() {
-    gl::pointSize(2);
+    gl::pointSize(5);
+
     gl::ScopedGlslProg render(geometry_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
                      odd_frame_ ? particle_buffer2_ : particle_buffer1_);
@@ -498,7 +519,7 @@ void Fluid::renderGeometry() {
     geometry_prog_->uniform("size", size_);
     geometry_prog_->uniform("binSize", bin_size_);
     geometry_prog_->uniform("gridRes", grid_res_);
-    const float pointRadius = particle_radius_ * (render_mode_ ? 6.0f : 3.5f);
+    const float pointRadius = particle_radius_ * 6.0f;
     geometry_prog_->uniform("pointRadius", pointRadius);
     geometry_prog_->uniform("pointScale", 650.0f);
 

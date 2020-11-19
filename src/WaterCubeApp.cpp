@@ -82,7 +82,7 @@ void WaterCubeApp::update() {
 
 void WaterCubeApp::draw() {
     gl::clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    gl::clear(Color(0.2f, 0.2f, 0.3f));
+    gl::clear(Color(0.3f, 0.3f, 0.35f));
     gl::setMatricesWindowPersp(getWindowSize());
     gl::setMatrices(cam_);
     gl::rotate(scene_rotation_);

@@ -3,7 +3,7 @@
 const float FLOAT_MIN = 1.175494351e-38;
 const float GRID_EPS = 0.000001;
 const float MAX_DENSITY = 600.0;
-const vec3 PARTICLE_COLOR = vec3(0.0, 0.0, 0.6);
+const vec3 PARTICLE_COLOR = vec3(0.2, 0.2, 0.8);
 
 out vec3 vColor;
 out vec3 vPosition;
@@ -25,7 +25,6 @@ uniform int renderMode;
 uniform float size;
 uniform float binSize;
 uniform int gridRes;
-uniform float pointRadius;
 uniform float pointScale;
 
 void main() {
@@ -60,6 +59,5 @@ void main() {
 
     const float dist = max(length(position.xyz), FLOAT_MIN);
 
-    gl_PointSize = pointRadius * (pointScale / dist);
     gl_Position = ciModelViewProjection * vec4(p.position, 1);
 }

@@ -8,7 +8,10 @@ Sort::Sort() {
     use_linear_scan_ = true;
 }
 
-Sort::~Sort() {}
+Sort::~Sort() {
+    glDeleteBuffers(1, &count_buffer_);
+    glDeleteBuffers(1, &offset_buffer_);
+}
 
 SortRef Sort::numItems(int n) {
     num_items_ = n;

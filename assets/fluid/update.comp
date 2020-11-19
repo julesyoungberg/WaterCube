@@ -122,11 +122,11 @@ void main() {
     const float dist = interpolatedDistance.a;
     // compute pressure from wall
     vec3 wallForce = vec3(0);
-    const float d = kernelRadius * 2; // ?
-    if (dist <= d) {
-        // Equation (11) from Harada
-        wallForce = particleMass * (((d - abs(dist)) * normal) / (d * dt * dt));
-    }
+    // const float d = kernelRadius / 4.0; // ?
+    // if (dist <= d) {
+    //     // Equation (11) from Harada
+    //     wallForce = particleMass * (((d - abs(dist)) * normal) / (d * dt * dt));
+    // }
 
     const vec3 externalForces = gravity * p.density;
 
@@ -135,9 +135,9 @@ void main() {
 
     // find accelaration and integrate
     const vec3 acceleration = force / p.density;
-    vec3 vel = clamp(p.velocity + acceleration, vec3(-50), vec3(50));
+    vec3 vel = clamp(p.velocity + acceleration, vec3(-100), vec3(100));
     vec3 pos = p.position + vel * dt;
-    const float wallDamping = 0.5;
+    const float wallDamping = 0.75;
 
     if (pos.x < 0) {
         vel.x *= -wallDamping;

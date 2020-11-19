@@ -97,10 +97,10 @@ void main() {
     }
 
     // check distance to nearest wall
-    const float dist = texture(distanceField, p.position / size).a;
-    if (dist <= kernelRadius) {
-        density += texture(wallWeight, dist / kernelRadius).x;
-    }
+    // const float dist = texture(distanceField, p.position / size).a;
+    // if (dist <= kernelRadius) {
+    //     density += texture(wallWeight, dist / kernelRadius).x;
+    // }
 
     p.density = density;
 
