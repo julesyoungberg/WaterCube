@@ -26,8 +26,8 @@ public:
     void draw() override;
     void keyDown(KeyEvent event) override;
 
-    bool run_once_, running_;
-    double prev_time_, first_frame_;
+    bool run_once_, running_, reset_;
+    double prev_time_;
     float size_;
     CameraPersp cam_;
     SceneRef scene_;
@@ -39,9 +39,9 @@ public:
 void WaterCubeApp::setup() {
     run_once_ = false;
     running_ = true;
+    reset_ = false;
     size_ = 1.0f;
     prev_time_ = 0.0;
-    first_frame_ = true;
 
     params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
     params_->addParam("Scene Rotation", &scene_rotation_);
@@ -57,18 +57,21 @@ void WaterCubeApp::setup() {
 
     fluid_ = Fluid::create("fluid")->size(size_)->numParticles(NUM_PARTICLES);
     fluid_->addParams(params_);
+    fluid_->setup();
+
     BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid_);
     CI_ASSERT(scene_->addObject(fluid_ref));
 }
 
 void WaterCubeApp::update() {
     if (!running_) {
-        return;
-    }
+        if (reset_) {
+            setup();
+            running_ = true;
+            reset_ = false;
+        }
 
-    if (first_frame_) {
-        fluid_->setup();
-        first_frame_ = false;
+        return;
     }
 
     double time = getElapsedSeconds();
@@ -102,7 +105,8 @@ void WaterCubeApp::keyDown(KeyEvent event) {
     case 'p':
         running_ = !running_;
     case 'r':
-        setup();
+        running_ = false;
+        reset_ = true;
     }
 }
 

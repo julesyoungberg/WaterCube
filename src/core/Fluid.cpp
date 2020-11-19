@@ -579,5 +579,3 @@ void Fluid::draw() {
 
     gl::popMatrices();
 }
-
-void Fluid::reset() {}

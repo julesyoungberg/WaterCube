@@ -58,7 +58,7 @@ public:
     FluidRef setup();
     void update(double time) override;
     void draw() override;
-    void reset() override;
+    void reset() override {}
 
     static FluidRef create(const std::string& name) { return std::make_shared<Fluid>(name); }
 

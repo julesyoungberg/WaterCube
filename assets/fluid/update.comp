@@ -107,19 +107,17 @@ void main() {
             // Equation (6) from Harada
             const float averagePressure = (p.pressure + other.pressure) / (2.0 * other.density);
             pressureForce += particleMass * averagePressure * mPressureWeight;
-
-            // get smoothed velocity from velocity field
-            const vec3 velocityDiff = p.velocity - other.velocity;
         
             // Equation (7) from Harada
+            const vec3 velocityDiff = p.velocity - other.velocity;
             viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
         }
     }
 
     // find distance to nearest wall
-    const vec4 interpolatedDistance = texture(distanceField, p.position / size);
-    const vec3 normal = interpolatedDistance.xyz;
-    const float dist = interpolatedDistance.a;
+    // const vec4 interpolatedDistance = texture(distanceField, p.position / size);
+    // const vec3 normal = interpolatedDistance.xyz;
+    // const float dist = interpolatedDistance.a;
     // compute pressure from wall
     vec3 wallForce = vec3(0);
     // const float d = kernelRadius / 4.0; // ?
