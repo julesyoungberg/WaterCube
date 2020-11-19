@@ -1,8 +1,8 @@
 #version 460 core
 
-const float AMBIENT_STRENGTH = 0.3;
-const float SPECULAR_STRENGTH = 0.5;
-const float SHININESS = 25.0;
+const float AMBIENT_STRENGTH = 0.4;
+const float SPECULAR_STRENGTH = 0.6;
+const float SHININESS = 32.0;
 const vec3 PARTICLE_COLOR = vec3(0.4, 0.4, 1);
 
 in vec3 vNormal;
