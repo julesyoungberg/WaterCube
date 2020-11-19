@@ -71,19 +71,16 @@ protected:
     void generateBoundaryPlanes();
     void prepareWallWeightFunction();
     void prepareParticleBuffers();
-    void prepareGridParticles();
     void prepareBuffers();
 
     void compileShaders();
 
     void runProg() { util::runProg(num_work_groups_); }
     void runDistanceFieldProg();
-    void runBinVelocityProg(GLuint particle_buffer);
     void runDensityProg(GLuint particle_buffer);
     void runUpdateProg(GLuint particle_buffer, float time_step);
     void printParticles(GLuint particle_buffer);
-    void renderGeometry();
-    void renderGrid();
+    void renderParticles();
 
     FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
 
@@ -109,15 +106,13 @@ protected:
     std::vector<Plane> boundaries_;
     std::vector<ivec4> grid_particles_;
 
-    gl::GlslProgRef distance_field_prog_, bin_velocity_prog_;
+    gl::GlslProgRef distance_field_prog_;
     gl::GlslProgRef density_prog_, update_prog_;
-    gl::GlslProgRef geometry_prog_, render_grid_prog_;
+    gl::GlslProgRef render_particles_prog_;
 
-    gl::SsboRef boundary_buffer_, grid_buffer_;
+    gl::SsboRef boundary_buffer_;
     gl::Texture1dRef wall_weight_function_;
-    gl::Texture3dRef velocity_field_, distance_field_;
-    gl::VboRef grid_ids_vbo_;
-    gl::VaoRef grid_attributes_;
+    gl::Texture3dRef distance_field_;
 
     SortRef sort_;
     MarchingCubeRef marching_cube_;

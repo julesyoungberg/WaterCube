@@ -228,7 +228,7 @@ void MarchingCube::runBinDensityProg(GLuint particle_buffer, GLuint count_buffer
 /**
  * run main marching cube algorithm
  */
-void MarchingCube::runMarchingCubeProg(const ivec3 thread) {
+void MarchingCube::runMarchingCubeProg() {
     gl::ScopedGlslProg prog(marching_cube_prog_);
     gl::ScopedVao vao(grid_attributes_);
 

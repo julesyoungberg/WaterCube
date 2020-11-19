@@ -39,15 +39,11 @@ void main() {
             vColor = mix(p.velocity / w, vec3(1, 0, 0), float(invalid));
             break;
         case 2:
-            const float speed = length(p.velocity);
-            vColor = vec3(speed, speed, 0);
-            break;
-        case 3:
             const float norm = p.density / MAX_DENSITY;
             invalid = (p.density <= 0.0) || isnan(p.density) || isinf(p.density);
             vColor = mix(vec3(norm), vec3(1, 0, 0), float(invalid));
             break;
-        case 4:
+        case 3:
             const ivec3 binCoord = ivec3(floor(p.position / binSize));
             vColor = vec3(binCoord) / gridRes;
             break;

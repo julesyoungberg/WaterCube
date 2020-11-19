@@ -16,7 +16,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 9;
+    render_mode_ = 7;
     particle_radius_ = 0.1f; // 0.0457f;
     rest_density_ = 1400.0f;
     sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
@@ -257,36 +257,6 @@ void Fluid::prepareParticleBuffers() {
 }
 
 /**
- * prepare debugging grid particles
- */
-void Fluid::prepareGridParticles() {
-    util::log("\tcreating grid particles");
-    grid_particles_.resize(int(pow(grid_res_, 3)));
-    for (int z = 0; z < grid_res_; z++) {
-        for (int y = 0; y < grid_res_; y++) {
-            for (int x = 0; x < grid_res_; x++) {
-                grid_particles_.push_back(ivec4(x, y, z, 0));
-            }
-        }
-    }
-    grid_buffer_ = gl::Ssbo::create(grid_particles_.size() * sizeof(ivec4), grid_particles_.data(),
-                                    GL_STATIC_DRAW);
-
-    util::log("\tcreating grid particles ids vbo");
-    std::vector<GLuint> ids(grid_particles_.size());
-    GLuint curr_id = 0;
-    std::generate(ids.begin(), ids.end(), [&curr_id]() -> GLuint { return curr_id++; });
-    grid_ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
-
-    util::log("\tcreating grid particles attributes vao");
-    grid_attributes_ = gl::Vao::create();
-    gl::ScopedBuffer scopedDids(grid_ids_vbo_);
-    gl::ScopedVao grid_vao(grid_attributes_);
-    gl::enableVertexAttribArray(0);
-    gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
-}
-
-/**
  * Prepares shared memory buffers
  */
 void Fluid::prepareBuffers() {
@@ -296,16 +266,13 @@ void Fluid::prepareBuffers() {
     boundary_buffer_ =
         gl::Ssbo::create(boundaries_.size() * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
 
-    util::log("\tcreating velocity field");
-    auto texture3d_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
-    velocity_field_ = gl::Texture3d::create(grid_res_, grid_res_, grid_res_, texture3d_format);
     util::log("\tcreating disance field");
+    auto texture3d_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
     distance_field_ =
         gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture3d_format);
 
     prepareParticleBuffers();
     prepareWallWeightFunction();
-    prepareGridParticles();
 }
 
 /**
@@ -317,25 +284,16 @@ void Fluid::compileShaders() {
     util::log("\tcompiling fluid distanceField compute shader");
     distance_field_prog_ = util::compileComputeShader("fluid/distanceField.comp");
 
-    util::log("\tcompiling fluid binVelocity compute shader");
-    bin_velocity_prog_ = util::compileComputeShader("fluid/binVelocity.comp");
-
     util::log("\tcompiling fluid density compute shader");
     density_prog_ = util::compileComputeShader("fluid/density.comp");
 
     util::log("\tcompiling fluid update compute shader");
     update_prog_ = util::compileComputeShader("fluid/update.comp");
 
-    util::log("\tcompiling fluid geometry shader");
-    geometry_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
-                                              .vertex(loadAsset("fluid/particle.vert"))
-                                              .fragment(loadAsset("fluid/particle.frag")));
-
-    util::log("\tcompiling render grid shader");
-    render_grid_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
-                                                 .vertex(loadAsset("fluid/grid.vert"))
-                                                 .fragment(loadAsset("fluid/grid.frag"))
-                                                 .attribLocation("gridID", 0));
+    util::log("\tcompiling fluid particles shader");
+    render_particles_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
+                                                      .vertex(loadAsset("fluid/particle.vert"))
+                                                      .fragment(loadAsset("fluid/particle.frag")));
 }
 
 /**
@@ -413,26 +371,6 @@ void Fluid::runDistanceFieldProg() {
 }
 
 /**
- * Run bin velocity compute shader
- */
-void Fluid::runBinVelocityProg(GLuint particle_buffer) {
-    gl::ScopedGlslProg prog(bin_velocity_prog_);
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
-
-    glActiveTexture(GL_TEXTURE0 + 3);
-    glUniform1i(glGetUniformLocation(bin_velocity_prog_->getHandle(), "velocityField"), 3);
-    glBindImageTexture(3, velocity_field_->getId(), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-    bin_velocity_prog_->uniform("gridRes", grid_res_);
-
-    util::runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
-}
-
-/**
  * Run density compute shader
  */
 void Fluid::runDensityProg(GLuint particle_buffer) {
@@ -473,10 +411,8 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
     distance_field_->bind(3);
-    // velocity_field_->bind(4);
 
     update_prog_->uniform("distanceField", 3);
-    // update_prog_->uniform("velocityField", 4);
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
@@ -522,8 +458,6 @@ void Fluid::update(double time) {
         first_frame_ = false;
     }
 
-    // runBinVelocityProg(out_particles);
-
     runDensityProg(out_particles);
     runUpdateProg(out_particles, float(time));
 
@@ -535,46 +469,24 @@ void Fluid::update(double time) {
 /**
  * render particles
  */
-void Fluid::renderGeometry() {
+void Fluid::renderParticles() {
+    const float pointRadius = particle_radius_ * 6.0f;
     gl::pointSize(5);
 
-    gl::ScopedGlslProg render(geometry_prog_);
+    gl::ScopedGlslProg render(render_particles_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
                      odd_frame_ ? particle_buffer1_ : particle_buffer2_);
     glBindVertexArray(odd_frame_ ? vao1_ : vao2_);
 
-    geometry_prog_->uniform("renderMode", render_mode_);
-    geometry_prog_->uniform("size", size_);
-    geometry_prog_->uniform("binSize", bin_size_);
-    geometry_prog_->uniform("gridRes", grid_res_);
-    const float pointRadius = particle_radius_ * 6.0f;
-    geometry_prog_->uniform("pointRadius", pointRadius);
-    geometry_prog_->uniform("pointScale", 650.0f);
+    render_particles_prog_->uniform("renderMode", render_mode_);
+    render_particles_prog_->uniform("size", size_);
+    render_particles_prog_->uniform("binSize", bin_size_);
+    render_particles_prog_->uniform("gridRes", grid_res_);
+    render_particles_prog_->uniform("pointRadius", pointRadius);
+    render_particles_prog_->uniform("pointScale", 650.0f);
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, num_particles_);
-}
-
-/**
- * render debugging grid
- */
-void Fluid::renderGrid() {
-    gl::pointSize(5);
-
-    gl::ScopedGlslProg render(render_grid_prog_);
-    gl::ScopedVao vao(grid_attributes_);
-
-    gl::ScopedBuffer grid_buffer(grid_buffer_);
-    grid_buffer_->bindBase(0);
-
-    velocity_field_->bind(1);
-
-    render_grid_prog_->uniform("tex", 1);
-    render_grid_prog_->uniform("binSize", bin_size_);
-    render_grid_prog_->uniform("gridRes", grid_res_);
-
-    gl::context()->setDefaultShaderVars();
-    gl::drawArrays(GL_POINTS, 0, int(grid_particles_.size()));
 }
 
 /**
@@ -587,18 +499,16 @@ void Fluid::draw() {
     vec3 offset = vec3(-size_ / 2.0f);
     gl::translate(offset.x, offset.y, offset.z);
 
-    if (render_mode_ == 5) {
+    if (render_mode_ == 4) {
         sort_->renderGrid(size_);
-    } else if (render_mode_ == 6) {
-        renderGrid();
-    } else if (render_mode_ == 7) {
+    } else if (render_mode_ == 5) {
         marching_cube_->renderDensity();
-    } else if (render_mode_ == 8) {
+    } else if (render_mode_ == 6) {
         marching_cube_->renderGrid();
-    } else if (render_mode_ == 9) {
+    } else if (render_mode_ == 7) {
         marching_cube_->renderSurface();
     } else {
-        renderGeometry();
+        renderParticles();
     }
 
     container_->draw();

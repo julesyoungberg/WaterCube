@@ -22,7 +22,6 @@ layout(std430, binding = 2) restrict readonly buffer Offsets {
 };
 
 layout(binding = 3) uniform sampler3D distanceField;
-// layout(binding = 3) uniform sampler3D velocityField;
 uniform float size;
 uniform float binSize;
 uniform int gridRes;
