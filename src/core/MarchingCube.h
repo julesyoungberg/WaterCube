@@ -54,7 +54,7 @@ private:
 
     void runClearProg();
     void runBinDensityProg(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer);
-    void runMarchingCubeProg(const ivec3 thread);
+    void runMarchingCubeProg();
     void printDensity();
     void printGrid();
 

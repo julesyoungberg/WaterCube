@@ -249,7 +249,7 @@ void MarchingCube::runMarchingCubeProg(const ivec3 thread) {
     // marching_cube_prog_->uniform("border", 1);
     marching_cube_prog_->uniform("threshold", threshold_);
 
-    util::runProg(thread);
+    util::runProg(ivec3(int(ceil(float(resolution_) / MARCHING_CUBE_GROUP_SIZE))));
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
@@ -290,14 +290,12 @@ void MarchingCube::printGrid() {
  * update routine
  */
 void MarchingCube::update(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer) {
-    const ivec3 thread = ivec3(int(ceil(resolution_ / MARCHING_CUBE_GROUP_SIZE)));
-
     runClearProg();
     clearDensity();
 
     runBinDensityProg(particle_buffer, count_buffer, offset_buffer);
-    runMarchingCubeProg(thread);
-    // printGrid();
+    runMarchingCubeProg();
+    // printGrid();s
 }
 
 /**

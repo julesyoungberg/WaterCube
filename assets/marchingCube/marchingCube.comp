@@ -28,7 +28,6 @@ layout(std430, binding = 3) restrict readonly buffer Density {
 uniform float threshold;
 uniform float size;
 uniform int res;
-// uniform int border;
 
 // edgeConnection lists the index of the endpoint vertices for each of the 12 edges of the cube
 const ivec2 edgeConnection[12] = {
@@ -77,7 +76,7 @@ float getOffset(float v1, float v2) {
 }
 
 vec3 coordToPoint(vec3 c) {
-    return (c / res) * size;
+    return (c / float(res)) * size;
 }
 
 void main() {
