@@ -137,7 +137,7 @@ void main() {
     const vec3 force = viscosityForce - pressureForce + externalForces;
 
     // find accelaration and integrate
-    const vec3 acceleration = force / p.density;
+    const vec3 acceleration = force / (p.density + 1e-16);
     vec3 vel = p.velocity + acceleration * dt;
     vec3 pos = p.position + vel * dt;
     const float wallDamping = 0.5;
