@@ -76,7 +76,7 @@ void main() {
     }
 
     const float binSize = size / float(res);
-    const float radius = binSize / 2.0;
+    const float radius = binSize * 1.5;
     // bin position in world space
     const vec3 binPos = vec3(coord) * binSize;
 
@@ -86,8 +86,8 @@ void main() {
     // sort bin position in world space
     const vec3 sortBinPos = vec3(sortBinCoord) * sortBinSize;
     // optimize the number of bins searched by filtering
-    bool neighboring[8] = { true, true, true, true, true, true, true, true };
-    getNeighboring(neighboring, binPos, sortBinPos);
+    // bool neighboring[8] = { true, true, true, true, true, true, true, true };
+    // getNeighboring(neighboring, binPos, sortBinPos);
 
     float density = 0;
     int total = 0;
@@ -95,9 +95,9 @@ void main() {
     // search neighboring bins
     #pragma unroll 1
     for (uint binIndex = 0; binIndex < 8; binIndex++) {
-        if (!neighboring[binIndex]) {
-            continue;
-        }
+        // if (!neighboring[binIndex]) {
+        //     continue;
+        // }
 
         const ivec3 nc = sortBinCoord + NEIGHBORHOOD[binIndex];
 

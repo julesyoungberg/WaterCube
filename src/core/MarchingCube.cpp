@@ -344,6 +344,9 @@ void MarchingCube::renderSurface() {
     gl::ScopedBuffer grid_buffer(grid_buffer_);
     grid_buffer_->bindBase(0);
 
+    render_surface_prog_->uniform("size", size_);
+    render_surface_prog_->uniform("lightPos", vec3(size_ / 2.0f, size_ * 2.0f, size_ / 2.0f));
+
     gl::context()->setDefaultShaderVars();
     // gl::drawElements(GL_TRIANGLES, count_, GL_UNSIGNED_INT, nullptr);
     gl::drawArrays(GL_TRIANGLES, 0, count_);

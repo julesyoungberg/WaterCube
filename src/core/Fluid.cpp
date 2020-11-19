@@ -15,7 +15,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 7;
+    render_mode_ = 9;
     particle_radius_ = 0.1f; // 0.0457f;
     rest_density_ = 1400.0f;
     sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
@@ -363,9 +363,9 @@ FluidRef Fluid::setup() {
     marching_cube_ = MarchingCube::create()
                          ->size(size_)
                          ->numItems(num_particles_)
-                         ->threshold(0.5f)
+                         ->threshold(0.7f)
                          ->sortingResolution(grid_res_)
-                         ->subdivisions(3);
+                         ->subdivisions(6);
     marching_cube_->setup();
 
     runDistanceFieldProg();

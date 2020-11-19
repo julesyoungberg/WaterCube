@@ -1,7 +1,8 @@
 #version 460 core
 
 layout(location = 0) in int gridID;
-out vec3 oNormal;
+out vec3 vNormal;
+out vec3 vPosition;
 
 struct Grid {
 	vec4 position;
@@ -17,5 +18,6 @@ uniform mat4 ciModelViewProjection;
 void main() {
     Grid grid = grid[gridID];
 	gl_Position = ciModelViewProjection * vec4(grid.position.xyz, 1);
-	oNormal = grid.normal.xyz;
+	vNormal = grid.normal.xyz;
+	vPosition = grid.position.xyz;
 }
