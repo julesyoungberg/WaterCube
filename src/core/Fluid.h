@@ -52,6 +52,7 @@ public:
     FluidRef position(vec3 p);
     FluidRef gravity(float g);
     FluidRef renderMode(int m);
+    FluidRef sortInterval(int i);
 
     void addParams(params::InterfaceGlRef p);
 
@@ -86,6 +87,7 @@ protected:
     int num_particles_, grid_res_;
     int num_work_groups_, distance_field_size_, num_bins_;
     int render_mode_;
+    int sort_interval_;
 
     float size_, bin_size_, kernel_radius_;
     float particle_mass_, particle_radius_;
@@ -94,7 +96,7 @@ protected:
     float stiffness_;
     float rest_density_, rest_pressure_, gravity_;
 
-    bool odd_frame_;
+    bool odd_frame_, first_frame_;
 
     vec3 position_;
     ContainerRef container_;

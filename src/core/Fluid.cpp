@@ -18,6 +18,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     render_mode_ = 1;
     particle_radius_ = 0.1f; // 0.0457f;
     rest_density_ = 1400.0f;
+    sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
 }
 
 Fluid::~Fluid() {}
@@ -99,6 +100,11 @@ FluidRef Fluid::renderMode(int m) {
 
 FluidRef Fluid::gravity(float g) {
     gravity_ = g;
+    return thisRef();
+}
+
+FluidRef Fluid::sortInterval(int i) {
+    sort_interval_ = i;
     return thisRef();
 }
 
@@ -321,6 +327,7 @@ void Fluid::compileShaders() {
  */
 FluidRef Fluid::setup() {
     util::log("initializing fluid");
+    first_frame_ = true;
     num_work_groups_ = int(ceil(float(num_particles_) / float(WORK_GROUP_SIZE)));
     num_bins_ = int(pow(grid_res_, 3));
     distance_field_size_ = int(pow(grid_res_ + 1, 3));
@@ -455,7 +462,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.00012f); // time_step);
+    update_prog_->uniform("dt", 0.00017f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", vec3(0, gravity_, 0));
     update_prog_->uniform("particleMass", particle_mass_);
@@ -488,11 +495,15 @@ void Fluid::printParticles(GLuint particle_buffer) {
  * Update simulation logic - run compute shaders
  */
 void Fluid::update(double time) {
-    odd_frame_ = !odd_frame_;
-    GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
-    GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
+    GLuint particles;
+    GLuint in_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
+    GLuint out_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
 
-    sort_->run(in_particles, out_particles);
+    if (first_frame_ || getElapsedFrames() % sort_interval_ == 0) {
+        sort_->run(in_particles, out_particles);
+        odd_frame_ = !odd_frame_;
+        first_frame_ = false;
+    }
 
     // runBinVelocityProg(out_particles);
 
@@ -501,7 +512,7 @@ void Fluid::update(double time) {
 
     // printParticles(out_particles);
 
-    // marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
+    marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**
@@ -512,8 +523,8 @@ void Fluid::renderGeometry() {
 
     gl::ScopedGlslProg render(geometry_prog_);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
-                     odd_frame_ ? particle_buffer2_ : particle_buffer1_);
-    glBindVertexArray(odd_frame_ ? vao2_ : vao1_);
+                     odd_frame_ ? particle_buffer1_ : particle_buffer2_);
+    glBindVertexArray(odd_frame_ ? vao1_ : vao2_);
 
     geometry_prog_->uniform("renderMode", render_mode_);
     geometry_prog_->uniform("size", size_);

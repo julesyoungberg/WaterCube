@@ -24,8 +24,3 @@ You must [build cinder](https://libcinder.org/docs/guides/cmake/cmake.html) with
 cp .env.example .env
 make
 ```
-
-## Todos
-
-- sort only every nth frame
-- use sorted grid as base for marching cube, but further subdivide
