@@ -78,7 +78,8 @@ void WaterCubeApp::update() {
         return;
     }
 
-    fluid_->setRotation(scene_rotation_);
+    // sometimes gravity gets inverted
+    // fluid_->setRotation(scene_rotation_);
 
     double time = getElapsedSeconds();
     scene_->update(time - prev_time_);

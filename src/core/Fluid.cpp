@@ -16,7 +16,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     viscosity_coefficient_ = 0.035f;
     stiffness_ = 250.0f;
     rest_pressure_ = 0;
-    render_mode_ = 7;
+    render_mode_ = 1;
     particle_radius_ = 0.1f; // 0.0457f;
     rest_density_ = 1400.0f;
     sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
@@ -415,7 +415,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.00017f); // time_step);
+    update_prog_->uniform("dt", 0.0002f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", gravity_direction_ * gravity_strength_);
     update_prog_->uniform("particleMass", particle_mass_);

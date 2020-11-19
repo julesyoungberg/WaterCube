@@ -106,7 +106,7 @@ void main() {
                 mPressureWeight = Wpress(r, dist);
             }
 
-            // Equation (6) from Harada with p.density added to the denomenator
+            // Equation (6) from Harada
             const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);
             if (pressure > 0) {
                 pressureForce += particleMass * pressure * mPressureWeight;
