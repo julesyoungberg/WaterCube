@@ -21,6 +21,10 @@ layout(std430, binding = 2) restrict readonly buffer Offsets {
     uint offsets[];
 };
 
+layout(std430, binding = 2) restrict readonly buffer Sorted {
+    uint sorted[];
+};
+
 // layout(binding = 3) uniform sampler3D distanceField;
 // layout(binding = 4) uniform sampler1D wallWeight;
 // uniform float size;
@@ -79,7 +83,8 @@ void main() {
 
         // search the particles of this bin
         for (uint localIndex = 0; localIndex < count; localIndex++) {
-            const uint otherParticleID = offset + localIndex;
+            const uint sortedID = offset + localIndex;
+            const uint otherParticleID = sorted[sortedID];
             if (particleID == otherParticleID) {
                 continue;
             }

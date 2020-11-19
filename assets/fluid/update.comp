@@ -21,6 +21,10 @@ layout(std430, binding = 2) restrict readonly buffer Offsets {
     uint offsets[];
 };
 
+layout(std430, binding = 2) restrict readonly buffer Sorted {
+    uint sorted[];
+};
+
 // layout(binding = 3) uniform sampler3D distanceField;
 uniform float size;
 uniform float binSize;
@@ -90,12 +94,14 @@ void main() {
 
         // search the particles of this bin
         for (uint localIndex = 0; localIndex < count; localIndex++) {
-            const uint otherParticleID = offset + localIndex; 
-            Particle other = particles[otherParticleID];
+            const uint sortedID = offset + localIndex;
+            const uint otherParticleID = sorted[sortedID];
             if (particleID == otherParticleID) {
                 continue;
             }
-            
+
+            Particle other = particles[otherParticleID];
+
             // find the distance, ignore if too far
             const vec3 r = p.position - other.position;
             const float dist = length(r);
@@ -118,13 +124,6 @@ void main() {
             // Equation (7) from Harada
             const vec3 velocityDiff = other.velocity - p.velocity;
             viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
-
-            // if (dist <= 2 * particleRadius) {
-            //     // apply collision force
-            //     const vec3 normal = normalize(r);
-            //     const vec3 vRelative = p.velocity - other.velocity;
-            //     const vec3 vNormal = normal * dot(normal, vRelative);
-            // }
         }
     }
 
