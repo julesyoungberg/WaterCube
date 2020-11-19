@@ -6,7 +6,9 @@
 
 using namespace core;
 
-MarchingCube::MarchingCube() : threshold_(0.5f) {}
+MarchingCube::MarchingCube()
+    : threshold_(0.5f), resolution_(0), sorting_resolution_(0), subdivisions_(0), num_items_(0),
+      size_(0) {}
 
 MarchingCube::~MarchingCube() {}
 
@@ -25,8 +27,13 @@ MarchingCubeRef MarchingCube::threshold(float t) {
     return thisRef();
 }
 
-MarchingCubeRef MarchingCube::resolution(int r) {
-    resolution_ = r;
+MarchingCubeRef MarchingCube::sortingResolution(int r) {
+    sorting_resolution_ = r;
+    return thisRef();
+}
+
+MarchingCubeRef MarchingCube::subdivisions(int s) {
+    subdivisions_ = s;
     return thisRef();
 }
 
@@ -160,6 +167,7 @@ void MarchingCube::compileShaders() {
  * setup given a grid resolution
  */
 void MarchingCube::setup() {
+    resolution_ = sorting_resolution_ * subdivisions_;
     prepareBuffers();
     compileShaders();
     clearDensity();
@@ -192,14 +200,19 @@ void MarchingCube::clearDensity() {
  * compute density for points on the grid
  */
 void MarchingCube::runBinDensityProg(GLuint particle_buffer, GLuint count_buffer,
-                                     GLuint offset_bufer) {
+                                     GLuint offset_buffer) {
     gl::ScopedGlslProg prog(bin_density_prog_);
+
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
 
     gl::ScopedBuffer density_buffer(density_buffer_);
     density_buffer_->bindBase(1);
 
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, count_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, offset_buffer);
+
     bin_density_prog_->uniform("size", size_);
+    bin_density_prog_->uniform("sortRes", sorting_resolution_);
     bin_density_prog_->uniform("res", resolution_);
 
     util::runProg(ivec3(int(ceil(float(resolution_ + 1) / 4.0f))));

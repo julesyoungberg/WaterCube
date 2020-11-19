@@ -28,7 +28,8 @@ public:
     ~MarchingCube();
 
     MarchingCubeRef numItems(int n);
-    MarchingCubeRef resolution(int r);
+    MarchingCubeRef sortingResolution(int r);
+    MarchingCubeRef subdivisions(int s);
     MarchingCubeRef size(float s);
     MarchingCubeRef threshold(float t);
 
@@ -59,6 +60,8 @@ private:
     MarchingCubeRef thisRef() { return std::make_shared<MarchingCube>(*this); }
 
     int count_;
+    int sorting_resolution_;
+    int subdivisions_;
     int resolution_;
     int num_items_;
     float size_;
