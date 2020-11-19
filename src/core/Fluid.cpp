@@ -5,20 +5,21 @@
 
 using namespace core;
 
+// https://scicomp.stackexchange.com/questions/14450/how-to-get-proper-parameters-of-sph-simulation
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     num_particles_ = 1000;
-    grid_res_ = 14;
+    grid_res_ = 2;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
-    particle_mass_ = 0.1f;
-    kernel_radius_ = 0.1828f;
-    viscosity_coefficient_ = 0.035f;
-    stiffness_ = 250.0f;
+    particle_radius_ = 0.05f; // 0.0457f;
+    kernel_radius_ = particle_radius_ * 4.0f;
+    rest_density_ = 1000.0f;
+    particle_mass_ = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
+    viscosity_coefficient_ = 0.0101f;
+    stiffness_ = 100.0f;
     rest_pressure_ = 0;
-    render_mode_ = 1;
-    particle_radius_ = 0.1f; // 0.0457f;
-    rest_density_ = 1400.0f;
+    render_mode_ = 0;
     sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
 }
 
@@ -306,7 +307,7 @@ FluidRef Fluid::setup() {
     num_bins_ = int(pow(grid_res_, 3));
     distance_field_size_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
-    kernel_radius_ = bin_size_ / 2.0f;
+    kernel_radius_ = bin_size_;
     util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_,
               kernel_radius_);
 
@@ -415,7 +416,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.0002f); // time_step);
+    update_prog_->uniform("dt", 0.00012f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", gravity_direction_ * gravity_strength_);
     update_prog_->uniform("particleMass", particle_mass_);
@@ -423,6 +424,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
     update_prog_->uniform("viscosityWeight", viscosity_weight_);
     update_prog_->uniform("pressureWeight", pressure_weight_);
+    update_prog_->uniform("particleRadius", particle_radius_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

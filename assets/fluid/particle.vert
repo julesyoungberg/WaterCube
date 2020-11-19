@@ -36,7 +36,7 @@ void main() {
         case 1:
             const float w = max(p.velocity.x, p.velocity.y);
             invalid = any(isnan(p.velocity)) || any(isinf(p.velocity)) || any(lessThan(p.position, vec3(0))) || any(greaterThan(p.position, vec3(size)));
-            vColor = mix(p.velocity / w, vec3(1, 0, 0), float(invalid));
+            vColor = mix(vec3(0, 0, length(p.velocity) / w), vec3(1, 0, 0), float(invalid));
             break;
         case 2:
             const float norm = p.density / MAX_DENSITY;

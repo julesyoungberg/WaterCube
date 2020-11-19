@@ -33,6 +33,7 @@ uniform float kernelRadius;
 uniform float viscosityCoefficient;
 uniform float viscosityWeight;
 uniform float pressureWeight;
+uniform float particleRadius;
 
 // neighborhood coordinate offsets
 const ivec3 NEIGHBORHOOD[27] = {
@@ -70,6 +71,8 @@ void main() {
     
     vec3 pressureForce = vec3(0);
     vec3 viscosityForce = vec3(0);
+    vec3 externalForces = gravity * p.density;
+
 
     // search the particles of each neighboring bin
     #pragma unroll 1
@@ -115,6 +118,13 @@ void main() {
             // Equation (7) from Harada
             const vec3 velocityDiff = other.velocity - p.velocity;
             viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
+
+            // if (dist <= 2 * particleRadius) {
+            //     // apply collision force
+            //     const vec3 normal = normalize(r);
+            //     const vec3 vRelative = p.velocity - other.velocity;
+            //     const vec3 vNormal = normal * dot(normal, vRelative);
+            // }
         }
     }
 
@@ -131,7 +141,6 @@ void main() {
     // }
 
     // Sum of Equations (6) and (7) and external forces from Herada
-    const vec3 externalForces = gravity * p.density + wallForce;
     viscosityForce *= viscosityCoefficient;
     const vec3 force = viscosityForce - pressureForce + externalForces;
 

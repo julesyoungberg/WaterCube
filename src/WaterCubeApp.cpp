@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(20e3);
+const int NUM_PARTICLES = static_cast<int>(2000);
 
 class WaterCubeApp : public App {
 public:
@@ -40,7 +40,7 @@ void WaterCubeApp::setup() {
     run_once_ = false;
     running_ = true;
     reset_ = false;
-    size_ = 1.0f;
+    size_ = 10.0f;
     prev_time_ = 0.0;
 
     params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
