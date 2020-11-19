@@ -51,7 +51,7 @@ void main() {
     }
 
     const float binSize = size / float(res);
-    const float radius = binSize * 1.5;
+    const float radius = binSize * 2.0;
     // bin position in world space
     const vec3 binPos = vec3(coord) * binSize;
 

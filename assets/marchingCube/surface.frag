@@ -3,7 +3,7 @@
 const float AMBIENT_STRENGTH = 0.3;
 const float SPECULAR_STRENGTH = 0.5;
 const float SHININESS = 25.0;
-const vec3 PARTICLE_COLOR = vec3(0.4, 0.4, 0.9);
+const vec3 PARTICLE_COLOR = vec3(0.4, 0.4, 1);
 
 in vec3 vNormal;
 in vec3 vPosition;
@@ -31,5 +31,5 @@ void main() {
 	const vec3 specular = spec * SPECULAR_STRENGTH * color;
 
 	// Final
-	fColor = vec4(ambient + diffuse + specular, 0.1);
+	fColor = vec4(ambient + diffuse + specular, 0.13);
 }

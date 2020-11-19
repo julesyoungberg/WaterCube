@@ -368,9 +368,9 @@ FluidRef Fluid::setup() {
     marching_cube_ = MarchingCube::create()
                          ->size(size_)
                          ->numItems(num_particles_)
-                         ->threshold(0.7f)
+                         ->threshold(0.8f)
                          ->sortingResolution(grid_res_)
-                         ->subdivisions(6)
+                         ->subdivisions(7)
                          ->cameraPosition(camera_position_ - vec3(size_ / 2.0f));
     marching_cube_->setup();
 
