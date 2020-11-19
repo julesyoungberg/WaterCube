@@ -1,6 +1,6 @@
 # WaterCube
 
-An interactive SPH water simulation using Cinder.
+A GPU powered SPH water simulation using Cinder.
 
 ## Setup
 
