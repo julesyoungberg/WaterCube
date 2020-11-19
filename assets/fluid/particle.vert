@@ -3,7 +3,7 @@
 const float FLOAT_MIN = 1.175494351e-38;
 const float GRID_EPS = 0.000001;
 const float MAX_DENSITY = 600.0;
-const vec3 PARTICLE_COLOR = vec3(0.2, 0.2, 0.8);
+const vec3 PARTICLE_COLOR = vec3(0.1, 0.1, 0.5);
 
 out vec3 vColor;
 out vec3 vPosition;

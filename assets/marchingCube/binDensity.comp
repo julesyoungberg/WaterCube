@@ -32,42 +32,17 @@ uniform int sortRes;
 uniform int res;
 
 // neighborhood coordinate offsets
-const ivec3 NEIGHBORHOOD[8] = {
-    ivec3(0, 0, 0), ivec3(0, 0, -1),
-    ivec3(0, -1, 0), ivec3(0, -1, -1), 
-    ivec3(-1, 0, 0), ivec3(-1, 0, -1),
-    ivec3(-1, -1, 0), ivec3(-1, -1, -1)
+const ivec3 NEIGHBORHOOD[27] = {
+    ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
+    ivec3(-1, -1,  0), ivec3(0, -1,  0), ivec3(1, -1,  0),
+    ivec3(-1, -1,  1), ivec3(0, -1,  1), ivec3(1, -1,  1),
+    ivec3(-1,  0, -1), ivec3(0,  0, -1), ivec3(1,  0, -1),
+    ivec3(-1,  0,  0), ivec3(0,  0,  0), ivec3(1,  0,  0),
+    ivec3(-1,  0,  1), ivec3(0,  0,  1), ivec3(1,  0,  1),
+    ivec3(-1,  1, -1), ivec3(0,  1, -1), ivec3(1,  1, -1),
+    ivec3(-1,  1,  0), ivec3(0,  1,  0), ivec3(1,  1,  0),
+    ivec3(-1,  1,  1), ivec3(0,  1,  1), ivec3(1,  1,  1)
 };
-
-// optimize the number of bins searched by considering
-// whether the bin's grid vertex belongs on the edge of the sorted bin.
-// If it is not along an edge in a dimension, neighbors in that dimension can be skipped.
-void getNeighboring(bool neighboring[8], vec3 binPos, vec3 sortBinPos) {
-    bool xg = binPos.x > sortBinPos.x;
-    bool yg = binPos.y > sortBinPos.y;
-    bool zg = binPos.z > sortBinPos.z;
-    if (xg) {
-        neighboring[4] = false;
-    }
-    if (yg) {
-        neighboring[2] = false;
-    }
-    if (zg) {
-        neighboring[1] = false;
-    }
-    if (xg && yg) {
-        neighboring[6] = false;
-    }
-    if (yg && zg) {
-        neighboring[3] = false;
-    }
-    if (zg && zg) {
-        neighboring[5] = false;
-    }
-    if (xg && yg && zg) {
-        neighboring[7] = false;
-    }
-}
 
 void main() {
     ivec3 coord = ivec3(gl_GlobalInvocationID);
@@ -85,20 +60,13 @@ void main() {
     const ivec3 sortBinCoord = ivec3(floor(binPos / sortBinSize));
     // sort bin position in world space
     const vec3 sortBinPos = vec3(sortBinCoord) * sortBinSize;
-    // optimize the number of bins searched by filtering
-    // bool neighboring[8] = { true, true, true, true, true, true, true, true };
-    // getNeighboring(neighboring, binPos, sortBinPos);
 
     float density = 0;
     int total = 0;
 
     // search neighboring bins
     #pragma unroll 1
-    for (uint binIndex = 0; binIndex < 8; binIndex++) {
-        // if (!neighboring[binIndex]) {
-        //     continue;
-        // }
-
+    for (uint binIndex = 0; binIndex < 27; binIndex++) {
         const ivec3 nc = sortBinCoord + NEIGHBORHOOD[binIndex];
 
         // don't go out of bounds
@@ -121,7 +89,7 @@ void main() {
             }
 
             total++;
-            density += p.density;
+            density += p.density; // * pow(radius * radius - dist * dist, 3);
         }
     }
 

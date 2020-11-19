@@ -32,5 +32,5 @@ void main() {
     const float windowDepth = 0.5 * ndcDepth + 0.5;
 
     gl_FragDepth = windowDepth;
-    outColor = vec4(vColor, 0.75);
+    outColor = vec4(vColor, 1);
 }

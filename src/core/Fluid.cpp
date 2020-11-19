@@ -502,7 +502,6 @@ void Fluid::printParticles(GLuint particle_buffer) {
  * Update simulation logic - run compute shaders
  */
 void Fluid::update(double time) {
-    GLuint particles;
     GLuint in_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
     GLuint out_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
 
@@ -562,7 +561,6 @@ void Fluid::renderGrid() {
     render_grid_prog_->uniform("tex", 1);
     render_grid_prog_->uniform("binSize", bin_size_);
     render_grid_prog_->uniform("gridRes", grid_res_);
-    render_grid_prog_->uniform("size", size_);
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, int(grid_particles_.size()));
