@@ -380,12 +380,11 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
-    distance_field_->bind(3);
-    wall_weight_function_->bind(4);
-
-    density_prog_->uniform("distanceField", 3);
-    density_prog_->uniform("wallWeight", 4);
-    density_prog_->uniform("size", size_);
+    // distance_field_->bind(3);
+    // wall_weight_function_->bind(4);
+    // density_prog_->uniform("distanceField", 3);
+    // density_prog_->uniform("wallWeight", 4);
+    // density_prog_->uniform("size", size_);
     density_prog_->uniform("binSize", bin_size_);
     density_prog_->uniform("gridRes", grid_res_);
     density_prog_->uniform("numParticles", num_particles_);
@@ -410,9 +409,9 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
 
-    distance_field_->bind(3);
+    // distance_field_->bind(3);
+    // update_prog_->uniform("distanceField", 3);
 
-    update_prog_->uniform("distanceField", 3);
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
@@ -502,9 +501,9 @@ void Fluid::draw() {
     if (render_mode_ == 4) {
         sort_->renderGrid(size_);
     } else if (render_mode_ == 5) {
-        marching_cube_->renderDensity();
+        marching_cube_->renderParticleGrid();
     } else if (render_mode_ == 6) {
-        marching_cube_->renderGrid();
+        marching_cube_->renderSurfaceVertices();
     } else if (render_mode_ == 7) {
         marching_cube_->renderSurface();
     } else {

@@ -15,7 +15,7 @@
 using namespace ci;
 using namespace ci::app;
 
-struct Grid {
+struct Vertex {
     vec4 position;
     vec4 normal;
 };
@@ -36,8 +36,8 @@ public:
 
     void setup();
     void update(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer);
-    void renderDensity();
-    void renderGrid();
+    void renderParticleGrid();
+    void renderSurfaceVertices();
     void renderSurface();
 
     void updateField(float time, float scale);
@@ -45,18 +45,20 @@ public:
     static MarchingCubeRef create() { return std::make_shared<MarchingCube>(); }
 
 private:
-    void prepareGridBuffer();
-    void prepareDensityParticles();
+    void prepareVertexBuffer();
+    void prepareDebugParticles();
     void prepareBuffers();
     void compileShaders();
 
     void clearDensity();
+    void clearPressure();
 
     void runClearProg();
-    void runBinDensityProg(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer);
+    void runDiscretizeProg(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer);
     void runMarchingCubeProg();
     void printDensity();
-    void printGrid();
+    void printPressure();
+    void printVertices();
 
     MarchingCubeRef thisRef() { return std::make_shared<MarchingCube>(*this); }
 
@@ -70,19 +72,20 @@ private:
 
     vec3 light_position_, camera_position_;
 
-    gl::GlslProgRef bin_density_prog_;
+    gl::GlslProgRef discretize_prog_;
     gl::GlslProgRef marching_cube_prog_, clear_prog_;
-    gl::GlslProgRef render_density_prog_;
-    gl::GlslProgRef render_grid_prog_;
+    gl::GlslProgRef render_particle_grid_prog_;
+    gl::GlslProgRef render_vertices_prog_;
     gl::GlslProgRef render_surface_prog_;
 
-    std::vector<Grid> grids_;
+    std::vector<Vertex> vertices_;
     std::vector<int> indices_;
     std::vector<ivec4> particles_;
 
-    gl::SsboRef grid_buffer_, index_buffer_;
+    gl::SsboRef vertex_buffer_, index_buffer_;
     gl::SsboRef particle_buffer_, density_buffer_;
     gl::SsboRef cube_edge_flags_buffer_, triangle_connection_table_buffer_;
-    gl::VboRef grid_ids_vbo_, particle_ids_vbo_;
-    gl::VaoRef grid_attributes_, particle_attributes_;
+    gl::Texture3dRef pressure_field_;
+    gl::VboRef vertex_ids_vbo_, particle_ids_vbo_;
+    gl::VaoRef vertex_attributes_, particle_attributes_;
 };

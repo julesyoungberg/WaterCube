@@ -4,13 +4,13 @@
 
 layout(local_size_x = THREAD, local_size_y = THREAD, local_size_z = THREAD) in;
 
-struct Grid {
+struct Vertex {
 	vec4 position;
 	vec4 normal;
 };
 
-layout(std430, binding = 0) restrict buffer grids {
-	Grid grid[];
+layout(std430, binding = 0) restrict buffer Vertices {
+	Vertex vertices[];
 };
 
 layout(std430, binding = 1) restrict readonly buffer CubeEdgeFlag {
@@ -126,18 +126,18 @@ void main() {
 			uint ic = idx * 15 + (3 * i + 2);
 
 			vec3 position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 0)]];
-			grid[ia].position = vec4(coordToPoint(position), 0);
+			vertices[ia].position = vec4(coordToPoint(position), 0);
 
 			position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 1)]];
-			grid[ib].position = vec4(coordToPoint(position), 0);
+			vertices[ib].position = vec4(coordToPoint(position), 0);
 
 			position = edgeVertex[triangleConnectionTable[flagIndex * 16 + (3 * i + 2)]];
-			grid[ic].position = vec4(coordToPoint(position), 0);
+			vertices[ic].position = vec4(coordToPoint(position), 0);
 
-			vec4 ab = grid[ia].position - grid[ib].position;
-			vec4 ac = grid[ia].position - grid[ic].position;
+			vec4 ab = vertices[ia].position - vertices[ib].position;
+			vec4 ac = vertices[ia].position - vertices[ic].position;
 			vec4 normal = vec4(normalize(cross(ab.xyz, ac.xyz)), 0);
-			grid[ia].normal = grid[ib].normal = grid[ic].normal = normal;
+			vertices[ia].normal = vertices[ib].normal = vertices[ic].normal = normal;
 		}
 	}
 }

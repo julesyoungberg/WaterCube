@@ -45,25 +45,26 @@ MarchingCubeRef MarchingCube::cameraPosition(vec3 p) {
 /**
  * Prepare resulting triangle buffer
  */
-void MarchingCube::prepareGridBuffer() {
+void MarchingCube::prepareVertexBuffer() {
     // The size of the buffer that holds the verts.
     // This is the maximum number of verts that the
     // marching cube can produce, 5 triangles for each voxel.
     count_ = resolution_ * resolution_ * resolution_ * (3 * 5);
     util::log("\tcreating grid buffer");
-    grids_.resize(count_, Grid());
-    grid_buffer_ = gl::Ssbo::create(grids_.size() * sizeof(Grid), grids_.data(), GL_STATIC_DRAW);
+    vertices_.resize(count_, Vertex());
+    vertex_buffer_ =
+        gl::Ssbo::create(vertices_.size() * sizeof(Vertex), vertices_.data(), GL_STATIC_DRAW);
 
     util::log("\tcreating ids vbo");
-    std::vector<GLuint> ids(grids_.size());
+    std::vector<GLuint> ids(vertices_.size());
     GLuint curr_id = 0;
     std::generate(ids.begin(), ids.end(), [&curr_id]() -> GLuint { return curr_id++; });
-    grid_ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
+    vertex_ids_vbo_ = gl::Vbo::create<GLuint>(GL_ARRAY_BUFFER, ids, GL_STATIC_DRAW);
 
     util::log("\tcreating attributes vao");
-    grid_attributes_ = gl::Vao::create();
-    gl::ScopedBuffer scopedIds(grid_ids_vbo_);
-    gl::ScopedVao vao(grid_attributes_);
+    vertex_attributes_ = gl::Vao::create();
+    gl::ScopedBuffer scopedIds(vertex_ids_vbo_);
+    gl::ScopedVao vao(vertex_attributes_);
     gl::enableVertexAttribArray(0);
     gl::vertexAttribIPointer(0, 1, GL_UNSIGNED_INT, sizeof(GLuint), 0);
 }
@@ -71,8 +72,8 @@ void MarchingCube::prepareGridBuffer() {
 /**
  * prepare debug particles
  */
-void MarchingCube::prepareDensityParticles() {
-    util::log("\tcreating density particles");
+void MarchingCube::prepareDebugParticles() {
+    util::log("\tcreating debug particles");
     particles_.resize(int(pow(resolution_, 3)));
     for (int z = 0; z < resolution_; z++) {
         for (int y = 0; y < resolution_; y++) {
@@ -104,7 +105,7 @@ void MarchingCube::prepareDensityParticles() {
 void MarchingCube::prepareBuffers() {
     util::log("preparing marching cube buffers");
 
-    prepareGridBuffer();
+    prepareVertexBuffer();
 
     util::log("\tcreating cube edge flags buffer");
     auto flags = std::vector<int>(256);
@@ -125,11 +126,12 @@ void MarchingCube::prepareBuffers() {
     triangle_connection_table_buffer_ = gl::Ssbo::create(connection_table.size() * sizeof(int),
                                                          connection_table.data(), GL_STATIC_DRAW);
 
-    util::log("\tcreating density buffer");
+    util::log("\tcreating density and pressure buffers");
     std::vector<float> zeros(int(pow(resolution_ + 1, 3)), 0);
     density_buffer_ = gl::Ssbo::create(zeros.size() * sizeof(float), zeros.data(), GL_STATIC_DRAW);
+    clearPressure(); // initializes the texture
 
-    prepareDensityParticles();
+    prepareDebugParticles();
 }
 
 /**
@@ -138,8 +140,8 @@ void MarchingCube::prepareBuffers() {
 void MarchingCube::compileShaders() {
     util::log("compiling marching cube shaders");
 
-    util::log("\tcompiling bin density prog");
-    bin_density_prog_ = util::compileComputeShader("marchingCube/binDensity.comp");
+    util::log("\tcompiling discretize prog");
+    discretize_prog_ = util::compileComputeShader("marchingCube/discretize.comp");
 
     util::log("\tcompiling marching cube prog");
     marching_cube_prog_ = util::compileComputeShader("marchingCube/marchingCube.comp");
@@ -147,25 +149,26 @@ void MarchingCube::compileShaders() {
     util::log("\tcompiling clear prog");
     clear_prog_ = util::compileComputeShader("marchingCube/clear.comp");
 
-    util::log("\tcompiling render density prog");
-    render_density_prog_ =
+    util::log("\tcompiling render particle grid prog");
+    render_particle_grid_prog_ =
         gl::GlslProg::create(gl::GlslProg::Format()
-                                 .vertex(loadAsset("marchingCube/density.vert"))
-                                 .fragment(loadAsset("marchingCube/density.frag"))
+                                 .vertex(loadAsset("marchingCube/particleGrid.vert"))
+                                 .fragment(loadAsset("marchingCube/particleGrid.frag"))
                                  .attribLocation("particleID", 0));
 
-    util::log("\tcompiling render grid prog");
-    render_grid_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
-                                                 .vertex(loadAsset("marchingCube/grid.vert"))
-                                                 .fragment(loadAsset("marchingCube/grid.frag"))
-                                                 .attribLocation("gridID", 0));
+    util::log("\tcompiling render surface points prog");
+    render_vertices_prog_ =
+        gl::GlslProg::create(gl::GlslProg::Format()
+                                 .vertex(loadAsset("marchingCube/surfaceVertex.vert"))
+                                 .fragment(loadAsset("marchingCube/surfaceVertex.frag"))
+                                 .attribLocation("vertexID", 0));
 
     util::log("\tcompiling render surface prog");
     render_surface_prog_ =
         gl::GlslProg::create(gl::GlslProg::Format()
                                  .vertex(loadAsset("marchingCube/surface.vert"))
                                  .fragment(loadAsset("marchingCube/surface.frag"))
-                                 .attribLocation("gridID", 0));
+                                 .attribLocation("vertexID", 0));
 }
 
 /**
@@ -176,53 +179,63 @@ void MarchingCube::setup() {
     light_position_ = vec3(size_ / 2.0f, size_ * 2.0f, size_ / 2.0f);
     prepareBuffers();
     compileShaders();
-    clearDensity();
 }
 
 /**
  * run clear program to clear the grid
  */
 void MarchingCube::runClearProg() {
-    const auto thread = count_ / CLEAR_GROUP_SIZE;
-    grid_buffer_->bindBase(0);
-
+    vertex_buffer_->bindBase(0);
     gl::ScopedGlslProg prog(clear_prog_);
     clear_prog_->uniform("count", count_);
-    util::runProg(thread);
+    util::runProg(int(ceil(float(count_) / CLEAR_GROUP_SIZE)));
 }
 
 /**
  * clear density buffer
  */
 void MarchingCube::clearDensity() {
-    std::vector<uint32_t> zeros(int(pow(resolution_, 3)), 0);
+    std::vector<float> zeros(int(pow(resolution_ + 1, 3)), 0);
     gl::ScopedBuffer buffer(density_buffer_);
-    glClearBufferData(density_buffer_->getTarget(), GL_R32UI, GL_RED_INTEGER, GL_UNSIGNED_INT,
-                      zeros.data());
+    glClearBufferData(density_buffer_->getTarget(), GL_R32F, GL_RED, GL_FLOAT, zeros.data());
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 }
 
 /**
- * compute density for points on the grid
+ * clear pressure buffer
  */
-void MarchingCube::runBinDensityProg(GLuint particle_buffer, GLuint count_buffer,
+void MarchingCube::clearPressure() {
+    auto format = gl::Texture3d::Format().internalFormat(GL_R32F);
+    std::vector<std::uint32_t> data(int(pow(resolution_ + 1, 3)), 0);
+    pressure_field_ = gl::Texture3d::create(data.data(), GL_RED, resolution_ + 1, resolution_ + 1,
+                                            resolution_ + 1, format);
+}
+
+/**
+ * compute density and pressure for points on the grid
+ */
+void MarchingCube::runDiscretizeProg(GLuint particle_buffer, GLuint count_buffer,
                                      GLuint offset_buffer) {
-    gl::ScopedGlslProg prog(bin_density_prog_);
+    gl::ScopedGlslProg prog(discretize_prog_);
 
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, count_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, offset_buffer);
 
     gl::ScopedBuffer density_buffer(density_buffer_);
-    density_buffer_->bindBase(1);
+    density_buffer_->bindBase(3);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, count_buffer);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, offset_buffer);
+    glActiveTexture(GL_TEXTURE0 + 4);
+    glUniform1i(glGetUniformLocation(discretize_prog_->getHandle(), "pressureField"), 4);
+    glBindImageTexture(4, pressure_field_->getId(), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_R32F);
 
-    bin_density_prog_->uniform("size", size_);
-    bin_density_prog_->uniform("sortRes", sorting_resolution_);
-    bin_density_prog_->uniform("res", resolution_);
+    discretize_prog_->uniform("pressureField", 4);
+    discretize_prog_->uniform("size", size_);
+    discretize_prog_->uniform("sortRes", sorting_resolution_);
+    discretize_prog_->uniform("res", resolution_);
 
-    util::runProg(ivec3(int(ceil(float(resolution_ + 1) / 4.0f))));
-    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+    util::runProg(ivec3(int(ceil(float(resolution_ + 1) / MARCHING_CUBE_GROUP_SIZE))));
+    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 /**
@@ -230,15 +243,15 @@ void MarchingCube::runBinDensityProg(GLuint particle_buffer, GLuint count_buffer
  */
 void MarchingCube::runMarchingCubeProg() {
     gl::ScopedGlslProg prog(marching_cube_prog_);
-    gl::ScopedVao vao(grid_attributes_);
+    gl::ScopedVao vao(vertex_attributes_);
 
-    gl::ScopedBuffer scoped_grid_buffer(grid_buffer_);
-    grid_buffer_->bindBase(0);
+    gl::ScopedBuffer vertex_buffer(vertex_buffer_);
+    vertex_buffer_->bindBase(0);
 
-    gl::ScopedBuffer scoped_flags_buffer(cube_edge_flags_buffer_);
+    gl::ScopedBuffer flags_buffer(cube_edge_flags_buffer_);
     cube_edge_flags_buffer_->bindBase(1);
 
-    gl::ScopedBuffer scoped_table_buffer(triangle_connection_table_buffer_);
+    gl::ScopedBuffer table_buffer(triangle_connection_table_buffer_);
     triangle_connection_table_buffer_->bindBase(2);
 
     gl::ScopedBuffer scoped_density(density_buffer_);
@@ -246,7 +259,6 @@ void MarchingCube::runMarchingCubeProg() {
 
     marching_cube_prog_->uniform("size", size_);
     marching_cube_prog_->uniform("res", resolution_);
-    // marching_cube_prog_->uniform("border", 1);
     marching_cube_prog_->uniform("threshold", threshold_);
 
     util::runProg(ivec3(int(ceil(float(resolution_) / MARCHING_CUBE_GROUP_SIZE))));
@@ -257,7 +269,7 @@ void MarchingCube::runMarchingCubeProg() {
  * prints density buffer for debugging
  */
 void MarchingCube::printDensity() {
-    auto densities = util::getFloats(density_buffer_->getId(), int(pow(resolution_, 3)));
+    auto densities = util::getFloats(density_buffer_->getId(), int(pow(resolution_ + 1, 3)));
     std::string s = "densities: ";
     for (int i = 0; i < 100; i++) {
         s += std::to_string(densities[i]) + ", ";
@@ -266,19 +278,31 @@ void MarchingCube::printDensity() {
 }
 
 /**
- * prints grid buffer for debugging
+ * prints pressure buffer for debugging
  */
-void MarchingCube::printGrid() {
-    std::vector<Grid> grid(count_);
-    gl::ScopedBuffer scoped_buffer(grid_buffer_);
+void MarchingCube::printPressure() {
+    auto values = util::getFloats(pressure_field_, int(pow(resolution_ + 1, 3)));
+    std::string s = "pressures: ";
+    for (int i = 0; i < 100; i++) {
+        s += std::to_string(values[i]) + ", ";
+    }
+    util::log("%s", s.c_str());
+}
 
-    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count_ * sizeof(Grid), grid.data());
+/**
+ * prints vertex buffer for debugging
+ */
+void MarchingCube::printVertices() {
+    std::vector<Vertex> vertices(count_);
+    gl::ScopedBuffer scoped_buffer(vertex_buffer_);
+
+    glGetBufferSubData(GL_SHADER_STORAGE_BUFFER, 0, count_ * sizeof(Vertex), vertices.data());
     glMemoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT);
 
-    std::string s = "grid: ";
+    std::string s = "vertices: ";
     for (int i = 0; i < 10; i++) {
-        auto p = grid[i].position;
-        auto n = grid[i].normal;
+        auto p = vertices[i].position;
+        auto n = vertices[i].normal;
         std::string ps = glm::to_string(p);
         std::string ns = glm::to_string(n);
         s += "(p=<" + ps + ">, n=<" + ns + ">), ";
@@ -292,19 +316,23 @@ void MarchingCube::printGrid() {
 void MarchingCube::update(GLuint particle_buffer, GLuint count_buffer, GLuint offset_buffer) {
     runClearProg();
     clearDensity();
+    clearPressure();
 
-    runBinDensityProg(particle_buffer, count_buffer, offset_buffer);
+    runDiscretizeProg(particle_buffer, count_buffer, offset_buffer);
+    // printDensity();
+    // printPressure();
+
     runMarchingCubeProg();
-    // printGrid();s
+    // printVertices();
 }
 
 /**
- * render debug density grid
+ * render debug particle grid
  */
-void MarchingCube::renderDensity() {
+void MarchingCube::renderParticleGrid() {
     gl::pointSize(5);
 
-    gl::ScopedGlslProg render(render_density_prog_);
+    gl::ScopedGlslProg render(render_particle_grid_prog_);
     gl::ScopedVao vao(particle_attributes_);
 
     gl::ScopedBuffer particle_buffer(particle_buffer_);
@@ -313,24 +341,27 @@ void MarchingCube::renderDensity() {
     gl::ScopedBuffer density_buffer(density_buffer_);
     density_buffer_->bindBase(1);
 
-    render_density_prog_->uniform("size", size_);
-    render_density_prog_->uniform("res", resolution_);
+    pressure_field_->bind(2);
+
+    render_particle_grid_prog_->uniform("pressureField", 2);
+    render_particle_grid_prog_->uniform("size", size_);
+    render_particle_grid_prog_->uniform("res", resolution_);
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, int(particles_.size()));
 }
 
 /**
- * render debugging grid
+ * render surface points for debugging
  */
-void MarchingCube::renderGrid() {
+void MarchingCube::renderSurfaceVertices() {
     gl::pointSize(5);
 
-    gl::ScopedGlslProg render(render_grid_prog_);
-    gl::ScopedVao vao(grid_attributes_);
+    gl::ScopedGlslProg render(render_vertices_prog_);
+    gl::ScopedVao vao(vertex_attributes_);
 
-    gl::ScopedBuffer grid_buffer(grid_buffer_);
-    grid_buffer_->bindBase(0);
+    gl::ScopedBuffer vertex_buffer(vertex_buffer_);
+    vertex_buffer_->bindBase(0);
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, count_);
@@ -343,11 +374,14 @@ void MarchingCube::renderSurface() {
     gl::ScopedDepthTest depthTest(true);
 
     gl::ScopedGlslProg render(render_surface_prog_);
-    gl::ScopedVao vao(grid_attributes_);
+    gl::ScopedVao vao(vertex_attributes_);
 
-    gl::ScopedBuffer grid_buffer(grid_buffer_);
-    grid_buffer_->bindBase(0);
+    gl::ScopedBuffer vertex_buffer(vertex_buffer_);
+    vertex_buffer_->bindBase(0);
 
+    pressure_field_->bind(1);
+
+    render_surface_prog_->uniform("pressureField", 1);
     render_surface_prog_->uniform("size", size_);
     render_surface_prog_->uniform("lightPos", light_position_);
     render_surface_prog_->uniform("cameraPos", camera_position_);

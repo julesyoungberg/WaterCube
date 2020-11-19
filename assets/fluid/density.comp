@@ -21,9 +21,9 @@ layout(std430, binding = 2) restrict readonly buffer Offsets {
     uint offsets[];
 };
 
-layout(binding = 3) uniform sampler3D distanceField;
-layout(binding = 4) uniform sampler1D wallWeight;
-uniform float size;
+// layout(binding = 3) uniform sampler3D distanceField;
+// layout(binding = 4) uniform sampler1D wallWeight;
+// uniform float size;
 uniform float binSize;
 uniform int gridRes;
 uniform int numParticles;

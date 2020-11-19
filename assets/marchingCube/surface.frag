@@ -7,13 +7,14 @@ const vec3 PARTICLE_COLOR = vec3(0.2, 0.2, 1);
 
 in vec3 vNormal;
 in vec3 vPosition;
+in float vPressure;
 out vec4 fColor;
 
 uniform vec3 lightPos;
 uniform vec3 cameraPos;
 
 void main() {
-	const vec3 color = PARTICLE_COLOR;
+	const vec3 color = mix(PARTICLE_COLOR, vec3(0.9, 0.9, 1), vPressure);
 	const vec3 lightDir = normalize(lightPos - vPosition);
 	const vec3 norm = normalize(vNormal);
 

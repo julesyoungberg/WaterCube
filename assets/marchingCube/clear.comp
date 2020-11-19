@@ -4,13 +4,13 @@
 
 layout(local_size_x = THREAD, local_size_y = 1, local_size_z = 1) in;
 
-struct Grid {
+struct Vertex {
 	vec4 position;
 	vec4 normal;
 };
 
-layout(std430, binding = 0) buffer grids {
-	Grid grid[];
+layout(std430, binding = 0) buffer Vertices {
+	Vertex vertices[];
 };
 
 uniform int count;
@@ -18,8 +18,6 @@ uniform int count;
 void main() {
 	uint idx = gl_GlobalInvocationID.x;
 	if (idx >= count) return;
-
-	// init
-	grid[idx].position = vec4(0);
-	grid[idx].normal = vec4(0);
+	vertices[idx].position = vec4(0);
+	vertices[idx].normal = vec4(0);
 }

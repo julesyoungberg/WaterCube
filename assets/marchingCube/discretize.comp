@@ -1,8 +1,11 @@
 #version 460 core
 
-layout(local_size_x = 4, local_size_y = 4, local_size_z = 4) in;
+#define THREAD 8
 
-const float MAX_DENSITY = 250.0;
+layout(local_size_x = THREAD, local_size_y = THREAD, local_size_z = THREAD) in;
+
+const float MAX_DENSITY = 5000.0;
+const float MAX_PRESSURE = 1000.0;
 
 struct Particle {
     vec3 position;
@@ -15,18 +18,19 @@ layout(std430, binding = 0) restrict readonly buffer Particles {
     Particle particles[];
 };
 
-layout(std430, binding = 1) buffer Density {
-    float densities[];
-};
-
-layout(std430, binding = 2) restrict readonly buffer Counts {
+layout(std430, binding = 1) restrict readonly buffer Counts {
     uint counts[];
 };
 
-layout(std430, binding = 3) restrict readonly buffer Offsets {
+layout(std430, binding = 2) restrict readonly buffer Offsets {
     uint offsets[];
 };
 
+layout(std430, binding = 3) buffer Density {
+    float densities[];
+};
+
+layout(binding = 4, r32f) uniform restrict writeonly image3D pressureField;
 uniform float size;
 uniform int sortRes;
 uniform int res;
@@ -62,6 +66,7 @@ void main() {
     const vec3 sortBinPos = vec3(sortBinCoord) * sortBinSize;
 
     float density = 0;
+    float pressure = 0;
     int total = 0;
 
     // search neighboring bins
@@ -90,13 +95,16 @@ void main() {
 
             total++;
             density += p.density; // * pow(radius * radius - dist * dist, 3);
+            pressure += p.pressure;
         }
     }
 
     if (total > 0) {
         density /= total;
+        pressure /= total;
     }
 
     const uint index = coord.z * res * res + coord.y * res + coord.x;
     densities[index] = density / MAX_DENSITY;
+    imageStore(pressureField, coord, vec4(pressure / MAX_PRESSURE));
 }

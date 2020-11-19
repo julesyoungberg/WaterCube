@@ -58,7 +58,9 @@ std::vector<uint32_t> getUints(gl::Texture3dRef tex, int num_items);
 
 std::vector<float> getFloats(GLuint buffer, int num_items);
 
-std::vector<vec3> getVecs(gl::Texture3dRef, int num_items);
+std::vector<float> getFloats(gl::Texture3dRef tex, int num_items);
+
+std::vector<vec3> getVecs(gl::Texture3dRef tex, int num_items);
 
 } // namespace util
 

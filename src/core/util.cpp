@@ -92,6 +92,14 @@ std::vector<float> util::getFloats(GLuint buffer, int num_items) {
     return data;
 }
 
+std::vector<float> util::getFloats(gl::Texture3dRef tex, int num_items) {
+    gl::ScopedTextureBind scoped_tex(tex->getTarget(), tex->getId());
+    glPixelStorei(GL_PACK_ALIGNMENT, 1);
+    std::vector<float> data(num_items);
+    glGetTexImage(tex->getTarget(), 0, GL_RED, GL_FLOAT, data.data());
+    return data;
+}
+
 std::vector<vec3> util::getVecs(gl::Texture3dRef tex, int num_items) {
     gl::ScopedTextureBind scoped_tex(tex->getTarget(), tex->getId());
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
