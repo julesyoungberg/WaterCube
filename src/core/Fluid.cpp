@@ -9,15 +9,15 @@ Fluid::Fluid(const std::string& name) : BaseObject(name) {
     num_particles_ = 1000;
     grid_res_ = 14;
     position_ = vec3(0);
-    gravity_ = -4.5f;
+    gravity_ = -900.0f;
     particle_mass_ = 0.1f;
     kernel_radius_ = 0.1828f;
     viscosity_coefficient_ = 0.035f;
-    stiffness_ = 2.0f;
+    stiffness_ = 250.0f;
     rest_pressure_ = 0;
     render_mode_ = 1;
     particle_radius_ = 0.1f; // 0.0457f;
-    rest_density_ = 3000.0f;
+    rest_density_ = 1400.0f;
 }
 
 Fluid::~Fluid() {}
@@ -127,7 +127,7 @@ void Fluid::generateInitialParticles() {
 
     for (auto& p : initial_particles_) {
         p.position = (Rand::randVec3() * 0.5f + 0.5f) * size_;
-        p.velocity = Rand::randVec3() * 50.0f;
+        p.velocity = Rand::randVec3() * 10.0f;
 
         if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.z > size_ ||
             p.position.y > size_ || p.position.z > size_) {
@@ -455,7 +455,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.00002f); // time_step);
+    update_prog_->uniform("dt", 0.00012f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", vec3(0, gravity_, 0));
     update_prog_->uniform("particleMass", particle_mass_);

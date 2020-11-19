@@ -90,6 +90,9 @@ void main() {
         for (uint localIndex = 0; localIndex < count; localIndex++) {
             const uint otherParticleID = offset + localIndex; 
             Particle other = particles[otherParticleID];
+            if (particleID == otherParticleID) {
+                continue;
+            }
             
             // find the distance, ignore if too far
             const vec3 r = p.position - other.position;
@@ -104,12 +107,14 @@ void main() {
                 mPressureWeight = Wpress(r, dist);
             }
 
-            // Equation (6) from Harada
-            const float averagePressure = (p.pressure + other.pressure) / (2.0 * other.density);
-            pressureForce += particleMass * averagePressure * mPressureWeight;
+            // Equation (6) from Harada with p.density added to the denomenator
+            const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);
+            if (pressure > 0) {
+                pressureForce += particleMass * pressure * mPressureWeight;
+            }
         
             // Equation (7) from Harada
-            const vec3 velocityDiff = p.velocity - other.velocity;
+            const vec3 velocityDiff = other.velocity - p.velocity;
             viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
         }
     }
@@ -126,16 +131,16 @@ void main() {
     //     wallForce = particleMass * (((d - abs(dist)) * normal) / (d * dt * dt));
     // }
 
-    const vec3 externalForces = gravity * p.density;
-
     // Sum of Equations (6) and (7) and external forces from Herada
-    const vec3 force = (viscosityForce * viscosityCoefficient) - pressureForce + wallForce + externalForces;
+    const vec3 externalForces = gravity * p.density + wallForce;
+    viscosityForce *= viscosityCoefficient;
+    const vec3 force = viscosityForce - pressureForce + externalForces;
 
     // find accelaration and integrate
     const vec3 acceleration = force / p.density;
-    vec3 vel = clamp(p.velocity + acceleration, vec3(-100), vec3(100));
+    vec3 vel = p.velocity + acceleration * dt;
     vec3 pos = p.position + vel * dt;
-    const float wallDamping = 0.75;
+    const float wallDamping = 0.5;
 
     if (pos.x < 0) {
         vel.x *= -wallDamping;
