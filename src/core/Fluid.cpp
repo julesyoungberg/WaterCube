@@ -1,15 +1,16 @@
 #include "./Fluid.h"
 
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 using namespace core;
 
-Fluid::Fluid(const std::string& name) : BaseObject(name) {
+Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     num_particles_ = 1000;
     grid_res_ = 14;
-    position_ = vec3(0);
-    gravity_ = -900.0f;
+    gravity_strength_ = 900.0f;
+    gravity_direction_ = vec3(0, -1, 0);
     particle_mass_ = 0.1f;
     kernel_radius_ = 0.1828f;
     viscosity_coefficient_ = 0.035f;
@@ -98,8 +99,8 @@ FluidRef Fluid::renderMode(int m) {
     return thisRef();
 }
 
-FluidRef Fluid::gravity(float g) {
-    gravity_ = g;
+FluidRef Fluid::gravityStrength(float g) {
+    gravity_strength_ = g;
     return thisRef();
 }
 
@@ -125,7 +126,17 @@ void Fluid::addParams(params::InterfaceGlRef p) {
     p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=1.0");
     p->addParam("Rest Density", &rest_density_, "min=0.0 max=1000.0 step=1.0");
     p->addParam("Rest Pressure", &rest_pressure_, "min=0.0 max=10.0 step=0.1");
-    p->addParam("Gravity", &gravity_, "min=-10.0 max=10.0 step=0.1");
+    p->addParam("Gravity Strength", &gravity_strength_, "min=-10.0 max=10.0 step=0.1");
+}
+
+/**
+ * set rotation and update settings
+ */
+void Fluid::setRotation(quat r) {
+    rotation_ = r;
+    mat4 rotation_matrix = glm::toMat4(r);
+    vec4 rotated = rotation_matrix * vec4(0, -1, 0, 1);
+    gravity_direction_ = vec3(rotated);
 }
 
 /**
@@ -471,7 +482,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("gridRes", grid_res_);
     update_prog_->uniform("dt", 0.00017f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
-    update_prog_->uniform("gravity", vec3(0, gravity_, 0));
+    update_prog_->uniform("gravity", gravity_direction_ * gravity_strength_);
     update_prog_->uniform("particleMass", particle_mass_);
     update_prog_->uniform("kernelRadius", kernel_radius_);
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
