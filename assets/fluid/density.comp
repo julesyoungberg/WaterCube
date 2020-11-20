@@ -68,38 +68,39 @@ void main() {
     float density = particleMass * pow(kernelRadius * kernelRadius, 3) * kernelWeight;
 
     // search the particles of each neighboring bin
-    #pragma unroll 1
-    for (uint binIndex = 0; binIndex < 27; binIndex++) {
-        const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
+    // #pragma unroll 1
+    // for (uint binIndex = 0; binIndex < 27; binIndex++) {
+    //     const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
 
-        // don't go out of bounds
-        if (any(lessThan(nc, ivec3(0))) || any(greaterThanEqual(nc, ivec3(gridRes)))) {
+    //     // don't go out of bounds
+    //     if (any(lessThan(nc, ivec3(0))) || any(greaterThanEqual(nc, ivec3(gridRes)))) {
+    //         continue;
+    //     }
+
+    //     const uint index = nc.z * gridRes * gridRes + nc.y * gridRes + nc.z;
+    //     const uint count = counts[index];
+    //     const uint offset = offsets[index];
+
+    //     // search the particles of this bin
+    //     for (uint localIndex = 0; localIndex < count; localIndex++) {
+    //         const uint sortedID = offset + localIndex;
+    //         const uint otherParticleID = sorted[sortedID];
+    for (uint otherParticleID = 0; otherParticleID < numParticles; otherParticleID++) {
+        if (particleID == otherParticleID) {
             continue;
         }
 
-        const uint index = nc.z * gridRes * gridRes + nc.y * gridRes + nc.z;
-        const uint count = counts[index];
-        const uint offset = offsets[index];
-
-        // search the particles of this bin
-        for (uint localIndex = 0; localIndex < count; localIndex++) {
-            const uint sortedID = offset + localIndex;
-            const uint otherParticleID = sorted[sortedID];
-            if (particleID == otherParticleID) {
-                continue;
-            }
-
-            // find the distance, ignore if too far
-            const vec3 r = p.position - particles[otherParticleID].position;
-            const float dist = length(r);
-            if (dist >= kernelRadius) {
-                continue;
-            }
-
-            // Equation (4) from Harada
-            density += particleMass * W(dist);
+        // find the distance, ignore if too far
+        const vec3 r = p.position - particles[otherParticleID].position;
+        const float dist = length(r);
+        if (dist >= kernelRadius) {
+            continue;
         }
+
+        // Equation (4) from Harada
+        density += particleMass * W(dist);
     }
+    // }
 
     // check distance to nearest wall
     // const float dist = texture(distanceField, p.position / size).a;

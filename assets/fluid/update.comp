@@ -55,7 +55,7 @@ const ivec3 NEIGHBORHOOD[27] = {
 // Equation (8) from Harada
 vec3 Wpress(vec3 r, float d) {
     // const float weight = 45.0 / (3.14 * pow(kernelRadius, 6));
-    return pow(kernelRadius - d, 3) * (r / d) * pressureWeight;
+    return pow(kernelRadius - d, 3) * (r / d) * (45.0 / (3.14 * pow(kernelRadius, 6))); // pressureWeight;
 }
 
 // Equation (9) from Harada
@@ -79,53 +79,52 @@ void main() {
 
 
     // search the particles of each neighboring bin
-    #pragma unroll 1
-    for (uint binIndex = 0; binIndex < 27; binIndex++) {
-        const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
+    // #pragma unroll 1
+    // for (uint binIndex = 0; binIndex < 27; binIndex++) {
+    //     const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
 
-        // don't go out of bounds
-        if (any(lessThan(nc, ivec3(0))) || any(greaterThanEqual(nc, ivec3(gridRes)))) {
+    //     // don't go out of bounds
+    //     if (any(lessThan(nc, ivec3(0))) || any(greaterThanEqual(nc, ivec3(gridRes)))) {
+    //         continue;
+    //     }
+
+    //     const uint index = nc.z * gridRes * gridRes + nc.y * gridRes + nc.z;
+    //     const uint count = counts[index];
+    //     const uint offset = offsets[index];
+
+    //     // search the particles of this bin
+    //     for (uint localIndex = 0; localIndex < count; localIndex++) {
+    //         const uint sortedID = offset + localIndex;
+    //         const uint otherParticleID = sorted[sortedID];
+    for (uint otherParticleID = 0; otherParticleID < numParticles; otherParticleID++) {
+        if (particleID == otherParticleID) {
             continue;
         }
 
-        const uint index = nc.z * gridRes * gridRes + nc.y * gridRes + nc.z;
-        const uint count = counts[index];
-        const uint offset = offsets[index];
+        Particle other = particles[otherParticleID];
 
-        // search the particles of this bin
-        for (uint localIndex = 0; localIndex < count; localIndex++) {
-            const uint sortedID = offset + localIndex;
-            const uint otherParticleID = sorted[sortedID];
-            if (particleID == otherParticleID) {
-                continue;
-            }
-
-            Particle other = particles[otherParticleID];
-
-            // find the distance, ignore if too far
-            const vec3 r = p.position - other.position;
-            const float dist = length(r);
-            if (dist >= kernelRadius) {
-                continue;
-            }
-
-            // if not self, calculate pressure weight
-            vec3 mPressureWeight = vec3(0);
-            if (dist > 0) {
-                mPressureWeight = Wpress(r, dist);
-            }
-
-            // Equation (6) from Harada
-            const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);
-            if (pressure > 0) {
-                pressureForce += particleMass * pressure * mPressureWeight;
-            }
-        
-            // Equation (7) from Harada
-            const vec3 velocityDiff = other.velocity - p.velocity;
-            viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
+        // find the distance, ignore if too far
+        const vec3 r = p.position - other.position;
+        const float dist = length(r);
+        if (dist >= kernelRadius) {
+            continue;
         }
+
+        // if not self, calculate pressure weight
+        vec3 mPressureWeight = vec3(0);
+        mPressureWeight = Wpress(r, dist + 1e-16);
+
+        // Equation (6) from Harada
+        const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);
+        if (pressure > 0) {
+            pressureForce += particleMass * pressure * mPressureWeight;
+        }
+    
+        // Equation (7) from Harada
+        const vec3 velocityDiff = other.velocity - p.velocity;
+        viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
     }
+    // }
 
     // find distance to nearest wall
     // const vec4 interpolatedDistance = texture(distanceField, p.position / size);

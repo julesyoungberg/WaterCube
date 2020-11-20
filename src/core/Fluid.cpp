@@ -13,13 +13,13 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     grid_res_ = 1;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
-    particle_radius_ = 0.05f;
+    particle_radius_ = 0.1f;
     kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
     particle_mass_ = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 100.0f;
-    rest_pressure_ = 0;
+    rest_pressure_ = 100100.0f;
     render_mode_ = 0;
     point_scale_ = 150.0f;
     // sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
@@ -324,16 +324,15 @@ FluidRef Fluid::setup() {
     num_bins_ = int(pow(grid_res_, 3));
     distance_field_size_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
-    // kernel_radius_ = bin_size_;
     util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_,
               kernel_radius_);
 
     // Part of equation (8) from Harada
-    pressure_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
+    pressure_weight_ = static_cast<float>(45.0f / (M_PI * pow(kernel_radius_, 6)));
     // Part of equation (9) from Harada
-    viscosity_weight_ = static_cast<float>(45.0f / (M_PI * std::pow(kernel_radius_, 6)));
+    viscosity_weight_ = static_cast<float>(45.0f / (M_PI * pow(kernel_radius_, 6)));
     // Part of equation (10) from Harada
-    kernel_weight_ = static_cast<float>(315.0f / (64.0f * M_PI * std::pow(kernel_radius_, 9)));
+    kernel_weight_ = static_cast<float>(315.0f / (64.0f * M_PI * pow(kernel_radius_, 9)));
 
     container_ = Container::create("fluidContainer", size_);
 
@@ -434,7 +433,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.0003f);            // time_step);
+    update_prog_->uniform("dt", 0.0003f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", gravity_direction_ * gravity_strength_);
     update_prog_->uniform("particleMass", particle_mass_);
