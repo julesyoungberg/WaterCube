@@ -19,9 +19,9 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     particle_mass_ = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 100.0f;
-    rest_pressure_ = 100100.0f;
+    rest_pressure_ = 100200.0f;
     render_mode_ = 0;
-    point_scale_ = 150.0f;
+    point_scale_ = 75.0f;
     // sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
 }
 
