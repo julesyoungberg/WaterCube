@@ -18,8 +18,8 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_density_ = 1000.0f;
     particle_mass_ = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
     viscosity_coefficient_ = 0.0101f;
-    stiffness_ = 100.0f;
-    rest_pressure_ = 100200.0f;
+    stiffness_ = 50.0f;
+    rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 75.0f;
     // sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
@@ -476,14 +476,14 @@ void Fluid::update(double time) {
     //     first_frame_ = false;
     // }
 
-    sort_->run(particle_buffer1_);
+    // sort_->run(particle_buffer1_);
 
     runDensityProg(particle_buffer1_);
     runUpdateProg(particle_buffer1_, float(time));
 
     printParticles(particle_buffer1_);
 
-    marching_cube_->update(particle_buffer1_, sort_->getCountBuffer(), sort_->getOffsetBuffer());
+    // marching_cube_->update(particle_buffer1_, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**

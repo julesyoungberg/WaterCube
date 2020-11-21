@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(1000);
+const int NUM_PARTICLES = static_cast<int>(10000);
 
 class WaterCubeApp : public App {
 public:
@@ -47,7 +47,7 @@ void WaterCubeApp::setup() {
     params_->addParam("Scene Rotation", &scene_rotation_);
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
-    vec3 camera_pos = vec3(size_, size_, size_ * 3) / 1.5f;
+    vec3 camera_pos = vec3(0, 0, size_ * 3) / 1.5f;
     cam_.lookAt(camera_pos, vec3(0, 0, 0));
 
     gl::enableDepthWrite();
@@ -60,7 +60,7 @@ void WaterCubeApp::setup() {
     fluid_->addParams(params_);
     fluid_->setup();
     fluid_->setCameraPosition(camera_pos);
-    fluid_->setLightPosition(vec3(size_ / 2.0f, size_ * 1.5f, size_ / 2.0f));
+    fluid_->setLightPosition(vec3(size_ / 2.0f, -size_ * 2.0f, size_ / 2.0f));
 
     BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid_);
     CI_ASSERT(scene_->addObject(fluid_ref));
@@ -91,7 +91,7 @@ void WaterCubeApp::update() {
 
 void WaterCubeApp::draw() {
     gl::clear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    gl::clear(Color(0.3f, 0.3f, 0.35f));
+    gl::clear(Color(0.8f, 0.8f, 0.8f));
     gl::setMatricesWindowPersp(getWindowSize());
     gl::setMatrices(cam_);
     gl::rotate(scene_rotation_);

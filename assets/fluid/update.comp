@@ -115,12 +115,12 @@ void main() {
         // Equation (6) from Harada
         const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);
         if (pressure > 0) {
-            pressureForce += particleMass * pressure * mPressureWeight;
+            pressureForce -= particleMass * pressure * mPressureWeight;
         }
     
         // Equation (7) from Harada
-        const vec3 velocityDiff = other.velocity - p.velocity;
-        viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
+        // const vec3 velocityDiff = other.velocity - p.velocity;
+        // viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
     }
     // }
 
@@ -138,7 +138,7 @@ void main() {
 
     // Sum of Equations (6) and (7) and external forces from Herada
     viscosityForce *= viscosityCoefficient;
-    const vec3 force = viscosityForce - pressureForce + externalForces;
+    const vec3 force = pressureForce + externalForces;
 
     // find accelaration and integrate
     const vec3 acceleration = force / (p.density + 1e-16);
