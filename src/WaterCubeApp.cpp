@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(10000);
+const int NUM_PARTICLES = static_cast<int>(20000);
 
 class WaterCubeApp : public App {
 public:
@@ -47,7 +47,7 @@ void WaterCubeApp::setup() {
     params_->addParam("Scene Rotation", &scene_rotation_);
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
-    vec3 camera_pos = vec3(0, 0, size_ * 3) / 1.5f;
+    vec3 camera_pos = vec3(0, size_ / 2.0, size_ * 3) / 1.5f;
     cam_.lookAt(camera_pos, vec3(0, 0, 0));
 
     gl::enableDepthWrite();

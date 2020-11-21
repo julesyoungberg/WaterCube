@@ -13,15 +13,15 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     grid_res_ = 1;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
-    particle_radius_ = 0.1f;
+    particle_radius_ = 0.5f;
     kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
     particle_mass_ = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
     viscosity_coefficient_ = 0.0101f;
-    stiffness_ = 50.0f;
+    stiffness_ = 30.0f;
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
-    point_scale_ = 75.0f;
+    point_scale_ = 20.0f;
     // sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
 }
 
@@ -164,14 +164,21 @@ void Fluid::generateInitialParticles() {
     util::log("creating particles");
     int n = num_particles_;
     initial_particles_.assign(n, Particle());
+    float distance = std::cbrt((4.0f * pow(particle_radius_, 3) * M_PI) / (3.0f * n));
+    int d = int(ceil(std::cbrt(n)));
 
-    for (auto& p : initial_particles_) {
-        p.position = (vec3(getRand(), getRand(), getRand())) * size_;
-        p.velocity = (vec3(getRand(), getRand(), getRand())) * 10.0f;
+    vec3 offset = vec3((size_ / 2.0) - ((distance * d) / 2));
 
-        if (p.position.x < 0 || p.position.y < 0 || p.position.z < 0 || p.position.z > size_ ||
-            p.position.y > size_ || p.position.z > size_) {
-            util::log("ERROR: <%f, %f, %f>", p.position.x, p.position.y, p.position.z);
+    for (int z = 0; z < d; z++) {
+        for (int y = 0; y < d; y++) {
+            for (int x = 0; x < d; x++) {
+                int index = z * d * d + y * d + x;
+                if (index >= n) {
+                    break;
+                }
+
+                initial_particles_[index].position = vec3(x, y, z) * distance + offset;
+            }
         }
     }
 }
