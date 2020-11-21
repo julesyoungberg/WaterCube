@@ -1,6 +1,8 @@
 #pragma once
 
-#include "./Util.h"
+#include <glm/gtx/string_cast.hpp>
+
+#include "util.h"
 
 using namespace core;
 
@@ -106,4 +108,16 @@ std::vector<vec3> util::getVecs(gl::Texture3dRef tex, int num_items) {
     std::vector<vec3> data(num_items);
     glGetTexImage(tex->getTarget(), 0, GL_RGBA32F, GL_UNSIGNED_INT, data.data());
     return data;
+}
+
+void util::printParticles(GLuint particle_buffer, int n) {
+    std::vector<Particle> particles = util::getParticles(particle_buffer, n);
+    util::log("-----Particles-----");
+    for (int i = 0; i < n; i++) {
+        Particle p = particles[i];
+        std::string s = "p=<" + glm::to_string(p.position) + ">";
+        s += " v=<" + glm::to_string(p.velocity) + ">";
+        s += " d=" + std::to_string(p.density) + ", pr=" + std::to_string(p.pressure);
+        util::log("%s", s.c_str());
+    }
 }

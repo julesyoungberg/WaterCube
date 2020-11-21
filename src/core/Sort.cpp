@@ -93,6 +93,8 @@ void Sort::prepareBuffers() {
     std::generate(sids.begin(), sids.end(), [&curr_id]() -> GLuint { return curr_id++; });
     auto id_format = gl::Texture1d::Format().internalFormat(GL_R32UI);
     id_map_ = gl::Texture1d::create(sids.data(), GL_R32F, num_items_, id_format);
+
+    gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT);
 }
 
 /**
@@ -274,9 +276,9 @@ void Sort::printGrids() {
 /**
  * main logic - sort in_particles and store result in out_particles
  */
-void Sort::run(GLuint particle_buffer) {
+void Sort::run(GLuint in_particles, GLuint out_particles) {
     clearCountBuffer();
-    runCountProg(particle_buffer);
+    runCountProg(in_particles);
 
     clearOffsetBuffer();
     if (use_linear_scan_) {
@@ -286,9 +288,10 @@ void Sort::run(GLuint particle_buffer) {
     }
 
     clearCountBuffer();
-    // runReorderProg(in_particles, out_particles);
-    clearSortedBuffer();
-    runSortProg(particle_buffer);
+    runReorderProg(in_particles, out_particles);
+    // clearSortedBuffer();
+    // runSortProg(out_particles);
+    // printSorted();
 }
 
 /**

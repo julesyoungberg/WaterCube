@@ -127,6 +127,8 @@ void MarchingCube::prepareBuffers() {
     clearPressure(); // initializes the texture
 
     prepareDebugParticles();
+
+    gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT);
 }
 
 /**

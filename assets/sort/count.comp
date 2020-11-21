@@ -30,7 +30,7 @@ void main() {
     }
 
     const vec3 p = particles[particleID].position;
-    const ivec3 c = ivec3(floor(p / binSize));
+    const ivec3 c = clamp(ivec3(p / binSize), ivec3(0), ivec3(gridRes - 1));
     const uint index = c.z * gridRes * gridRes + c.y * gridRes + c.x; 
 
     atomicAdd(counts[index], 1);

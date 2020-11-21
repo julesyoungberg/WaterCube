@@ -29,7 +29,7 @@ public:
 
     void prepareBuffers();
     void compileShaders();
-    void run(GLuint particle_buffer);
+    void run(GLuint in_particles, GLuint out_particles);
     void renderGrid(float size);
 
     GLuint getCountBuffer() { return count_buffer_; }

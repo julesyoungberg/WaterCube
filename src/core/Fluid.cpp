@@ -1,7 +1,6 @@
 #include "./Fluid.h"
 
 #include <glm/gtx/quaternion.hpp>
-#include <glm/gtx/string_cast.hpp>
 #include <time.h>
 
 using namespace core;
@@ -10,7 +9,7 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     num_particles_ = 1000;
-    grid_res_ = 1;
+    grid_res_ = 10;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.5f;
@@ -298,6 +297,8 @@ void Fluid::prepareBuffers() {
 
     prepareParticleBuffers();
     prepareWallWeightFunction();
+
+    gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT);
 }
 
 /**
@@ -455,27 +456,12 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
 }
 
 /**
- * print particles for debugging
- */
-void Fluid::printParticles(GLuint particle_buffer) {
-    const int n = 1;
-    std::vector<Particle> particles = util::getParticles(particle_buffer, n);
-    util::log("-----Particles-----");
-    for (int i = 0; i < n; i++) {
-        Particle p = particles[i];
-        std::string s = "p=<" + glm::to_string(p.position) + ">";
-        s += " v=<" + glm::to_string(p.velocity) + ">";
-        s += " d=" + std::to_string(p.density) + ", pr=" + std::to_string(p.pressure);
-        util::log("%s", s.c_str());
-    }
-}
-
-/**
  * Update simulation logic - run compute shaders
  */
 void Fluid::update(double time) {
-    // GLuint in_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
-    // GLuint out_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
+    odd_frame_ = !odd_frame_;
+    GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
+    GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
 
     // if (first_frame_ || getElapsedFrames() % sort_interval_ == 0) {
     //     sort_->run(in_particles, out_particles);
@@ -483,12 +469,12 @@ void Fluid::update(double time) {
     //     first_frame_ = false;
     // }
 
-    // sort_->run(particle_buffer1_);
+    sort_->run(in_particles, out_particles);
 
-    runDensityProg(particle_buffer1_);
-    runUpdateProg(particle_buffer1_, float(time));
+    runDensityProg(out_particles);
+    runUpdateProg(out_particles, float(time));
 
-    printParticles(particle_buffer1_);
+    // util::printParticles(particle_buffer1_, 1);
 
     // marching_cube_->update(particle_buffer1_, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
@@ -501,8 +487,9 @@ void Fluid::renderParticles() {
     gl::pointSize(pointRadius * 2.0f);
 
     gl::ScopedGlslProg render(render_particles_prog_);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer1_);
-    glBindVertexArray(vao1_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
+                     odd_frame_ ? particle_buffer2_ : particle_buffer1_);
+    glBindVertexArray(odd_frame_ ? vao2_ : vao1_);
 
     render_particles_prog_->uniform("renderMode", render_mode_);
     render_particles_prog_->uniform("size", size_);

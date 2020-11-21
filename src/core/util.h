@@ -62,6 +62,8 @@ std::vector<float> getFloats(gl::Texture3dRef tex, int num_items);
 
 std::vector<vec3> getVecs(gl::Texture3dRef tex, int num_items);
 
+void printParticles(GLuint particle_buffer, int n);
+
 } // namespace util
 
 } // namespace core

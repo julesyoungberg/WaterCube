@@ -80,7 +80,6 @@ protected:
     void runDistanceFieldProg();
     void runDensityProg(GLuint particle_buffer);
     void runUpdateProg(GLuint particle_buffer, float time_step);
-    void printParticles(GLuint particle_buffer);
     void renderParticles();
 
     FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
