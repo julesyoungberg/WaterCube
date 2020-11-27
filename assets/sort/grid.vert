@@ -8,7 +8,7 @@ layout(std430, binding = 0) restrict readonly buffer Grid {
     ivec4 grid[];
 };
 
-layout(std430, binding = 1) restrict buffer Counts {
+layout(std430, binding = 1) buffer Counts {
     uint counts[];
 };
 
@@ -33,8 +33,8 @@ void main() {
     const uint count = counts[index];
     const uint offset = offsets[index];
 
-    const float n = float(numItems) / 100.0;
-    const vec3 color = vec3(0, float(count) / n, float(offset) / n);
+    const float n = float(numItems);
+    const vec3 color = vec3(0, float(count) / 100.0, offset / n); //float(offset) / n);
     const bool invalid = any(lessThan(color, vec3(0))) || any(isnan(color)) || any(isinf(color));
 
     vPosition = coordToPoint(coord) + vec3(binSize / 2.0);

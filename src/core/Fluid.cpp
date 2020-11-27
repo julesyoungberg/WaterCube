@@ -20,8 +20,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     stiffness_ = 30.0f;
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
-    point_scale_ = 20.0f;
-    // sort_interval_ = 1; // TODO: fix - any value other than 1 results in really shakey movement
+    point_scale_ = 15.0f;
 }
 
 Fluid::~Fluid() {}
@@ -119,7 +118,7 @@ void Fluid::addParams(params::InterfaceGlRef p) {
     p->addParam("Render Mode", &render_mode_, "min=0 max=9 step=1");
     // p->addParam("Grid Resolution", &grid_res_, "min=1 max=1000 step=1");
     // p->addParam("Particle Mass", &particle_mass_, "min=0.0001 max=2.0 step=0.001");
-    p->addParam("Viscosity", &viscosity_coefficient_, "min=0.001 max=2.0 step=0.001");
+    // p->addParam("Viscosity", &viscosity_coefficient_, "min=0.001 max=2.0 step=0.001");
     p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=1.0");
     p->addParam("Rest Density", &rest_density_, "min=0.0 max=1000.0 step=1.0");
     p->addParam("Rest Pressure", &rest_pressure_, "min=0.0 max=10.0 step=0.1");
@@ -166,8 +165,6 @@ void Fluid::generateInitialParticles() {
     float distance = std::cbrt((4.0f * pow(particle_radius_, 3) * M_PI) / (3.0f * n));
     int d = int(ceil(std::cbrt(n)));
 
-    vec3 offset = vec3((size_ / 2.0) - ((distance * d) / 2));
-
     for (int z = 0; z < d; z++) {
         for (int y = 0; y < d; y++) {
             for (int x = 0; x < d; x++) {
@@ -176,7 +173,9 @@ void Fluid::generateInitialParticles() {
                     break;
                 }
 
-                initial_particles_[index].position = vec3(x, y, z) * distance + offset;
+                initial_particles_[index].position = vec3(x, y, z) * distance;
+                initial_particles_[index].position +=
+                    vec3(getRand() * 0.1 - 0.05, getRand() * 0.1 - 0.05, getRand() * 0.1 - 0.05);
             }
         }
     }
@@ -441,7 +440,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.0003f); // time_step);
+    update_prog_->uniform("dt", 0.0006f); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", gravity_direction_ * gravity_strength_);
     update_prog_->uniform("particleMass", particle_mass_);
@@ -463,12 +462,6 @@ void Fluid::update(double time) {
     GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
     GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
 
-    // if (first_frame_ || getElapsedFrames() % sort_interval_ == 0) {
-    //     sort_->run(in_particles, out_particles);
-    //     odd_frame_ = !odd_frame_;
-    //     first_frame_ = false;
-    // }
-
     sort_->run(in_particles, out_particles);
 
     runDensityProg(out_particles);
@@ -476,7 +469,7 @@ void Fluid::update(double time) {
 
     // util::printParticles(particle_buffer1_, 1);
 
-    // marching_cube_->update(particle_buffer1_, sort_->getCountBuffer(), sort_->getOffsetBuffer());
+    marching_cube_->update(particle_buffer1_, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**

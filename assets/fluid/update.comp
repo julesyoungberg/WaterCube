@@ -75,7 +75,6 @@ void main() {
     vec3 viscosityForce = vec3(0);
     vec3 externalForces = gravity * p.density;
 
-
     // search the particles of each neighboring bin
     #pragma unroll 1
     for (uint binIndex = 0; binIndex < 27; binIndex++) {
@@ -100,19 +99,23 @@ void main() {
             Particle other = particles[otherParticleID];
 
             // find the distance, ignore if too far
-            const vec3 r = other.position - p.position;
+            const vec3 r = p.position - other.position;
             const float dist = length(r);
             if (dist >= kernelRadius) {
                 continue;
             }
 
-            // if not self, calculate pressure weight
-            vec3 mPressureWeight = vec3(0);
-            mPressureWeight = Wpress(r, dist + 1e-16);
+            // if (dist < particleRadius && other.position.y < p.position.y) {
+            //     const vec3 dir = normalize(r);
+            //     const float strength = dot(p.velocity, dir);
+            //     externalForces += dir * -strength * p.density / 2.0;
+            // }
 
             // Equation (6) from Harada
             const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);
             if (pressure > 0) {
+                // calculate pressure weight as a vector
+                vec3 mPressureWeight = Wpress(r, dist + 1e-16);
                 pressureForce -= particleMass * pressure * mPressureWeight;
             }
     
@@ -121,18 +124,6 @@ void main() {
             viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
         }
     }
-
-    // find distance to nearest wall
-    // const vec4 interpolatedDistance = texture(distanceField, p.position / size);
-    // const vec3 normal = interpolatedDistance.xyz;
-    // const float dist = interpolatedDistance.a;
-    // compute pressure from wall
-    vec3 wallForce = vec3(0);
-    // const float d = kernelRadius / 4.0; // ?
-    // if (dist <= d) {
-    //     // Equation (11) from Harada
-    //     wallForce = particleMass * (((d - abs(dist)) * normal) / (d * dt * dt));
-    // }
 
     // Sum of Equations (6) and (7) and external forces from Herada
     viscosityForce *= viscosityCoefficient;
@@ -144,7 +135,7 @@ void main() {
     vec3 pos = p.position + vel * dt;
     
     const float wallDamping = 0.3;
-    const float border = 0.0;
+    const float border = 0.01;
 
     if (pos.x < border) {
         vel.x *= -wallDamping;

@@ -17,7 +17,6 @@ layout(std430, binding = 1) buffer Counts {
     uint counts[];
 };
 
-layout(binding = 1, r32ui) uniform restrict uimage3D countGrid;
 uniform float binSize;
 uniform int numItems;
 uniform int gridRes;

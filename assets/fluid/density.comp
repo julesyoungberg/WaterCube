@@ -25,9 +25,6 @@ layout(std430, binding = 2) restrict readonly buffer Sorted {
     uint sorted[];
 };
 
-// layout(binding = 3) uniform sampler3D distanceField;
-// layout(binding = 4) uniform sampler1D wallWeight;
-// uniform float size;
 uniform float binSize;
 uniform int gridRes;
 uniform int numParticles;
@@ -99,12 +96,6 @@ void main() {
             density += particleMass * W(dist);
         }
     }
-
-    // check distance to nearest wall
-    // const float dist = texture(distanceField, p.position / size).a;
-    // if (dist <= kernelRadius) {
-    //     density += texture(wallWeight, dist / kernelRadius).x;
-    // }
 
     p.density = density;
 
