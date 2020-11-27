@@ -25,7 +25,6 @@ layout(std430, binding = 2) restrict readonly buffer Sorted {
     uint sorted[];
 };
 
-// layout(binding = 3) uniform sampler3D distanceField;
 uniform float size;
 uniform float binSize;
 uniform int gridRes;
@@ -129,7 +128,7 @@ void main() {
     viscosityForce *= viscosityCoefficient;
     const vec3 force = pressureForce + viscosityForce + externalForces;
 
-    // find accelaration and integrate
+    // find accelaration and integrate for next velocity
     const vec3 acceleration = force / (p.density + 1e-16);
     vec3 vel = p.velocity + acceleration * dt;
     vec3 pos = p.position + vel * dt;

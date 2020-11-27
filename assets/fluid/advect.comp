@@ -1,0 +1,59 @@
+#version 460 core
+
+layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
+
+struct Particle {
+    vec3 position;
+    float density;
+    vec3 velocity;
+    float pressure;
+};
+
+layout(std430, binding = 0) restrict buffer Particles {
+    Particle particles[];
+};
+
+uniform float size;
+uniform float dt;
+uniform int numParticles;
+
+void main() {
+    const uint particleID = gl_GlobalInvocationID.x;
+    if (particleID >= numParticles) {
+        return;
+    }
+
+    Particle p = particles[particleID];
+    vec3 vel = p.velocity;
+    vec3 pos = p.position + vel * dt;
+    
+    const float wallDamping = 0.3;
+    const float border = 0.01;
+
+    if (pos.x < border) {
+        vel.x *= -wallDamping;
+        pos.x = border;
+    } else if (pos.x > size - border) {
+        vel.x *= -wallDamping;
+        pos.x = size - border;
+    }
+
+    if (pos.y < border) {
+        vel.y *= -wallDamping;
+        pos.y = border;
+    } else if (pos.y > size - border) {
+        vel.y *= -wallDamping;
+        pos.y = size - border;
+    }
+
+    if (pos.z < border) {
+        vel.z *= -wallDamping;
+        pos.z = border;
+    } else if (pos.z > size - border) {
+        vel.z *= -wallDamping;
+        pos.z = size - border;
+    }
+
+    p.position = pos;
+    particles[particleID] = p;
+}

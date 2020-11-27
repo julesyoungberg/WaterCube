@@ -69,23 +69,21 @@ public:
 
 protected:
     void generateInitialParticles();
-    void generateBoundaryPlanes();
-    void prepareWallWeightFunction();
     void prepareParticleBuffers();
     void prepareBuffers();
 
     void compileShaders();
 
     void runProg() { util::runProg(num_work_groups_); }
-    void runDistanceFieldProg();
     void runDensityProg(GLuint particle_buffer);
     void runUpdateProg(GLuint particle_buffer, float time_step);
+    void runAdvectProg(GLuint particle_buffer, float time_step);
     void renderParticles();
 
     FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
 
     int num_particles_, grid_res_;
-    int num_work_groups_, distance_field_size_, num_bins_;
+    int num_work_groups_, num_bins_;
     int render_mode_;
     int sort_interval_;
 
@@ -96,6 +94,7 @@ protected:
     float stiffness_;
     float rest_density_, rest_pressure_, gravity_strength_;
     float point_scale_;
+    float dt_;
 
     bool odd_frame_, first_frame_;
 
@@ -107,13 +106,9 @@ protected:
     std::vector<Plane> boundaries_;
     std::vector<ivec4> grid_particles_;
 
-    gl::GlslProgRef distance_field_prog_;
     gl::GlslProgRef density_prog_, update_prog_;
     gl::GlslProgRef render_particles_prog_;
-
-    gl::SsboRef boundary_buffer_;
-    gl::Texture1dRef wall_weight_function_;
-    gl::Texture3dRef distance_field_;
+    gl::GlslProgRef advect_prog_;
 
     SortRef sort_;
     MarchingCubeRef marching_cube_;

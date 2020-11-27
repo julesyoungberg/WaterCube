@@ -21,6 +21,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 15.0f;
+    dt_ = 0.0006f;
 }
 
 Fluid::~Fluid() {}
@@ -182,77 +183,6 @@ void Fluid::generateInitialParticles() {
 }
 
 /**
- * generates a vector of planes representing the container boundaries
- */
-void Fluid::generateBoundaryPlanes() {
-    util::log("creating boundaries");
-
-    // walls of the unit cube
-    std::vector<std::vector<vec3>> walls = {
-        {vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 1, 0), vec3(0, 1, 0)},
-        {vec3(0, 0, 1), vec3(1, 0, 1), vec3(1, 1, 1), vec3(0, 1, 1)},
-        {vec3(0, 1, 0), vec3(1, 1, 0), vec3(1, 1, 1), vec3(0, 1, 1)},
-        {vec3(0, 0, 0), vec3(1, 0, 0), vec3(1, 0, 1), vec3(0, 0, 1)},
-        {vec3(0, 0, 0), vec3(0, 1, 0), vec3(0, 1, 1), vec3(0, 0, 1)},
-        {vec3(1, 0, 0), vec3(1, 1, 0), vec3(1, 1, 1), vec3(1, 0, 1)},
-    };
-
-    for (int i = 0; i < walls.size(); i++) {
-        for (int j = 0; j < walls[i].size(); j++) {
-            walls[i][j] = walls[i][j] * size_;
-        }
-    }
-
-    boundaries_.resize(walls.size());
-
-    // compute planes from wall definitions
-    for (int i = 0; i < walls.size(); i++) {
-        auto const wall = walls[i];
-
-        Plane p = Plane();
-
-        vec3 ab = wall[1] - wall[0];
-        vec3 ac = wall[3] - wall[0];
-        vec3 n = cross(ab, ac);
-
-        vec3 normal = normalize(n) * float(pow(-1, i));
-        vec3 point = wall[2];
-        p.normal = vec4(normal, 1);
-        p.point = vec4(point, 1);
-
-        util::log("\t%d - normal: <%f, %f, %f>, point: <%f, %f, %f>", i, p.normal.x, p.normal.y,
-                  p.normal.z, p.point.x, p.point.y, p.point.z);
-
-        boundaries_[i] = p;
-    }
-}
-
-/**
- * generate a 1d map from distance to force weight
- */
-void Fluid::prepareWallWeightFunction() {
-    util::log("\tpreparing wall weight function");
-
-    // calculate discrete weights for interpolation on the GPU
-    int divisions = 10;
-    float step = kernel_radius_ / float(divisions);
-    std::vector<float> values(divisions + 1, 0);
-
-    util::log("\t\tgenerating values");
-
-    for (int i = 0; i <= divisions; i++) {
-        float dist = i * step;
-        values[i] = kernel_weight_ * pow(kernel_radius_ * kernel_radius_ - dist * dist, 3);
-    }
-
-    util::log("\t\tcreating buffer");
-
-    auto texture_format = gl::Texture1d::Format().internalFormat(GL_R32F);
-    wall_weight_function_ =
-        gl::Texture1d::create(values.data(), GL_R32F, divisions + 1, texture_format);
-}
-
-/**
  * prepare main particle buffers
  */
 void Fluid::prepareParticleBuffers() {
@@ -285,17 +215,7 @@ void Fluid::prepareParticleBuffers() {
 void Fluid::prepareBuffers() {
     util::log("preparing fluid buffers");
 
-    util::log("\tcreating boundary buffer - boundaries: %d", boundaries_.size());
-    boundary_buffer_ =
-        gl::Ssbo::create(boundaries_.size() * sizeof(Plane), boundaries_.data(), GL_STATIC_DRAW);
-
-    util::log("\tcreating disance field");
-    auto texture3d_format = gl::Texture3d::Format().internalFormat(GL_RGBA32F);
-    distance_field_ =
-        gl::Texture3d::create(grid_res_ + 1, grid_res_ + 1, grid_res_ + 1, texture3d_format);
-
     prepareParticleBuffers();
-    prepareWallWeightFunction();
 
     gl::memoryBarrier(GL_BUFFER_UPDATE_BARRIER_BIT | GL_TEXTURE_UPDATE_BARRIER_BIT);
 }
@@ -306,14 +226,14 @@ void Fluid::prepareBuffers() {
 void Fluid::compileShaders() {
     util::log("compiling fluid shaders");
 
-    util::log("\tcompiling fluid distanceField compute shader");
-    distance_field_prog_ = util::compileComputeShader("fluid/distanceField.comp");
-
     util::log("\tcompiling fluid density compute shader");
     density_prog_ = util::compileComputeShader("fluid/density.comp");
 
     util::log("\tcompiling fluid update compute shader");
     update_prog_ = util::compileComputeShader("fluid/update.comp");
+
+    util::log("\tcompiling fluid advect compute shader");
+    advect_prog_ = util::compileComputeShader("fluid/advect.comp");
 
     util::log("\tcompiling fluid particles shader");
     render_particles_prog_ = gl::GlslProg::create(gl::GlslProg::Format()
@@ -329,7 +249,6 @@ FluidRef Fluid::setup() {
     first_frame_ = true;
     num_work_groups_ = int(ceil(float(num_particles_) / float(WORK_GROUP_SIZE)));
     num_bins_ = int(pow(grid_res_, 3));
-    distance_field_size_ = int(pow(grid_res_ + 1, 3));
     bin_size_ = size_ / float(grid_res_);
     util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_,
               kernel_radius_);
@@ -344,7 +263,6 @@ FluidRef Fluid::setup() {
     container_ = Container::create("fluidContainer", size_);
 
     generateInitialParticles();
-    generateBoundaryPlanes();
 
     ivec3 count = gl::getMaxComputeWorkGroupCount();
     CI_ASSERT(count.x >= num_work_groups_);
@@ -366,31 +284,8 @@ FluidRef Fluid::setup() {
                          ->subdivisions(5);
     marching_cube_->setup();
 
-    runDistanceFieldProg();
-
     util::log("fluid created");
     return std::make_shared<Fluid>(*this);
-}
-
-/**
- * compute distance field on the GPU
- */
-void Fluid::runDistanceFieldProg() {
-    gl::ScopedGlslProg prog(distance_field_prog_);
-
-    gl::ScopedBuffer scoped_boundary_buffer(boundary_buffer_);
-    boundary_buffer_->bindBase(0);
-
-    glActiveTexture(GL_TEXTURE0 + 1);
-    glUniform1i(glGetUniformLocation(distance_field_prog_->getHandle(), "distanceField"), 1);
-    glBindImageTexture(1, distance_field_->getId(), 0, GL_TRUE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-
-    distance_field_prog_->uniform("gridRes", grid_res_ + 1);
-    distance_field_prog_->uniform("numBoundaries", int(boundaries_.size()));
-    distance_field_prog_->uniform("binSize", bin_size_);
-
-    util::runProg(ivec3(int(ceil(distance_field_size_ / 4.0f))));
-    gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
 }
 
 /**
@@ -404,11 +299,6 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, sort_->getSortedBuffer());
 
-    // distance_field_->bind(3);
-    // wall_weight_function_->bind(4);
-    // density_prog_->uniform("distanceField", 3);
-    // density_prog_->uniform("wallWeight", 4);
-    // density_prog_->uniform("size", size_);
     density_prog_->uniform("binSize", bin_size_);
     density_prog_->uniform("gridRes", grid_res_);
     density_prog_->uniform("numParticles", num_particles_);
@@ -434,13 +324,10 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, sort_->getSortedBuffer());
 
-    // distance_field_->bind(3);
-    // update_prog_->uniform("distanceField", 3);
-
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", 0.0006f); // time_step);
+    update_prog_->uniform("dt", dt_); // time_step);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", gravity_direction_ * gravity_strength_);
     update_prog_->uniform("particleMass", particle_mass_);
@@ -449,6 +336,22 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("viscosityWeight", viscosity_weight_);
     update_prog_->uniform("pressureWeight", pressure_weight_);
     update_prog_->uniform("particleRadius", particle_radius_);
+
+    runProg();
+    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
+}
+
+/**
+ * Run advect compute shader
+ */
+void Fluid::runAdvectProg(GLuint particle_buffer, float time_step) {
+    gl::ScopedGlslProg prog(advect_prog_);
+
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
+
+    advect_prog_->uniform("size", size_);
+    advect_prog_->uniform("dt", dt_); // time_step);
+    advect_prog_->uniform("numParticles", num_particles_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -466,6 +369,7 @@ void Fluid::update(double time) {
 
     runDensityProg(out_particles);
     runUpdateProg(out_particles, float(time));
+    // runAdvectProg(out_particles, float(time));
 
     // util::printParticles(particle_buffer1_, 1);
 
