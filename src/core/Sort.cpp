@@ -265,7 +265,7 @@ void Sort::printGrids() {
 
     std::string c = "counts: ";
     std::string o = "offsets: ";
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < num_bins_; i++) {
         c += std::to_string(counts[i]) + ", ";
         o += std::to_string(offsets[i]) + ", ";
     }
@@ -286,12 +286,13 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
     } else {
         runScanProg();
     }
+    util::log("counted");
+    printGrids();
 
     clearCountBuffer();
     runReorderProg(in_particles, out_particles);
-    // clearSortedBuffer();
-    // runSortProg(out_particles);
-    // printSorted();
+    util::log("reordered");
+    printGrids();
 }
 
 /**

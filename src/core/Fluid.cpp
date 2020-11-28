@@ -5,24 +5,22 @@
 
 using namespace core;
 
-// https://scicomp.stackexchange.com/questions/14450/how-to-get-proper-parameters-of-sph-simulation
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     num_particles_ = 1000;
     grid_res_ = 1;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
-    particle_radius_ = 0.01f;
+    particle_radius_ = 0.2f; // 0.01f;
     kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
-    // particle_mass = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
-    particle_mass_ = 0.08;
+    particle_mass_ = particle_radius_ * 8.0f;
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 30.0f;
     rest_pressure_ = 3;
-    render_mode_ = 0;
-    point_scale_ = 650.0f;
-    dt_ = 0.0008f;
+    render_mode_ = 3;
+    point_scale_ = 75.0f; // 650.0f;
+    dt_ = 0.0003f;        // 0.0008f;
 }
 
 Fluid::~Fluid() {}
@@ -374,9 +372,9 @@ void Fluid::update(double time) {
     runUpdateProg(out_particles, float(time));
     // runAdvectProg(out_particles, float(time));
 
-    util::printParticles(particle_buffer1_, 10);
+    util::printParticles(out_particles, 10);
 
-    marching_cube_->update(particle_buffer1_, sort_->getCountBuffer(), sort_->getOffsetBuffer());
+    // marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**

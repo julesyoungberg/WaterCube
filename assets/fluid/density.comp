@@ -37,15 +37,15 @@ uniform float restPressure;
 
 // neighborhood coordinate offsets
 const ivec3 NEIGHBORHOOD[27] = {
-    ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
-    ivec3(-1, -1,  0), ivec3(0, -1,  0), ivec3(1, -1,  0),
-    ivec3(-1, -1,  1), ivec3(0, -1,  1), ivec3(1, -1,  1),
-    ivec3(-1,  0, -1), ivec3(0,  0, -1), ivec3(1,  0, -1),
-    ivec3(-1,  0,  0), ivec3(0,  0,  0), ivec3(1,  0,  0),
-    ivec3(-1,  0,  1), ivec3(0,  0,  1), ivec3(1,  0,  1),
-    ivec3(-1,  1, -1), ivec3(0,  1, -1), ivec3(1,  1, -1),
-    ivec3(-1,  1,  0), ivec3(0,  1,  0), ivec3(1,  1,  0),
-    ivec3(-1,  1,  1), ivec3(0,  1,  1), ivec3(1,  1,  1)
+    ivec3(-1, -1, -1), ivec3(-1, -1,  0), ivec3(-1, -1,  1),
+    ivec3(-1,  0, -1), ivec3(-1,  0,  0), ivec3(-1,  0,  1),
+    ivec3(-1,  1, -1), ivec3(-1,  1,  0), ivec3(-1,  1,  1),
+    ivec3( 0, -1, -1), ivec3( 0, -1,  0), ivec3( 0, -1,  1),
+    ivec3( 0,  0, -1), ivec3( 0,  0,  0), ivec3( 0,  0,  1),
+    ivec3( 0,  1, -1), ivec3( 0,  1,  0), ivec3( 0,  1,  1),
+    ivec3( 1, -1, -1), ivec3( 1, -1,  0), ivec3( 1, -1,  1),
+    ivec3( 1,  0, -1), ivec3( 1,  0,  0), ivec3( 1,  0,  1),
+    ivec3( 1,  1, -1), ivec3( 1,  1,  0), ivec3( 1,  1,  1)
 };
 
 // Equation (10) from Harada
@@ -66,7 +66,7 @@ void main() {
     float density = particleMass * pow(kernelRadius * kernelRadius, 3) * kernelWeight;
 
     // search the particles of each neighboring bin
-    #pragma unroll 1
+    // #pragma unroll 1
     for (uint binIndex = 0; binIndex < 27; binIndex++) {
         const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
 

@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(5000);
+const int NUM_PARTICLES = static_cast<int>(100);
 
 class WaterCubeApp : public App {
 public:
@@ -40,8 +40,8 @@ void WaterCubeApp::setup() {
     run_once_ = false;
     running_ = true;
     reset_ = false;
-    size_ = 1.0f;
-    prev_time_ = 0.0;
+    size_ = 1.0;
+    prev_time_ = 0.0f;
 
     params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
     params_->addParam("Scene Rotation", &scene_rotation_);
