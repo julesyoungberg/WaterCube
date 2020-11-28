@@ -118,6 +118,7 @@ void util::printParticles(GLuint particle_buffer, int n) {
         std::string s = "p=<" + glm::to_string(p.position) + ">";
         s += " v=<" + glm::to_string(p.velocity) + ">";
         s += " d=" + std::to_string(p.density) + ", pr=" + std::to_string(p.pressure);
+        s += " n=" + std::to_string(p.neighbors);
         util::log("%s", s.c_str());
     }
 }
