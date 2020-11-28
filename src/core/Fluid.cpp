@@ -12,16 +12,17 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     grid_res_ = 1;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
-    particle_radius_ = 0.2f;
-    kernel_radius_ = 1.0f; // particle_radius_ * 4.0f;
+    particle_radius_ = 0.01f;
+    kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
-    particle_mass_ = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
+    // particle_mass = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
+    particle_mass_ = 0.08;
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 30.0f;
     rest_pressure_ = 0; // 100000.0f;
     render_mode_ = 0;
-    point_scale_ = 50.0f;
-    dt_ = 0.00012f;
+    point_scale_ = 650.0f;
+    dt_ = 0.0008f;
 }
 
 Fluid::~Fluid() {}
@@ -174,9 +175,11 @@ void Fluid::generateInitialParticles() {
                     break;
                 }
 
-                initial_particles_[index].position = vec3(x, y, z) * distance;
-                initial_particles_[index].position +=
-                    vec3(getRand() * 0.1 - 0.05, getRand() * 0.1 - 0.05, getRand() * 0.1 - 0.05);
+                initial_particles_[index].position =
+                    vec3(getRand() * size_, getRand() * size_, getRand() * size_);
+                // initial_particles_[index].position = vec3(x, y, z) * distance;
+                // initial_particles_[index].position +=
+                //     vec3(getRand() * 0.1 - 0.05, getRand() * 0.1 - 0.05, getRand() * 0.1 - 0.05);
             }
         }
     }
