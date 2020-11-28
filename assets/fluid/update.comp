@@ -147,8 +147,8 @@ void main() {
             // }
     
             // Equation (7) from Harada
-            // const vec3 velocityDiff = other.velocity - p.velocity;
-            // viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
+            const vec3 velocityDiff = other.velocity - p.velocity;
+            viscosityForce += particleMass * (velocityDiff / other.density) * Wvis(dist);
         }
     }
 
