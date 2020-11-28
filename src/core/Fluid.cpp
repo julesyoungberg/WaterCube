@@ -372,7 +372,7 @@ void Fluid::update(double time) {
     GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
     GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
 
-    util::printParticles(in_particles, debug_buffer_, 10, bin_size_);
+    // util::printParticles(in_particles, debug_buffer_, 10, bin_size_);
 
     sort_->run(in_particles, out_particles);
 
@@ -380,7 +380,7 @@ void Fluid::update(double time) {
     runUpdateProg(out_particles, float(time));
     // runAdvectProg(out_particles, float(time));
 
-    util::printParticles(out_particles, debug_buffer_, 10, bin_size_);
+    // util::printParticles(out_particles, debug_buffer_, 10, bin_size_);
 
     // marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }

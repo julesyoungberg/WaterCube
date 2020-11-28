@@ -286,13 +286,13 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
     } else {
         runScanProg();
     }
-    util::log("counted");
-    printGrids();
+    // util::log("counted");
+    // printGrids();
 
     clearCountBuffer();
     runReorderProg(in_particles, out_particles);
-    util::log("reordered");
-    printGrids();
+    // util::log("reordered");
+    // printGrids();
 }
 
 /**
