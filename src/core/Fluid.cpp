@@ -209,6 +209,11 @@ void Fluid::prepareParticleBuffers() {
     glVertexArrayVertexBuffer(vao2_, 0, particle_buffer2_, 0, sizeof(Particle));
     glVertexArrayAttribBinding(vao2_, 0, 0);
     glVertexArrayAttribFormat(vao2_, 0, 3, GL_FLOAT, GL_FALSE, 0);
+
+    // Neighbor count buffer
+    glCreateBuffers(1, &neighbor_count_);
+    std::vector<uint32_t> zeros(num_particles_, 0);
+    glNamedBufferStorage(neighbor_count_, num_particles_ * sizeof(uint32_t), zeros.data(), 0);
 }
 
 /**
@@ -299,6 +304,7 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, neighbor_count_);
 
     density_prog_->uniform("binSize", bin_size_);
     density_prog_->uniform("gridRes", grid_res_);
@@ -365,7 +371,7 @@ void Fluid::update(double time) {
     GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
     GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
 
-    util::printParticles(in_particles, 10);
+    util::printParticles(in_particles, neighbor_count_, 10);
 
     sort_->run(in_particles, out_particles);
 
@@ -373,7 +379,7 @@ void Fluid::update(double time) {
     runUpdateProg(out_particles, float(time));
     // runAdvectProg(out_particles, float(time));
 
-    util::printParticles(out_particles, 10);
+    util::printParticles(out_particles, neighbor_count_, 10);
 
     // marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
