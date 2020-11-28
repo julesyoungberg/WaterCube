@@ -60,7 +60,7 @@ void WaterCubeApp::setup() {
     fluid_->addParams(params_);
     fluid_->setup();
     fluid_->setCameraPosition(camera_pos);
-    fluid_->setLightPosition(vec3(size_ / 2.0f, -size_, 0));
+    fluid_->setLightPosition(vec3(size_ / 2.0f, -size_, size_));
 
     BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid_);
     CI_ASSERT(scene_->addObject(fluid_ref));

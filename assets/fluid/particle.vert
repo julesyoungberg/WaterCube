@@ -3,7 +3,7 @@
 const float FLOAT_MIN = 1.175494351e-38;
 const float MAX_DENSITY = 15000.0;
 const float MAX_SPEED = 10.0;
-const float MAX_PRESSURE = 800000.0;
+const float MAX_PRESSURE = 1000000.0;
 const vec3 PARTICLE_COLOR = vec3(0.1, 0.1, 0.5);
 
 out vec3 vColor;
@@ -50,7 +50,8 @@ void main() {
             break;
         default:
             const float normP = 1 - clamp(p.pressure / MAX_PRESSURE, 0, 1);
-            vColor = vec3(normP * 0.5, normP * 0.75, 1);
+            const float normS = clamp(length(p.velocity) / MAX_SPEED, 0, 1);
+            vColor = vec3(normP * 0.3 + normS * 0.2, normP * 0.3 + normS * 0.2 + 0.3, 0.6 + 0.4 * normS);
     }
     
     vec4 position = ciViewMatrix * vec4(p.position, 1);
