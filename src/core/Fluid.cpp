@@ -9,18 +9,18 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     size_ = 1.0f;
     num_particles_ = 1000;
     grid_res_ = 25; // lucky to be able to do this because of the particle radius at 0.01
-    gravity_strength_ = 450.0f;
+    gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
     kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
     particle_mass_ = particle_radius_ * 8.0f;
     viscosity_coefficient_ = 0.0101f;
-    stiffness_ = 30.0f;
+    stiffness_ = 200.0f;
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
-    dt_ = 0.0006f;
+    dt_ = 0.00012f;
 }
 
 Fluid::~Fluid() {}
