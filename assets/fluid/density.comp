@@ -25,6 +25,7 @@ layout(std430, binding = 3) restrict buffer Debug {
     uint debug[];
 };
 
+uniform float size;
 uniform float binSize;
 uniform int gridRes;
 uniform int numParticles;
@@ -52,6 +53,30 @@ const ivec3 NEIGHBORHOOD[27] = {
 float W(float r) {
     const float weight = 315.0 / (64.0 * 3.14 * pow(kernelRadius, 9));
     return pow(kernelRadius * kernelRadius - r * r, 3) * weight;
+}
+
+float wallDensity(vec3 p) {
+    float density = 0;
+
+    if (p.x < kernelRadius) {
+        density += particleMass * W(p.x);
+    } else if (p.x > size - kernelRadius) {
+        density += particleMass * W(size - p.x);
+    }
+
+    if (p.y < kernelRadius) {
+        density += particleMass * W(p.y);
+    } else if (p.y > size - kernelRadius) {
+        density += particleMass * W(size - p.y);
+    }
+
+    if (p.z < kernelRadius) {
+        density += particleMass * W(p.z);
+    } else if (p.y > size - kernelRadius) {
+        density += particleMass * W(size - p.z);
+    }
+
+    return density;
 }
 
 void main() {
@@ -95,12 +120,11 @@ void main() {
             }
 
             // Equation (4) from Harada
-            d++;
             density += particleMass * W(dist);
         }
     }
 
-    p.density = density;
+    p.density = density + wallDensity(p.position);
 
     // Equation (5) from Harada
     p.pressure = restPressure + stiffness * (density - restDensity);

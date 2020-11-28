@@ -9,7 +9,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     size_ = 1.0f;
     num_particles_ = 1000;
     grid_res_ = 2;
-    gravity_strength_ = 900.0f;
+    gravity_strength_ = 750.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.2f; // 0.01f;
     kernel_radius_ = particle_radius_ * 4.0f;
@@ -20,7 +20,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_pressure_ = 3;
     render_mode_ = 3;
     point_scale_ = 75.0f; // 650.0f;
-    dt_ = 0.0003f;        // 0.0008f;
+    dt_ = 0.0012f;
 }
 
 Fluid::~Fluid() {}
@@ -306,6 +306,7 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, debug_buffer_);
 
+    density_prog_->uniform("size", size_);
     density_prog_->uniform("binSize", bin_size_);
     density_prog_->uniform("gridRes", grid_res_);
     density_prog_->uniform("numParticles", num_particles_);
