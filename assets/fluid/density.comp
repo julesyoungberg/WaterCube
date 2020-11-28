@@ -21,10 +21,6 @@ layout(std430, binding = 2) restrict readonly buffer Offsets {
     uint offsets[];
 };
 
-layout(std430, binding = 2) restrict readonly buffer Sorted {
-    uint sorted[];
-};
-
 uniform float binSize;
 uniform int gridRes;
 uniform int numParticles;
