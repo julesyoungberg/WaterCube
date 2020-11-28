@@ -21,7 +21,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
-    dt_ = 0.0005f;
+    dt_ = 0.0003f;
 }
 
 Fluid::~Fluid() {}
