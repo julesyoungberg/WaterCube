@@ -19,7 +19,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     stiffness_ = 30.0f;
     rest_pressure_ = 100000.0f;
     render_mode_ = 0;
-    point_scale_ = 650.0f;
+    point_scale_ = 300.0f;
     dt_ = 0.0012f;
 }
 

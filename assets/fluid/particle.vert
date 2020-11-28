@@ -3,7 +3,7 @@
 const float FLOAT_MIN = 1.175494351e-38;
 const float MAX_DENSITY = 15000.0;
 const float MAX_SPEED = 10.0;
-const float MAX_PRESSURE = 500000.0;
+const float MAX_PRESSURE = 800000.0;
 const vec3 PARTICLE_COLOR = vec3(0.1, 0.1, 0.5);
 
 out vec3 vColor;

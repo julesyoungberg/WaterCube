@@ -129,7 +129,7 @@ void main() {
     vec3 pos = p.position + vel * dt;
     
     const float wallDamping = 0.3;
-    const float border = 0.01;
+    const float border = 0.001;
 
     if (pos.x < border) {
         vel.x *= -wallDamping;
