@@ -156,7 +156,7 @@ void main() {
     }
 
     const float level = size / 2.0;
-    const float s = 0.003;
+    const float s = 0.005;
     if (pos.y < level) {
         pos.y = (1 - s) * pos.y + s * level;
     }
