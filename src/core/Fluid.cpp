@@ -16,11 +16,11 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_density_ = 1000.0f;
     particle_mass_ = particle_radius_ * 8.0f;
     viscosity_coefficient_ = 0.0101f;
-    stiffness_ = 200.0f;
+    stiffness_ = 30.0f;
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
-    dt_ = 0.00012f;
+    dt_ = 0.0002f;
 }
 
 Fluid::~Fluid() {}
@@ -130,9 +130,9 @@ void Fluid::addParams(params::InterfaceGlRef p) {
  */
 void Fluid::setRotation(quat r) {
     rotation_ = r;
-    mat4 rotation_matrix = glm::toMat4(r);
+    mat4 rotation_matrix = glm::toMat4(-r);
     vec4 rotated = rotation_matrix * vec4(0, -1, 0, 1);
-    gravity_direction_ = vec3(rotated);
+    // gravity_direction_ = vec3(rotated);
 }
 
 /**

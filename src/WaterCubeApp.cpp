@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(100000);
+const int NUM_PARTICLES = static_cast<int>(1000);
 
 class WaterCubeApp : public App {
 public:
@@ -78,7 +78,7 @@ void WaterCubeApp::update() {
     }
 
     // sometimes gravity gets inverted
-    // fluid_->setRotation(scene_rotation_);
+    fluid_->setRotation(scene_rotation_);
 
     double time = getElapsedSeconds();
     scene_->update(time - prev_time_);
