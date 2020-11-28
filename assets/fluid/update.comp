@@ -2,6 +2,8 @@
 
 layout(local_size_x = 128, local_size_y = 1, local_size_z = 1) in;
 
+const vec3 MAX_SPEED = vec3(1000);
+
 struct Particle {
     vec3 position;
     float density;
@@ -158,7 +160,7 @@ void main() {
 
     // find accelaration and integrate for next velocity
     const vec3 acceleration = force / (p.density + 1e-16);
-    vec3 vel = p.velocity + acceleration * dt;
+    vec3 vel = clamp(p.velocity + acceleration * dt, -MAX_SPEED, MAX_SPEED);
     vec3 pos = p.position + vel * dt;
     
     const float wallDamping = 0.3;
