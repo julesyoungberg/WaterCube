@@ -21,10 +21,11 @@ layout(std430, binding = 2) restrict readonly buffer Offsets {
     uint offsets[];
 };
 
-layout(std430, binding = 2) restrict readonly buffer Sorted {
-    uint sorted[];
+layout(std430, binding = 3) restrict buffer Debug {
+    uint debug[];
 };
 
+uniform float size;
 uniform float binSize;
 uniform int gridRes;
 uniform int numParticles;
@@ -37,21 +38,45 @@ uniform float restPressure;
 
 // neighborhood coordinate offsets
 const ivec3 NEIGHBORHOOD[27] = {
-    ivec3(-1, -1, -1), ivec3(0, -1, -1), ivec3(1, -1, -1),
-    ivec3(-1, -1,  0), ivec3(0, -1,  0), ivec3(1, -1,  0),
-    ivec3(-1, -1,  1), ivec3(0, -1,  1), ivec3(1, -1,  1),
-    ivec3(-1,  0, -1), ivec3(0,  0, -1), ivec3(1,  0, -1),
-    ivec3(-1,  0,  0), ivec3(0,  0,  0), ivec3(1,  0,  0),
-    ivec3(-1,  0,  1), ivec3(0,  0,  1), ivec3(1,  0,  1),
-    ivec3(-1,  1, -1), ivec3(0,  1, -1), ivec3(1,  1, -1),
-    ivec3(-1,  1,  0), ivec3(0,  1,  0), ivec3(1,  1,  0),
-    ivec3(-1,  1,  1), ivec3(0,  1,  1), ivec3(1,  1,  1)
+    ivec3(-1, -1, -1), ivec3(-1, -1,  0), ivec3(-1, -1,  1),
+    ivec3(-1,  0, -1), ivec3(-1,  0,  0), ivec3(-1,  0,  1),
+    ivec3(-1,  1, -1), ivec3(-1,  1,  0), ivec3(-1,  1,  1),
+    ivec3( 0, -1, -1), ivec3( 0, -1,  0), ivec3( 0, -1,  1),
+    ivec3( 0,  0, -1), ivec3( 0,  0,  0), ivec3( 0,  0,  1),
+    ivec3( 0,  1, -1), ivec3( 0,  1,  0), ivec3( 0,  1,  1),
+    ivec3( 1, -1, -1), ivec3( 1, -1,  0), ivec3( 1, -1,  1),
+    ivec3( 1,  0, -1), ivec3( 1,  0,  0), ivec3( 1,  0,  1),
+    ivec3( 1,  1, -1), ivec3( 1,  1,  0), ivec3( 1,  1,  1)
 };
 
 // Equation (10) from Harada
 float W(float r) {
     const float weight = 315.0 / (64.0 * 3.14 * pow(kernelRadius, 9));
     return pow(kernelRadius * kernelRadius - r * r, 3) * weight;
+}
+
+float wallDensity(vec3 p) {
+    float density = 0;
+
+    if (p.x < kernelRadius) {
+        density += particleMass * W(p.x);
+    } else if (p.x > size - kernelRadius) {
+        density += particleMass * W(size - p.x);
+    }
+
+    if (p.y < kernelRadius) {
+        density += particleMass * W(p.y);
+    } else if (p.y > size - kernelRadius) {
+        density += particleMass * W(size - p.y);
+    }
+
+    if (p.z < kernelRadius) {
+        density += particleMass * W(p.z);
+    } else if (p.y > size - kernelRadius) {
+        density += particleMass * W(size - p.z);
+    }
+
+    return density;
 }
 
 void main() {
@@ -61,12 +86,13 @@ void main() {
     }
 
     Particle p = particles[particleID];
-    const ivec3 coord = ivec3(p.position / binSize);
+    const ivec3 coord = clamp(ivec3(p.position / binSize), ivec3(0), ivec3(gridRes - 1));
 
     float density = particleMass * pow(kernelRadius * kernelRadius, 3) * kernelWeight;
+    uint d = 0;
 
     // search the particles of each neighboring bin
-    #pragma unroll 1
+    // #pragma unroll 1
     for (uint binIndex = 0; binIndex < 27; binIndex++) {
         const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
 
@@ -75,7 +101,7 @@ void main() {
             continue;
         }
 
-        const uint index = nc.z * gridRes * gridRes + nc.y * gridRes + nc.z;
+        const uint index = nc.z * gridRes * gridRes + nc.y * gridRes + nc.x;
         const uint count = counts[index];
         const uint offset = offsets[index];
 
@@ -98,7 +124,7 @@ void main() {
         }
     }
 
-    p.density = density;
+    p.density = density + wallDensity(p.position);
 
     // Equation (5) from Harada
     p.pressure = restPressure + stiffness * (density - restDensity);
@@ -107,4 +133,5 @@ void main() {
     // p.pressure = (stiffenss * restDensity / pressureConst) * (pow(density / restDensity, pressureConst) - 1);
 
     particles[particleID] = p;
+    debug[particleID] = d;
 }

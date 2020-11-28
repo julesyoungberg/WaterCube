@@ -5,24 +5,22 @@
 
 using namespace core;
 
-// https://scicomp.stackexchange.com/questions/14450/how-to-get-proper-parameters-of-sph-simulation
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     num_particles_ = 1000;
-    grid_res_ = 1;
-    gravity_strength_ = 900.0f;
+    grid_res_ = 25;
+    gravity_strength_ = 750.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
     kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
-    // particle_mass = 4.0f * pow(particle_radius_, 3) * M_PI * rest_density_ / (3.0f * 50.0f);
-    particle_mass_ = 0.08;
+    particle_mass_ = particle_radius_ * 8.0f;
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 30.0f;
-    rest_pressure_ = 3;
+    rest_pressure_ = 1000.0f;
     render_mode_ = 0;
     point_scale_ = 650.0f;
-    dt_ = 0.0008f;
+    dt_ = 0.0012f;
 }
 
 Fluid::~Fluid() {}
@@ -159,7 +157,8 @@ float getRand() { return (float)rand() / RAND_MAX; }
  * Generates a vector of particles used as the simulations initial state
  */
 void Fluid::generateInitialParticles() {
-    srand((unsigned)time(NULL));
+    // srand((unsigned)time(NULL));
+    srand(0);
 
     util::log("creating particles");
     int n = num_particles_;
@@ -210,6 +209,11 @@ void Fluid::prepareParticleBuffers() {
     glVertexArrayVertexBuffer(vao2_, 0, particle_buffer2_, 0, sizeof(Particle));
     glVertexArrayAttribBinding(vao2_, 0, 0);
     glVertexArrayAttribFormat(vao2_, 0, 3, GL_FLOAT, GL_FALSE, 0);
+
+    // debug buffer
+    glCreateBuffers(1, &debug_buffer_);
+    std::vector<uint32_t> zeros(num_particles_, 0);
+    glNamedBufferStorage(debug_buffer_, num_particles_ * sizeof(uint32_t), zeros.data(), 0);
 }
 
 /**
@@ -300,8 +304,9 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, sort_->getSortedBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, debug_buffer_);
 
+    density_prog_->uniform("size", size_);
     density_prog_->uniform("binSize", bin_size_);
     density_prog_->uniform("gridRes", grid_res_);
     density_prog_->uniform("numParticles", num_particles_);
@@ -325,7 +330,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, sort_->getSortedBuffer());
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, debug_buffer_);
 
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
@@ -338,7 +343,6 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
     update_prog_->uniform("viscosityWeight", viscosity_weight_);
     update_prog_->uniform("pressureWeight", pressure_weight_);
-    update_prog_->uniform("particleRadius", particle_radius_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
@@ -368,15 +372,17 @@ void Fluid::update(double time) {
     GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
     GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
 
+    // util::printParticles(in_particles, debug_buffer_, 10, bin_size_);
+
     sort_->run(in_particles, out_particles);
 
     runDensityProg(out_particles);
     runUpdateProg(out_particles, float(time));
     // runAdvectProg(out_particles, float(time));
 
-    util::printParticles(particle_buffer1_, 10);
+    // util::printParticles(out_particles, debug_buffer_, 10, bin_size_);
 
-    marching_cube_->update(particle_buffer1_, sort_->getCountBuffer(), sort_->getOffsetBuffer());
+    // marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**
