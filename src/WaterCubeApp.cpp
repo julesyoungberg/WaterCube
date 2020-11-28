@@ -17,7 +17,7 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(1000);
+const int NUM_PARTICLES = static_cast<int>(5000);
 
 class WaterCubeApp : public App {
 public:

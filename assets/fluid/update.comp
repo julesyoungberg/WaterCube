@@ -53,13 +53,8 @@ const ivec3 NEIGHBORHOOD[27] = {
 
 // Equation (8) from Harada
 vec3 Wpress(vec3 r, float d) {    
-    // This kernel causes the particles to repel
     const float weight = -45.0 / (3.14 * pow(kernelRadius, 6));
     return pow(kernelRadius - d, 2) * (r / d) * weight;
-    // This kernel causes the particles to gravitate towards each other
-    // const float weight = 45 / (3.14 * pow(kernelRadius, 6));
-    // return pow(kernelRadius - d, 3) * (r / d) * weight;
-    
 }
 
 // Equation (9) from Harada
@@ -110,12 +105,6 @@ void main() {
             if (dist >= kernelRadius) {
                 continue;
             }
-
-            // if (dist < particleRadius && other.position.y < p.position.y) {
-            //     const vec3 dir = normalize(r);
-            //     const float strength = dot(p.velocity, dir);
-            //     externalForces += dir * -strength * p.density / 2.0;
-            // }
 
             // Equation (6) from Harada
             const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);

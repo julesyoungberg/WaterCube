@@ -3,7 +3,6 @@
 const float AMBIENT_STRENGTH = 0.5;
 const float SPECULAR_STRENGTH = 0.6;
 const float SHININESS = 32.0;
-const vec3 PARTICLE_COLOR = vec3(0.2, 0.2, 1);
 
 in vec3 vPosition;
 in vec3 vColor;
@@ -14,11 +13,6 @@ uniform vec3 cameraPos;
 uniform int renderMode;
 
 void main() {
-    if (renderMode > 0) {
-        outColor = vec4(vColor, 1);
-        return;
-    }
-
     // calculate normal from texture coordinates
     vec3 N;
     N.xy = gl_PointCoord * 2.0 - vec2(1.0);    
@@ -29,7 +23,7 @@ void main() {
     N.z = sqrt(1.0 - mag);
 
     // calculate lighting
-    vec3 color = PARTICLE_COLOR;
+    vec3 color = vColor;
 	const vec3 lightDir = normalize(lightPos - vPosition);
 
     // Ambient

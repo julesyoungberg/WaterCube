@@ -19,7 +19,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     particle_mass_ = 0.08;
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 30.0f;
-    rest_pressure_ = 0; // 100000.0f;
+    rest_pressure_ = 3;
     render_mode_ = 0;
     point_scale_ = 650.0f;
     dt_ = 0.0008f;
@@ -395,7 +395,6 @@ void Fluid::renderParticles() {
     render_particles_prog_->uniform("size", size_);
     render_particles_prog_->uniform("binSize", bin_size_);
     render_particles_prog_->uniform("gridRes", grid_res_);
-    render_particles_prog_->uniform("pointRadius", pointRadius);
     render_particles_prog_->uniform("lightPos", light_position_);
     render_particles_prog_->uniform("cameraPos", camera_position_);
 
