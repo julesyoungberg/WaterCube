@@ -36,7 +36,6 @@ uniform float kernelRadius;
 uniform float viscosityCoefficient;
 uniform float viscosityWeight;
 uniform float pressureWeight;
-uniform float particleRadius;
 
 // neighborhood coordinate offsets
 const ivec3 NEIGHBORHOOD[27] = {

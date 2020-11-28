@@ -11,15 +11,15 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     grid_res_ = 2;
     gravity_strength_ = 750.0f;
     gravity_direction_ = vec3(0, -1, 0);
-    particle_radius_ = 0.2f; // 0.01f;
+    particle_radius_ = 0.01f;
     kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
     particle_mass_ = particle_radius_ * 8.0f;
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 30.0f;
-    rest_pressure_ = 3;
+    rest_pressure_ = 1000.0f;
     render_mode_ = 3;
-    point_scale_ = 75.0f; // 650.0f;
+    point_scale_ = 650.0f;
     dt_ = 0.0012f;
 }
 
@@ -343,7 +343,6 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
     update_prog_->uniform("viscosityWeight", viscosity_weight_);
     update_prog_->uniform("pressureWeight", pressure_weight_);
-    update_prog_->uniform("particleRadius", particle_radius_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
