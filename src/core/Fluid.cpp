@@ -17,7 +17,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     particle_mass_ = particle_radius_ * 8.0f;
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 30.0f;
-    rest_pressure_ = 100000.0f;
+    rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
     dt_ = 0.0006f;
