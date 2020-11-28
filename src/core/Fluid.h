@@ -115,6 +115,7 @@ protected:
 
     GLuint particle_buffer1_, particle_buffer2_;
     GLuint vao1_, vao2_;
+    GLuint debug_buffer_;
 };
 
 } // namespace core

@@ -110,14 +110,17 @@ std::vector<vec3> util::getVecs(gl::Texture3dRef tex, int num_items) {
     return data;
 }
 
-void util::printParticles(GLuint particle_buffer, int n) {
-    std::vector<Particle> particles = util::getParticles(particle_buffer, n);
+void util::printParticles(GLuint particle_buffer, GLuint debug_buffer, int n, float bin_size) {
+    auto particles = util::getParticles(particle_buffer, n);
+    auto debug = util::getUints(debug_buffer, n);
     util::log("-----Particles-----");
     for (int i = 0; i < n; i++) {
         Particle p = particles[i];
         std::string s = "p=<" + glm::to_string(p.position) + ">";
         s += " v=<" + glm::to_string(p.velocity) + ">";
         s += " d=" + std::to_string(p.density) + ", pr=" + std::to_string(p.pressure);
+        s += " binCoord=" + glm::to_string(ivec3(p.position / bin_size));
+        s += " debug=" + std::to_string(debug[i]);
         util::log("%s", s.c_str());
     }
 }
