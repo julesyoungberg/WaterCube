@@ -1,9 +1,10 @@
 # WaterCube
 
-A GPU powered SPH water simulation using Cinder.
+A GPU powered SPH water simulation built on OpenGL with Cinder.
 
 ## Setup
 
+No macs sorry, you need modern OpenGL with compute shaders to run this.
 
 ```shell
 git clone --recursive https://github.com/julesyoungberg/WaterCube
