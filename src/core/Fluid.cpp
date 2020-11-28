@@ -288,7 +288,7 @@ FluidRef Fluid::setup() {
                          ->numItems(num_particles_)
                          ->threshold(0.5f)
                          ->sortingResolution(grid_res_)
-                         ->subdivisions(5);
+                         ->subdivisions(1);
     marching_cube_->setup();
 
     util::log("fluid created");
