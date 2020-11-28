@@ -107,7 +107,7 @@ void main() {
     vec3 externalForces = gravity * p.density;
 
     // search the particles of each neighboring bin
-    // #pragma unroll 1
+    #pragma unroll 1
     for (uint binIndex = 0; binIndex < 27; binIndex++) {
         const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
 

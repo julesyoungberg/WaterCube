@@ -8,7 +8,8 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     num_particles_ = 1000;
-    grid_res_ = 25; // lucky to be able to do this because of the particle radius at 0.01
+    // must be less than (size / kernel_radius - b) where b is a positive int
+    grid_res_ = 21;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
@@ -16,11 +17,11 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_density_ = 1000.0f;
     particle_mass_ = particle_radius_ * 8.0f;
     viscosity_coefficient_ = 0.0101f;
-    stiffness_ = 30.0f;
+    stiffness_ = 200.0f;
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
-    dt_ = 0.0002f;
+    dt_ = 0.0003f;
 }
 
 Fluid::~Fluid() {}
@@ -132,7 +133,7 @@ void Fluid::setRotation(quat r) {
     rotation_ = r;
     mat4 rotation_matrix = glm::toMat4(-r);
     vec4 rotated = rotation_matrix * vec4(0, -1, 0, 1);
-    // gravity_direction_ = vec3(rotated);
+    gravity_direction_ = vec3(rotated);
 }
 
 /**

@@ -92,7 +92,7 @@ void main() {
     uint d = 0;
 
     // search the particles of each neighboring bin
-    // #pragma unroll 1
+    #pragma unroll 1
     for (uint binIndex = 0; binIndex < 27; binIndex++) {
         const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
 
