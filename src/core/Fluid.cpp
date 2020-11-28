@@ -8,7 +8,7 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     num_particles_ = 1000;
-    grid_res_ = 2;
+    grid_res_ = 25;
     gravity_strength_ = 750.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
@@ -18,7 +18,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     viscosity_coefficient_ = 0.0101f;
     stiffness_ = 30.0f;
     rest_pressure_ = 1000.0f;
-    render_mode_ = 3;
+    render_mode_ = 0;
     point_scale_ = 650.0f;
     dt_ = 0.0012f;
 }
