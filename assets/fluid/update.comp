@@ -52,13 +52,20 @@ const ivec3 NEIGHBORHOOD[27] = {
 };
 
 // Equation (8) from Harada
-vec3 Wpress(vec3 r, float d) {
-    return pow(kernelRadius - d, 3) * (r / d) * pressureWeight;
+vec3 Wpress(vec3 r, float d) {    
+    // This kernel causes the particles to repel
+    const float weight = -45.0 / (3.14 * pow(kernelRadius, 6));
+    return pow(kernelRadius - d, 2) * (r / d) * weight;
+    // This kernel causes the particles to gravitate towards each other
+    // const float weight = 45 / (3.14 * pow(kernelRadius, 6));
+    // return pow(kernelRadius - d, 3) * (r / d) * weight;
+    
 }
 
 // Equation (9) from Harada
 float Wvis(float r) {
-    return (kernelRadius - r) * viscosityWeight;
+    const float weight = 45.0 / (3.14 * pow(kernelRadius, 6));
+    return (kernelRadius - r) * weight;
 }
 
 void main() {
@@ -112,11 +119,11 @@ void main() {
 
             // Equation (6) from Harada
             const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);
-            if (pressure > 0) {
-                // calculate pressure weight as a vector
-                vec3 mPressureWeight = Wpress(r, dist + 1e-16);
-                pressureForce -= particleMass * pressure * mPressureWeight;
-            }
+            // if (pressure > 0) {
+            // calculate pressure weight as a vector
+            vec3 mPressureWeight = Wpress(r, dist + 1e-16);
+            pressureForce -= particleMass * pressure * mPressureWeight;
+            // }
     
             // Equation (7) from Harada
             // const vec3 velocityDiff = other.velocity - p.velocity;

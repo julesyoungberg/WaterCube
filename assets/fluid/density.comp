@@ -50,7 +50,8 @@ const ivec3 NEIGHBORHOOD[27] = {
 
 // Equation (10) from Harada
 float W(float r) {
-    return pow(kernelRadius * kernelRadius - r * r, 3) * kernelWeight;
+    const float weight = 315.0 / (64.0 * 3.14 * pow(kernelRadius, 9));
+    return pow(kernelRadius * kernelRadius - r * r, 3) * weight;
 }
 
 void main() {
@@ -101,6 +102,9 @@ void main() {
 
     // Equation (5) from Harada
     p.pressure = restPressure + stiffness * (density - restDensity);
+    // Alternative presure computation (Desbrun and Cani, 1996)
+    // const float pressureConst = 3;
+    // p.pressure = (stiffenss * restDensity / pressureConst) * (pow(density / restDensity, pressureConst) - 1);
 
     particles[particleID] = p;
 }
