@@ -44,7 +44,7 @@ void WaterCubeApp::setup() {
     prev_time_ = 0.0f;
 
     params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
-    params_->addParam("Scene Rotation", &scene_rotation_);
+    params_->addParam("Rotation", &scene_rotation_);
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
     vec3 camera_pos = vec3(0, size_ / 2.0, size_ * 3) / 1.5f;
