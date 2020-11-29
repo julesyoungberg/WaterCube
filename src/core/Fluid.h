@@ -59,6 +59,7 @@ public:
     void setCameraPosition(vec3 p);
     void setLightPosition(vec3 p);
     void setRotation(quat r);
+    void setMouseRay(Ray r);
 
     FluidRef setup();
     void update(double time) override;
@@ -101,7 +102,11 @@ protected:
     quat rotation_;
 
     vec3 position_, camera_position_, gravity_direction_, light_position_;
+
     ContainerRef container_;
+
+    Ray mouse_ray_;
+
     std::vector<Particle> initial_particles_;
     std::vector<Plane> boundaries_;
     std::vector<ivec4> grid_particles_;

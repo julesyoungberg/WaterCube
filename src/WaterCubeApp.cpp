@@ -25,14 +25,21 @@ public:
     void update() override;
     void draw() override;
     void keyDown(KeyEvent event) override;
+    void mouseMove(MouseEvent event) override;
+
+private:
+    Ray getMouseRay();
 
     bool run_once_, running_, reset_;
     double prev_time_;
     float size_;
+
+    ivec2 mouse_position_;
+    quat scene_rotation_;
+
     CameraPersp cam_;
     SceneRef scene_;
     params::InterfaceGlRef params_;
-    quat scene_rotation_;
     FluidRef fluid_;
 };
 
@@ -66,6 +73,14 @@ void WaterCubeApp::setup() {
     CI_ASSERT(scene_->addObject(fluid_ref));
 }
 
+Ray WaterCubeApp::getMouseRay() {
+    // Generate a ray from the camera into our world. Note that we have to
+    // flip the vertical coordinate.
+    float u = mouse_position_.x / (float)getWindowWidth();
+    float v = mouse_position_.y / (float)getWindowHeight();
+    return cam_.generateRay(u, 1.0f - v, cam_.getAspectRatio());
+}
+
 void WaterCubeApp::update() {
     if (!running_) {
         if (reset_) {
@@ -77,8 +92,8 @@ void WaterCubeApp::update() {
         return;
     }
 
-    // sometimes gravity gets inverted
     fluid_->setRotation(scene_rotation_);
+    fluid_->setMouseRay(getMouseRay());
 
     double time = getElapsedSeconds();
     scene_->update(time - prev_time_);
@@ -115,6 +130,8 @@ void WaterCubeApp::keyDown(KeyEvent event) {
         reset_ = true;
     }
 }
+
+void WaterCubeApp::mouseMove(MouseEvent event) { mouse_position_ = event.getPos(); }
 
 CINDER_APP(WaterCubeApp, RendererGl,
            [](App::Settings* settings) { settings->setWindowSize(1920, 1080); })

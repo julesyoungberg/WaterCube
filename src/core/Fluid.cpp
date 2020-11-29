@@ -1,12 +1,14 @@
 #include "./Fluid.h"
 
 #include <glm/gtx/quaternion.hpp>
+#include <glm/gtx/string_cast.hpp>
 #include <time.h>
 
 using namespace core;
 
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
+    position_ = -vec3(size_ / 2.0f);
     num_particles_ = 1000;
     // must be less than (size / kernel_radius - b) where b is a positive int
     grid_res_ = 21;
@@ -137,10 +139,19 @@ void Fluid::setRotation(quat r) {
 }
 
 /**
- * set camera position and update children
+ * update mouse ray in model space
+ */
+void Fluid::setMouseRay(Ray r) {
+    mouse_ray_ = r;
+    mat4 matrix = glm::translate(position_);
+    mouse_ray_.transform(matrix);
+}
+
+/**
+ * update camera position in model space
  */
 void Fluid::setCameraPosition(vec3 p) {
-    camera_position_ = p - vec3(size_ / 2.0f);
+    camera_position_ = p + position_;
     marching_cube_->setCameraPosition(camera_position_);
 }
 
@@ -416,8 +427,7 @@ void Fluid::draw() {
     gl::enableDepthRead();
     gl::enableDepthWrite();
     gl::pushMatrices();
-    vec3 offset = vec3(-size_ / 2.0f);
-    gl::translate(offset.x, offset.y, offset.z);
+    gl::translate(position_.x, position_.y, position_.z);
 
     if (render_mode_ == 4) {
         sort_->renderGrid(size_);
