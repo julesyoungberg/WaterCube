@@ -395,7 +395,7 @@ void Fluid::drawLight() {
     gl::pointSize(10);
 
     gl::begin(GL_POINTS);
-    gl::vertex(vec3(light_position_));
+    gl::vertex(getRelativeLightPosition());
     gl::end();
 }
 
@@ -447,8 +447,8 @@ void Fluid::draw() {
     }
 
     container_->draw();
-    drawGravity();
-    drawLight();
+    // drawGravity();
+    // drawLight();
 
     gl::popMatrices();
 }

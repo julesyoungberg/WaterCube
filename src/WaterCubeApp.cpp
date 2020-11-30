@@ -46,7 +46,7 @@ void WaterCubeApp::setup() {
     prev_time_ = 0.0f;
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
-    vec3 camera_pos = vec3(0, size_ / 2.0, size_ * 3) / 1.5f;
+    vec3 camera_pos = vec3(0, 0, size_ * 2);
     cam_.lookAt(camera_pos, vec3(0, 0, 0));
 
     gl::enableDepthWrite();
@@ -58,7 +58,7 @@ void WaterCubeApp::setup() {
     fluid_ = Fluid::create("fluid");
     fluid_->setup();
     fluid_->setCameraPosition(camera_pos);
-    fluid_->setLightPosition(vec3(size_ / 2.0f, -size_, size_));
+    fluid_->setLightPosition(vec3(0, size_ / 2.0f, size_));
 
     BaseObjectRef fluid_ref = std::dynamic_pointer_cast<BaseObject, Fluid>(fluid_);
     CI_ASSERT(scene_->addObject(fluid_ref));
