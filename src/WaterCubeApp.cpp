@@ -7,7 +7,6 @@
 #include "cinder/app/RendererGl.h"
 #include "cinder/gl/Shader.h"
 #include "cinder/gl/gl.h"
-#include "cinder/params/Params.h"
 
 #include "./core/Fluid.h"
 #include "./core/Scene.h"
@@ -36,7 +35,6 @@ private:
 
     CameraPersp cam_;
     SceneRef scene_;
-    params::InterfaceGlRef params_;
     FluidRef fluid_;
 };
 
@@ -46,8 +44,6 @@ void WaterCubeApp::setup() {
     reset_ = false;
     size_ = 1.0;
     prev_time_ = 0.0f;
-
-    params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
     vec3 camera_pos = vec3(0, size_ / 2.0, size_ * 3) / 1.5f;
@@ -60,7 +56,6 @@ void WaterCubeApp::setup() {
     scene_ = Scene::create();
 
     fluid_ = Fluid::create("fluid");
-    fluid_->addParams(params_);
     fluid_->setup();
     fluid_->setCameraPosition(camera_pos);
     fluid_->setLightPosition(vec3(size_ / 2.0f, -size_, size_));
@@ -106,7 +101,6 @@ void WaterCubeApp::draw() {
     gl::setMatrices(cam_);
 
     scene_->draw();
-    params_->draw();
 
     vec2 window = app::getWindowSize();
     gl::setMatricesWindow(window);

@@ -23,6 +23,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     point_scale_ = 300.0f;
     dt_ = 0.0002f;
     rotate_gravity_ = false;
+    createParams();
 }
 
 Fluid::~Fluid() {}
@@ -85,15 +86,16 @@ FluidRef Fluid::gravityStrength(float g) {
 /**
  * setup GUI configuration parameters
  */
-void Fluid::addParams(params::InterfaceGlRef p) {
-    p->addParam("Rotation", &rotation_);
-    p->addParam("Render Mode", &render_mode_, "min=0 max=9 step=1");
-    p->addParam("Viscosity", &viscosity_coefficient_, "min=0.0 max=1000.0 step=10.0");
-    p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=10.0");
-    p->addParam("Rest Density", &rest_density_, "min=0.0 max=2000.0 step=100.0");
-    p->addParam("Rest Pressure", &rest_pressure_, "min=0.0 max=100000.0 step=100.0");
-    p->addParam("Gravity Strength", &gravity_strength_, "min=0.0 max=1000.0 step=10.0");
-    p->addParam("Rotate Gravity", &rotate_gravity_);
+void Fluid::createParams() {
+    params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
+    params_->addParam("Rotation", &rotation_);
+    params_->addParam("Render Mode", &render_mode_, "min=0 max=9 step=1");
+    params_->addParam("Viscosity", &viscosity_coefficient_, "min=0.0 max=1000.0 step=10.0");
+    params_->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=10.0");
+    params_->addParam("Rest Density", &rest_density_, "min=0.0 max=2000.0 step=100.0");
+    params_->addParam("Rest Pressure", &rest_pressure_, "min=0.0 max=100000.0 step=100.0");
+    params_->addParam("Gravity Strength", &gravity_strength_, "min=0.0 max=1000.0 step=10.0");
+    params_->addParam("Rotate Gravity", &rotate_gravity_);
 }
 
 /**
@@ -397,6 +399,8 @@ void Fluid::renderParticles() {
  * Draw simulation logic
  */
 void Fluid::draw() {
+    params_->draw();
+
     gl::enableDepthRead();
     gl::enableDepthWrite();
     gl::pushMatrices();

@@ -48,8 +48,6 @@ public:
     FluidRef gravityStrength(float g);
     FluidRef renderMode(int m);
 
-    void addParams(params::InterfaceGlRef p);
-
     void setCameraPosition(vec3 p);
     void setLightPosition(vec3 p);
     void setRotation(quat r);
@@ -63,6 +61,7 @@ public:
     static FluidRef create(const std::string& name) { return std::make_shared<Fluid>(name); }
 
 protected:
+    void createParams();
     void generateInitialParticles();
     void prepareParticleBuffers();
     void prepareBuffers();
@@ -132,6 +131,8 @@ protected:
     GLuint particle_buffer2_;
     GLuint vao1_, vao2_;
     GLuint debug_buffer_;
+
+    params::InterfaceGlRef params_;
 };
 
 } // namespace core
