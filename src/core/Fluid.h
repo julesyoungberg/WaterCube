@@ -39,20 +39,14 @@ public:
     FluidRef numParticles(int n);
     FluidRef gridRes(int r);
     FluidRef size(float s);
-    FluidRef kernelRadius(float r);
-    FluidRef particleMass(float m);
     FluidRef particleRadius(float r);
     FluidRef viscosityCoefficient(float c);
-    FluidRef viscosityWeight(float w);
-    FluidRef pressureWeight(float w);
-    FluidRef kernelWeight(float w);
     FluidRef stiffness(float s);
     FluidRef restDensity(float d);
     FluidRef restPressure(float p);
     FluidRef position(vec3 p);
     FluidRef gravityStrength(float g);
     FluidRef renderMode(int m);
-    FluidRef sortInterval(int i);
 
     void addParams(params::InterfaceGlRef p);
 
@@ -83,25 +77,34 @@ protected:
 
     FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
 
-    int num_particles_, grid_res_;
-    int num_work_groups_, num_bins_;
+    int num_particles_;
+    int grid_res_;
+    int num_bins_;
+    int num_work_groups_;
     int render_mode_;
-    int sort_interval_;
 
-    float size_, bin_size_, kernel_radius_;
-    float particle_mass_, particle_radius_;
+    float size_;
+    float bin_size_;
+    float kernel_radius_;
+    float particle_mass_;
+    float particle_radius_;
     float viscosity_coefficient_;
-    float viscosity_weight_, pressure_weight_, kernel_weight_;
     float stiffness_;
-    float rest_density_, rest_pressure_, gravity_strength_;
+    float rest_density_;
+    float rest_pressure_;
+    float gravity_strength_;
     float point_scale_;
     float dt_;
 
-    bool odd_frame_, first_frame_;
+    bool odd_frame_;
+    bool first_frame_;
 
     quat rotation_;
 
-    vec3 position_, camera_position_, gravity_direction_, light_position_;
+    vec3 position_;
+    vec3 camera_position_;
+    vec3 gravity_direction_;
+    vec3 light_position_;
 
     ContainerRef container_;
 
@@ -111,14 +114,16 @@ protected:
     std::vector<Plane> boundaries_;
     std::vector<ivec4> grid_particles_;
 
-    gl::GlslProgRef density_prog_, update_prog_;
+    gl::GlslProgRef density_prog_;
+    gl::GlslProgRef update_prog_;
     gl::GlslProgRef render_particles_prog_;
     gl::GlslProgRef advect_prog_;
 
     SortRef sort_;
     MarchingCubeRef marching_cube_;
 
-    GLuint particle_buffer1_, particle_buffer2_;
+    GLuint particle_buffer1_;
+    GLuint particle_buffer2_;
     GLuint vao1_, vao2_;
     GLuint debug_buffer_;
 };

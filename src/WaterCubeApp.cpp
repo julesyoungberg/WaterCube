@@ -17,8 +17,6 @@ using namespace ci;
 using namespace ci::app;
 using namespace core;
 
-const int NUM_PARTICLES = static_cast<int>(50000);
-
 class WaterCubeApp : public App {
 public:
     void setup() override;
@@ -63,7 +61,7 @@ void WaterCubeApp::setup() {
     util::log("creating scene");
     scene_ = Scene::create();
 
-    fluid_ = Fluid::create("fluid")->size(size_)->numParticles(NUM_PARTICLES);
+    fluid_ = Fluid::create("fluid");
     fluid_->addParams(params_);
     fluid_->setup();
     fluid_->setCameraPosition(camera_pos);

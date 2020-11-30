@@ -9,15 +9,13 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     position_ = -vec3(size_ / 2.0f);
-    num_particles_ = 1000;
+    num_particles_ = 50000;
     // must be less than (size / kernel_radius - b) where b is a positive int
     grid_res_ = 21;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
-    kernel_radius_ = particle_radius_ * 4.0f;
     rest_density_ = 1000.0f;
-    particle_mass_ = particle_radius_ * 8.0f;
     viscosity_coefficient_ = 100;
     stiffness_ = 100.0f;
     rest_pressure_ = 0.0f;
@@ -43,16 +41,6 @@ FluidRef Fluid::size(float s) {
     return thisRef();
 }
 
-FluidRef Fluid::kernelRadius(float r) {
-    kernel_radius_ = r;
-    return thisRef();
-}
-
-FluidRef Fluid::particleMass(float m) {
-    particle_mass_ = m;
-    return thisRef();
-}
-
 FluidRef Fluid::particleRadius(float r) {
     particle_radius_ = r;
     return thisRef();
@@ -60,21 +48,6 @@ FluidRef Fluid::particleRadius(float r) {
 
 FluidRef Fluid::viscosityCoefficient(float c) {
     viscosity_coefficient_ = c;
-    return thisRef();
-}
-
-FluidRef Fluid::viscosityWeight(float w) {
-    viscosity_weight_ = w;
-    return thisRef();
-}
-
-FluidRef Fluid::pressureWeight(float w) {
-    pressure_weight_ = w;
-    return thisRef();
-}
-
-FluidRef Fluid::kernelWeight(float w) {
-    kernel_weight_ = w;
     return thisRef();
 }
 
@@ -105,11 +78,6 @@ FluidRef Fluid::renderMode(int m) {
 
 FluidRef Fluid::gravityStrength(float g) {
     gravity_strength_ = g;
-    return thisRef();
-}
-
-FluidRef Fluid::sortInterval(int i) {
-    sort_interval_ = i;
     return thisRef();
 }
 
@@ -272,15 +240,10 @@ FluidRef Fluid::setup() {
     num_work_groups_ = int(ceil(float(num_particles_) / float(WORK_GROUP_SIZE)));
     num_bins_ = int(pow(grid_res_, 3));
     bin_size_ = size_ / float(grid_res_);
-    util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f", size_, num_bins_, bin_size_,
-              kernel_radius_);
-
-    // Part of equation (8) from Harada
-    pressure_weight_ = static_cast<float>(45.0f / (M_PI * pow(kernel_radius_, 6)));
-    // Part of equation (9) from Harada
-    viscosity_weight_ = static_cast<float>(45.0f / (M_PI * pow(kernel_radius_, 6)));
-    // Part of equation (10) from Harada
-    kernel_weight_ = static_cast<float>(315.0f / (64.0f * M_PI * pow(kernel_radius_, 9)));
+    kernel_radius_ = particle_radius_ * 4.0f;
+    particle_mass_ = particle_radius_ * 8.0f;
+    util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f, particleMass: %f", size_,
+              num_bins_, bin_size_, kernel_radius_, particle_mass_);
 
     container_ = Container::create("fluidContainer", size_);
 
@@ -327,7 +290,6 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
     density_prog_->uniform("numParticles", num_particles_);
     density_prog_->uniform("particleMass", particle_mass_);
     density_prog_->uniform("kernelRadius", kernel_radius_);
-    density_prog_->uniform("kernelWeight", kernel_weight_);
     density_prog_->uniform("stiffness", stiffness_);
     density_prog_->uniform("restDensity", rest_density_);
     density_prog_->uniform("restPressure", rest_pressure_);
@@ -356,8 +318,6 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("particleMass", particle_mass_);
     update_prog_->uniform("kernelRadius", kernel_radius_);
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
-    update_prog_->uniform("viscosityWeight", viscosity_weight_);
-    update_prog_->uniform("pressureWeight", pressure_weight_);
     update_prog_->uniform("cameraPosition", mouse_ray_.getOrigin());
     update_prog_->uniform("mouseRayDirection", mouse_ray_.getDirection());
 
