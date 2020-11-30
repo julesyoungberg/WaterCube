@@ -73,7 +73,7 @@ protected:
     vec3 getRelativeCameraPosition();
     vec3 getRelativeLightPosition();
     Ray getRelativeMouseRay();
-    void setGravity();
+    void updateGravity();
 
     void runProg() { util::runProg(num_work_groups_); }
     void runDensityProg(GLuint particle_buffer);
@@ -100,7 +100,7 @@ protected:
     float rest_pressure_;
     float gravity_strength_;
     float point_scale_;
-    float dt_;
+    float time_scale_;
     float spiky_kernel_const_;
     float poly6_kernel_const_;
     float viscosity_kernel_const_;

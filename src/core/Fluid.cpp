@@ -21,7 +21,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
-    dt_ = 0.0002f;
+    time_scale_ = 0.013f;
     rotate_gravity_ = false;
     createParams();
 }
@@ -246,7 +246,11 @@ FluidRef Fluid::setup() {
 
 vec3 Fluid::translateWorldSpacePosition(vec3 p) { return p - position_; }
 
-vec3 Fluid::rotateWorldSpacePosition(vec3 p) { return p; }
+vec3 Fluid::rotateWorldSpacePosition(vec3 p) {
+    mat4 rotation_matrix = glm::toMat4(-rotation_);
+    vec4 rotated = rotation_matrix * vec4(p, 1);
+    return vec3(rotated);
+}
 
 vec3 Fluid::getRelativePosition(vec3 p) {
     return translateWorldSpacePosition(rotateWorldSpacePosition(p));
@@ -263,12 +267,9 @@ Ray Fluid::getRelativeMouseRay() {
     return ray;
 }
 
-void Fluid::setGravity() {
-    mat4 rotation_matrix = glm::toMat4(-rotation_);
-
+void Fluid::updateGravity() {
     if (rotate_gravity_) {
-        vec4 rotated = rotation_matrix * vec4(0, -1, 0, 1);
-        gravity_direction_ = vec3(rotated);
+        gravity_direction_ = rotateWorldSpacePosition(vec3(0, -1, 0));
     }
 }
 
@@ -314,7 +315,7 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
-    update_prog_->uniform("dt", dt_); // time_step);
+    update_prog_->uniform("dt", time_step * time_scale_);
     update_prog_->uniform("numParticles", num_particles_);
     update_prog_->uniform("gravity", gravity_direction_ * gravity_strength_);
     update_prog_->uniform("particleMass", particle_mass_);
@@ -338,7 +339,7 @@ void Fluid::runAdvectProg(GLuint particle_buffer, float time_step) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
 
     advect_prog_->uniform("size", size_);
-    advect_prog_->uniform("dt", dt_); // time_step);
+    advect_prog_->uniform("dt", time_step * time_scale_);
     advect_prog_->uniform("numParticles", num_particles_);
 
     runProg();
@@ -349,7 +350,7 @@ void Fluid::runAdvectProg(GLuint particle_buffer, float time_step) {
  * Update simulation logic - run compute shaders
  */
 void Fluid::update(double time) {
-    setGravity();
+    updateGravity();
 
     odd_frame_ = !odd_frame_;
     GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
