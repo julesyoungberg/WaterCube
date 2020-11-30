@@ -102,8 +102,7 @@ void Fluid::createParams() {
  * Generates a vector of particles used as the simulations initial state
  */
 void Fluid::generateInitialParticles() {
-    // srand((unsigned)time(NULL));
-    srand(0);
+    srand(0); // (unsigned)time(NULL));
 
     util::log("creating particles");
     int n = num_particles_;
@@ -111,7 +110,7 @@ void Fluid::generateInitialParticles() {
     float distance = particle_radius_ * 2.0f;
     int d = int(ceil(std::cbrt(n)));
 
-    float jitter = distance * 0.5;
+    float jitter = distance * 0.5f;
     auto getJitter = [jitter]() { return ((float)rand() / RAND_MAX) * jitter - (jitter / 2.0f); };
 
     for (int z = 0; z < d; z++) {
@@ -212,9 +211,9 @@ FluidRef Fluid::setup() {
     util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f, particleMass: %f", size_,
               num_bins_, bin_size_, kernel_radius_, particle_mass_);
 
-    poly6_kernel_const_ = 315.0f / (64.0f * M_PI * glm::pow(kernel_radius_, 9));
-    spiky_kernel_const_ = -45.0f / (M_PI * glm::pow(kernel_radius_, 6));
-    viscosity_kernel_const_ = 45.0f / (M_PI * glm::pow(kernel_radius_, 6));
+    poly6_kernel_const_ = static_cast<float>(315.0 / (64.0 * M_PI * glm::pow(kernel_radius_, 9)));
+    spiky_kernel_const_ = static_cast<float>(-45.0 / (M_PI * glm::pow(kernel_radius_, 6)));
+    viscosity_kernel_const_ = static_cast<float>(45.0 / (M_PI * glm::pow(kernel_radius_, 6)));
 
     container_ = Container::create("fluidContainer", size_);
 
@@ -247,9 +246,8 @@ FluidRef Fluid::setup() {
 vec3 Fluid::translateWorldSpacePosition(vec3 p) { return p - position_; }
 
 vec3 Fluid::rotateWorldSpacePosition(vec3 p) {
-    mat4 rotation_matrix = glm::inverse(glm::toMat4(rotation_));
-    vec4 rotated = rotation_matrix * vec4(p, 1);
-    return vec3(rotated);
+    mat3 rotation_matrix = glm::transpose(glm::toMat3(rotation_));
+    return rotation_matrix * p;
 }
 
 vec3 Fluid::getRelativePosition(vec3 p) {
@@ -372,6 +370,36 @@ void Fluid::update(double time) {
 }
 
 /**
+ * Draw gravity vector
+ */
+void Fluid::drawGravity() {
+    gl::color(Color("red"));
+    gl::lineWidth(2);
+
+    gl::pushMatrices();
+    gl::translate(vec3(size_ / 2.0f));
+
+    gl::begin(GL_LINES);
+    gl::vertex(vec3(0));
+    gl::vertex(gravity_direction_);
+    gl::end();
+
+    gl::popMatrices();
+}
+
+/**
+ * Draw the light for debugging
+ */
+void Fluid::drawLight() {
+    gl::color(Color("red"));
+    gl::pointSize(10);
+
+    gl::begin(GL_POINTS);
+    gl::vertex(vec3(light_position_));
+    gl::end();
+}
+
+/**
  * render particles
  */
 void Fluid::renderParticles() {
@@ -387,7 +415,7 @@ void Fluid::renderParticles() {
     render_particles_prog_->uniform("size", size_);
     render_particles_prog_->uniform("binSize", bin_size_);
     render_particles_prog_->uniform("gridRes", grid_res_);
-    render_particles_prog_->uniform("lightPos", getRelativeLightPosition());
+    render_particles_prog_->uniform("lightPos", light_position_);
     render_particles_prog_->uniform("cameraPos", getRelativeCameraPosition());
 
     gl::context()->setDefaultShaderVars();
@@ -419,6 +447,8 @@ void Fluid::draw() {
     }
 
     container_->draw();
+    drawGravity();
+    drawLight();
 
     gl::popMatrices();
 }

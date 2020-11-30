@@ -69,7 +69,8 @@ Ray WaterCubeApp::getMouseRay() {
     // flip the vertical coordinate.
     float u = mouse_position_.x / (float)getWindowWidth();
     float v = mouse_position_.y / (float)getWindowHeight();
-    return cam_.generateRay(u, 1.0f - v, cam_.getAspectRatio());
+    Ray ray = cam_.generateRay(u, 1.0f - v, cam_.getAspectRatio());
+    return ray;
 }
 
 void WaterCubeApp::update() {

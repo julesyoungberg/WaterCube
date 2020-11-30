@@ -79,6 +79,8 @@ protected:
     void runDensityProg(GLuint particle_buffer);
     void runUpdateProg(GLuint particle_buffer, float time_step);
     void runAdvectProg(GLuint particle_buffer, float time_step);
+    void drawGravity();
+    void drawLight();
     void renderParticles();
 
     FluidRef thisRef() { return std::make_shared<Fluid>(*this); }
@@ -116,9 +118,9 @@ protected:
     vec3 gravity_direction_;
     vec3 light_position_;
 
-    ContainerRef container_;
-
     Ray mouse_ray_;
+
+    ContainerRef container_;
 
     std::vector<Particle> initial_particles_;
     std::vector<Plane> boundaries_;
