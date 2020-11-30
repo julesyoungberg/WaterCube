@@ -101,6 +101,7 @@ protected:
 
     bool odd_frame_;
     bool first_frame_;
+    bool rotate_gravity_;
 
     quat rotation_;
 

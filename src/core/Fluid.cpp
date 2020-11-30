@@ -16,12 +16,13 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
     rest_density_ = 1000.0f;
-    viscosity_coefficient_ = 100;
+    viscosity_coefficient_ = 50;
     stiffness_ = 100.0f;
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
     dt_ = 0.0003f;
+    rotate_gravity_ = false;
 }
 
 Fluid::~Fluid() {}
@@ -85,15 +86,13 @@ FluidRef Fluid::gravityStrength(float g) {
  * setup GUI configuration parameters
  */
 void Fluid::addParams(params::InterfaceGlRef p) {
-    // p->addParam("Number of Particles", &num_particles_, "min=100 step=100");
     p->addParam("Render Mode", &render_mode_, "min=0 max=9 step=1");
-    // p->addParam("Grid Resolution", &grid_res_, "min=1 max=1000 step=1");
-    // p->addParam("Particle Mass", &particle_mass_, "min=0.0001 max=2.0 step=0.001");
-    // p->addParam("Viscosity", &viscosity_coefficient_, "min=0.001 max=2.0 step=0.001");
-    p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=1.0");
-    p->addParam("Rest Density", &rest_density_, "min=0.0 max=1000.0 step=1.0");
-    p->addParam("Rest Pressure", &rest_pressure_, "min=0.0 max=10.0 step=0.1");
-    p->addParam("Gravity Strength", &gravity_strength_, "min=-10.0 max=10.0 step=0.1");
+    p->addParam("Viscosity", &viscosity_coefficient_, "min=0.0 max=1000.0 step=10.0");
+    p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=10.0");
+    p->addParam("Rest Density", &rest_density_, "min=0.0 max=2000.0 step=100.0");
+    p->addParam("Rest Pressure", &rest_pressure_, "min=0.0 max=100000.0 step=100.0");
+    p->addParam("Gravity Strength", &gravity_strength_, "min=0.0 max=1000.0 step=10.0");
+    p->addParam("Rotate Gravity", &rotate_gravity_);
 }
 
 /**
@@ -101,9 +100,13 @@ void Fluid::addParams(params::InterfaceGlRef p) {
  */
 void Fluid::setRotation(quat r) {
     rotation_ = r;
+
     mat4 rotation_matrix = glm::toMat4(-r);
-    vec4 rotated = rotation_matrix * vec4(0, -1, 0, 1);
-    gravity_direction_ = vec3(rotated);
+
+    if (rotate_gravity_) {
+        vec4 rotated = rotation_matrix * vec4(0, -1, 0, 1);
+        gravity_direction_ = vec3(rotated);
+    }
 }
 
 /**
