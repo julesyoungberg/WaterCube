@@ -245,6 +245,10 @@ FluidRef Fluid::setup() {
     util::log("size: %f, numBins: %d, binSize: %f, kernelRadius: %f, particleMass: %f", size_,
               num_bins_, bin_size_, kernel_radius_, particle_mass_);
 
+    poly6_kernel_const_ = 315.0f / (64.0f * M_PI * glm::pow(kernel_radius_, 9));
+    spiky_kernel_const_ = -45.0f / (M_PI * glm::pow(kernel_radius_, 6));
+    viscosity_kernel_const_ = 45.0f / (M_PI * glm::pow(kernel_radius_, 6));
+
     container_ = Container::create("fluidContainer", size_);
 
     generateInitialParticles();
@@ -293,6 +297,7 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
     density_prog_->uniform("stiffness", stiffness_);
     density_prog_->uniform("restDensity", rest_density_);
     density_prog_->uniform("restPressure", rest_pressure_);
+    density_prog_->uniform("poly6KernelConst", poly6_kernel_const_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT | GL_SHADER_STORAGE_BARRIER_BIT);
@@ -320,6 +325,8 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
     update_prog_->uniform("cameraPosition", mouse_ray_.getOrigin());
     update_prog_->uniform("mouseRayDirection", mouse_ray_.getDirection());
+    update_prog_->uniform("spikyKernelConst", spiky_kernel_const_);
+    update_prog_->uniform("viscosityKernelConst", viscosity_kernel_const_);
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);

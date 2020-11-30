@@ -95,6 +95,9 @@ protected:
     float gravity_strength_;
     float point_scale_;
     float dt_;
+    float spiky_kernel_const_;
+    float poly6_kernel_const_;
+    float viscosity_kernel_const_;
 
     bool odd_frame_;
     bool first_frame_;

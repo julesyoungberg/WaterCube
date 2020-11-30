@@ -38,6 +38,8 @@ uniform float kernelRadius;
 uniform float viscosityCoefficient;
 uniform vec3 cameraPosition;
 uniform vec3 mouseRayDirection;
+uniform float spikyKernelConst;
+uniform float viscosityKernelConst;
 
 // neighborhood coordinate offsets
 const ivec3 NEIGHBORHOOD[27] = {
@@ -52,19 +54,14 @@ const ivec3 NEIGHBORHOOD[27] = {
     ivec3( 1,  1, -1), ivec3( 1,  1,  0), ivec3( 1,  1,  1)
 };
 
-vec3 spikyKernel(vec3 r, float d, float h) {
-    return (-45.0 / (3.14 * pow(h, 6))) * pow(h - d, 2) * (r / d);
-}
-
 // Equation (8) from Harada
-vec3 Wpress(vec3 r, float d) {    
-    return spikyKernel(r, d, kernelRadius);
+vec3 spikyKernel(vec3 r, float d) {
+    return pow(kernelRadius - d, 2) * (r / d) * spikyKernelConst;
 }
 
 // Equation (9) from Harada
 float Wvis(float r) {
-    const float weight = 45.0 / (3.14 * pow(kernelRadius, 6));
-    return (kernelRadius - r) * weight;
+    return (kernelRadius - r) * viscosityKernelConst;
 }
 
 vec3 wallForces(vec3 p) {
@@ -73,26 +70,26 @@ vec3 wallForces(vec3 p) {
 
     if (p.x < kernelRadius) {
         r = vec3(0, p.y, p.z) - p;
-        force += Wpress(r, r.length());
+        force += spikyKernel(r, r.length());
     } else if (p.x > size - kernelRadius) {
         r = vec3(size, p.y, p.z) - p;
-        force += Wpress(r, r.length());
+        force += spikyKernel(r, r.length());
     }
 
     if (p.y < kernelRadius) {
         r = vec3(p.x, 0, p.z) - p;
-        force += Wpress(r, r.length());
+        force += spikyKernel(r, r.length());
     } else if (p.y > size - kernelRadius) {
         r = vec3(p.x, size, p.z) - p;
-        force += Wpress(r, r.length());
+        force += spikyKernel(r, r.length());
     }
 
     if (p.z < kernelRadius) {
         r = vec3(p.x, p.y, 0) - p;
-        force += Wpress(r, r.length());
+        force += spikyKernel(r, r.length());
     } else if (p.z > size - kernelRadius) {
         r = vec3(p.x, p.y, size) - p;
-        force += Wpress(r, r.length());
+        force += spikyKernel(r, r.length());
     }
 
     return force * 0.1;
@@ -127,7 +124,7 @@ vec3 mouseForce(Particle p) {
     }
     
     const float normalizedDistance = max(0, distanceToMouseRay / mouseRadius);    
-    return -particleMass * p.pressure * spikyKernel(toMouse, distanceToMouseRay + 1e-16, mouseRadius) * 0.02;
+    return -particleMass * p.pressure * spikyKernel(toMouse, distanceToMouseRay + 1e-16) * 0.00001;
 }
 
 void main() {
@@ -177,7 +174,7 @@ void main() {
             const float pressure = (p.pressure + other.pressure) / (2.0 * other.density);
             if (pressure > 0) {
                 // calculate pressure weight as a vector
-                vec3 mPressureWeight = Wpress(r, dist + 1e-16);
+                vec3 mPressureWeight = spikyKernel(r, dist + 1e-16);
                 pressureForce -= particleMass * pressure * mPressureWeight;
             }
     
@@ -187,7 +184,7 @@ void main() {
         }
     }
 
-    externalForces += mouseForce(p); // wallForces(p.position);
+    externalForces += mouseForce(p) + wallForces(p.position);
 
     // Sum of Equations (6) and (7) and external forces from Herada
     viscosityForce *= viscosityCoefficient;

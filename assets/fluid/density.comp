@@ -34,6 +34,7 @@ uniform float kernelRadius;
 uniform float stiffness;
 uniform float restDensity;
 uniform float restPressure;
+uniform float poly6KernelConst;
 
 // neighborhood coordinate offsets
 const ivec3 NEIGHBORHOOD[27] = {
@@ -49,36 +50,32 @@ const ivec3 NEIGHBORHOOD[27] = {
 };
 
 // Equation (10) from Harada
-float poly6Kernel(float r, float h) {
-    return 315.0 / (64.0 * 3.14 * pow(h, 9)) * pow(h * h - r * r, 3);
-}
-
-float W(float r) {
-    return poly6Kernel(r, kernelRadius);
+float poly6Kernel(float r) {
+    return pow(kernelRadius * kernelRadius - r * r, 3) * poly6KernelConst;
 }
 
 float wallDensity(vec3 p) {
     float density = 0;
 
     if (p.x < kernelRadius) {
-        density += particleMass * W(p.x);
+        density += particleMass * poly6Kernel(p.x);
     } else if (p.x > size - kernelRadius) {
-        density += particleMass * W(size - p.x);
+        density += particleMass * poly6Kernel(size - p.x);
     }
 
     if (p.y < kernelRadius) {
-        density += particleMass * W(p.y);
+        density += particleMass * poly6Kernel(p.y);
     } else if (p.y > size - kernelRadius) {
-        density += particleMass * W(size - p.y);
+        density += particleMass * poly6Kernel(size - p.y);
     }
 
     if (p.z < kernelRadius) {
-        density += particleMass * W(p.z);
+        density += particleMass * poly6Kernel(p.z);
     } else if (p.y > size - kernelRadius) {
-        density += particleMass * W(size - p.z);
+        density += particleMass * poly6Kernel(size - p.z);
     }
 
-    return density * 5;
+    return density * 4;
 }
 
 void main() {
@@ -90,7 +87,7 @@ void main() {
     Particle p = particles[particleID];
     const ivec3 coord = clamp(ivec3(p.position / binSize), ivec3(0), ivec3(gridRes - 1));
 
-    float density = particleMass * W(0);
+    float density = particleMass * poly6Kernel(0);
     uint d = 0;
 
     // search the particles of each neighboring bin
@@ -122,7 +119,7 @@ void main() {
             }
 
             // Equation (4) from Harada
-            density += particleMass * W(dist);
+            density += particleMass * poly6Kernel(dist);
         }
     }
 
