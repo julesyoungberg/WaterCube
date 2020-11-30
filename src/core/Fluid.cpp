@@ -139,7 +139,7 @@ void Fluid::setRotation(quat r) {
 }
 
 /**
- * update mouse ray in model space
+ * update mouse ray and transform to model space
  */
 void Fluid::setMouseRay(Ray r) {
     mouse_ray_ = r;
@@ -148,7 +148,7 @@ void Fluid::setMouseRay(Ray r) {
 }
 
 /**
- * update camera position in model space
+ * update camera position and transform model space
  */
 void Fluid::setCameraPosition(vec3 p) {
     camera_position_ = p + position_;
@@ -355,6 +355,8 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
     update_prog_->uniform("viscosityWeight", viscosity_weight_);
     update_prog_->uniform("pressureWeight", pressure_weight_);
+    update_prog_->uniform("cameraPosition", mouse_ray_.getOrigin());
+    update_prog_->uniform("mouseRayDirection", mouse_ray_.getDirection());
 
     runProg();
     gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
