@@ -126,8 +126,9 @@ void main() {
     p.density = density + wallDensity(p.position);
 
     // Equation (5) from Harada
-    p.pressure = restPressure + stiffness * (density - restDensity);
-    // Alternative presure computation (Desbrun and Cani, 1996)
+    // p.pressure = restPressure + stiffness * (density - restDensity);
+    // Alternative presure computation to better preserve volume
+    // (Desbrun and Cani, 1996)
     const float pressureConst = 3;
     p.pressure = restPressure + stiffness * (pow(density / restDensity, pressureConst) - 1);
 

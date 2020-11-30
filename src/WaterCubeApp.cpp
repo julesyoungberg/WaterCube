@@ -105,6 +105,7 @@ void WaterCubeApp::draw() {
 
     vec2 window = app::getWindowSize();
     gl::setMatricesWindow(window);
+    gl::color(Color("black"));
     gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps",
                    vec2(window.x - 64.0f, 100.0f));
 }

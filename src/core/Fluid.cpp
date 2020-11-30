@@ -16,12 +16,12 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
     rest_density_ = 1000.0f;
-    viscosity_coefficient_ = 50;
+    viscosity_coefficient_ = 20;
     stiffness_ = 100.0f;
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
-    time_scale_ = 0.013f;
+    time_scale_ = 0.01f;
     rotate_gravity_ = false;
     createParams();
 }
