@@ -402,6 +402,7 @@ void Fluid::draw() {
     gl::enableDepthRead();
     gl::enableDepthWrite();
     gl::pushMatrices();
+    gl::rotate(rotation_);
     gl::translate(position_.x, position_.y, position_.z);
 
     if (render_mode_ == 4) {
