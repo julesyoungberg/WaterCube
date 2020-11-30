@@ -92,7 +92,7 @@ vec3 wallForces(vec3 p) {
         force += spikyKernel(r, r.length());
     }
 
-    return force * 0.05;
+    return force * 0.01;
 }
 
 // https://gist.github.com/DomNomNom/46bb1ce47f68d255fd5d
