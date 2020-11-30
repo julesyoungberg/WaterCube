@@ -48,10 +48,9 @@ public:
     FluidRef gravityStrength(float g);
     FluidRef renderMode(int m);
 
-    void setCameraPosition(vec3 p);
-    void setLightPosition(vec3 p);
-    void setRotation(quat r);
-    void setMouseRay(Ray r);
+    void setCameraPosition(vec3 p) { camera_position_ = p; }
+    void setLightPosition(vec3 p) { light_position_ = p; }
+    void setMouseRay(Ray r) { mouse_ray_ = r; }
 
     FluidRef setup();
     void update(double time) override;
@@ -68,7 +67,10 @@ protected:
 
     void compileShaders();
 
-    void transformWorldSpaceVectors();
+    vec3 getRelativeCameraPosition();
+    vec3 getRelativeLightPosition();
+    Ray getRelativeMouseRay();
+    void setGravity();
 
     void runProg() { util::runProg(num_work_groups_); }
     void runDensityProg(GLuint particle_buffer);

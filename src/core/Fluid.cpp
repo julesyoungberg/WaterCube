@@ -99,31 +99,6 @@ void Fluid::createParams() {
 }
 
 /**
- * update mouse ray and transform to model space
- */
-void Fluid::setMouseRay(Ray r) {
-    mouse_ray_ = r;
-    mat4 matrix = glm::translate(-position_);
-    mouse_ray_.transform(matrix);
-}
-
-/**
- * update camera position and transform model space
- */
-void Fluid::setCameraPosition(vec3 p) {
-    camera_position_ = p + position_;
-    marching_cube_->setCameraPosition(camera_position_);
-}
-
-/**
- * set light position and update children
- */
-void Fluid::setLightPosition(vec3 p) {
-    light_position_ = p;
-    marching_cube_->setLightPosition(p);
-}
-
-/**
  * Generates a vector of particles used as the simulations initial state
  */
 void Fluid::generateInitialParticles() {
@@ -269,7 +244,18 @@ FluidRef Fluid::setup() {
     return std::make_shared<Fluid>(*this);
 }
 
-void Fluid::transformWorldSpaceVectors() {
+vec3 Fluid::getRelativeCameraPosition() { return camera_position_ - position_; }
+
+vec3 Fluid::getRelativeLightPosition() { return light_position_ - position_; }
+
+Ray Fluid::getRelativeMouseRay() {
+    mat4 matrix = glm::translate(-position_);
+    Ray ray = mouse_ray_;
+    ray.transform(matrix);
+    return ray;
+}
+
+void Fluid::setGravity() {
     mat4 rotation_matrix = glm::toMat4(-rotation_);
 
     if (rotate_gravity_) {
@@ -315,6 +301,8 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, debug_buffer_);
 
+    Ray mouse_ray = getRelativeMouseRay();
+
     update_prog_->uniform("size", size_);
     update_prog_->uniform("binSize", bin_size_);
     update_prog_->uniform("gridRes", grid_res_);
@@ -324,8 +312,8 @@ void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
     update_prog_->uniform("particleMass", particle_mass_);
     update_prog_->uniform("kernelRadius", kernel_radius_);
     update_prog_->uniform("viscosityCoefficient", viscosity_coefficient_);
-    update_prog_->uniform("cameraPosition", mouse_ray_.getOrigin());
-    update_prog_->uniform("mouseRayDirection", mouse_ray_.getDirection());
+    update_prog_->uniform("cameraPosition", mouse_ray.getOrigin());
+    update_prog_->uniform("mouseRayDirection", mouse_ray.getDirection());
     update_prog_->uniform("spikyKernelConst", spiky_kernel_const_);
     update_prog_->uniform("viscosityKernelConst", viscosity_kernel_const_);
 
@@ -353,7 +341,7 @@ void Fluid::runAdvectProg(GLuint particle_buffer, float time_step) {
  * Update simulation logic - run compute shaders
  */
 void Fluid::update(double time) {
-    transformWorldSpaceVectors();
+    setGravity();
 
     odd_frame_ = !odd_frame_;
     GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
@@ -369,6 +357,8 @@ void Fluid::update(double time) {
 
     // util::printParticles(out_particles, debug_buffer_, 10, bin_size_);
 
+    // marching_cube_->setCameraPosition(getRelativeCameraPosition());
+    // marching_cube_->setLightPosition(getRelativeLightPosition());
     // marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
@@ -388,8 +378,8 @@ void Fluid::renderParticles() {
     render_particles_prog_->uniform("size", size_);
     render_particles_prog_->uniform("binSize", bin_size_);
     render_particles_prog_->uniform("gridRes", grid_res_);
-    render_particles_prog_->uniform("lightPos", light_position_);
-    render_particles_prog_->uniform("cameraPos", camera_position_);
+    render_particles_prog_->uniform("lightPos", getRelativeLightPosition());
+    render_particles_prog_->uniform("cameraPos", getRelativeCameraPosition());
 
     gl::context()->setDefaultShaderVars();
     gl::drawArrays(GL_POINTS, 0, num_particles_);
