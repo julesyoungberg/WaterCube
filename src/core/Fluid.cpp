@@ -247,7 +247,7 @@ FluidRef Fluid::setup() {
 vec3 Fluid::translateWorldSpacePosition(vec3 p) { return p - position_; }
 
 vec3 Fluid::rotateWorldSpacePosition(vec3 p) {
-    mat4 rotation_matrix = glm::toMat4(-rotation_);
+    mat4 rotation_matrix = glm::inverse(glm::toMat4(rotation_));
     vec4 rotated = rotation_matrix * vec4(p, 1);
     return vec3(rotated);
 }
