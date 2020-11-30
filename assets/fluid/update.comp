@@ -121,7 +121,7 @@ vec3 mouseForce(Particle p) {
         return vec3(0);
     }
 
-    const float mouseRadius = kernelRadius * 2;
+    const float mouseRadius = kernelRadius;
     const vec3 toMouse = p.position - cameraPosition;
     const float distanceToMouseRay = length(cross(mouseRayDirection, toMouse));
     if (distanceToMouseRay > mouseRadius) {
@@ -129,7 +129,7 @@ vec3 mouseForce(Particle p) {
     }
     
     const float normalizedDistance = max(0, distanceToMouseRay / mouseRadius);    
-    return -particleMass * p.pressure * spikyKernel(toMouse, distanceToMouseRay + 1e-16, mouseRadius);
+    return -particleMass * p.pressure * spikyKernel(toMouse, distanceToMouseRay + 1e-16, mouseRadius) * 0.00002;
 }
 
 void main() {
