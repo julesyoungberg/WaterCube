@@ -163,8 +163,6 @@ void Fluid::setLightPosition(vec3 p) {
     marching_cube_->setLightPosition(p);
 }
 
-float getRand() { return (float)rand() / RAND_MAX; }
-
 /**
  * Generates a vector of particles used as the simulations initial state
  */
@@ -175,8 +173,11 @@ void Fluid::generateInitialParticles() {
     util::log("creating particles");
     int n = num_particles_;
     initial_particles_.assign(n, Particle());
-    float distance = std::cbrt((4.0f * pow(particle_radius_, 3) * M_PI) / (3.0f * n));
+    float distance = particle_radius_ * 2.0f;
     int d = int(ceil(std::cbrt(n)));
+
+    float jitter = distance * 0.5;
+    auto getJitter = [jitter]() { return ((float)rand() / RAND_MAX) * jitter - (jitter / 2.0f); };
 
     for (int z = 0; z < d; z++) {
         for (int y = 0; y < d; y++) {
@@ -186,11 +187,13 @@ void Fluid::generateInitialParticles() {
                     break;
                 }
 
-                initial_particles_[index].position =
-                    vec3(getRand() * size_, getRand() * size_, getRand() * size_);
-                // initial_particles_[index].position = vec3(x, y, z) * distance;
-                // initial_particles_[index].position +=
-                //     vec3(getRand() * 0.1 - 0.05, getRand() * 0.1 - 0.05, getRand() * 0.1 - 0.05);
+                // random position
+                // initial_particles_[index].position =
+                //     vec3(getRand() * size_, getRand() * size_, getRand() * size_);
+
+                // dam break
+                initial_particles_[index].position = vec3(x, y, z) * distance;
+                initial_particles_[index].position += vec3(getJitter(), getJitter(), getJitter());
             }
         }
     }
