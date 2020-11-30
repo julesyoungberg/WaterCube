@@ -67,6 +67,9 @@ protected:
 
     void compileShaders();
 
+    vec3 translateWorldSpacePosition(vec3 p);
+    vec3 rotateWorldSpacePosition(vec3 p);
+    vec3 getRelativePosition(vec3 p);
     vec3 getRelativeCameraPosition();
     vec3 getRelativeLightPosition();
     Ray getRelativeMouseRay();

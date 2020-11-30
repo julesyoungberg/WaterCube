@@ -244,9 +244,17 @@ FluidRef Fluid::setup() {
     return std::make_shared<Fluid>(*this);
 }
 
-vec3 Fluid::getRelativeCameraPosition() { return camera_position_ - position_; }
+vec3 Fluid::translateWorldSpacePosition(vec3 p) { return p - position_; }
 
-vec3 Fluid::getRelativeLightPosition() { return light_position_ - position_; }
+vec3 Fluid::rotateWorldSpacePosition(vec3 p) { return p; }
+
+vec3 Fluid::getRelativePosition(vec3 p) {
+    return translateWorldSpacePosition(rotateWorldSpacePosition(p));
+}
+
+vec3 Fluid::getRelativeCameraPosition() { return getRelativePosition(camera_position_); }
+
+vec3 Fluid::getRelativeLightPosition() { return getRelativePosition(light_position_); }
 
 Ray Fluid::getRelativeMouseRay() {
     mat4 matrix = glm::translate(-position_);
