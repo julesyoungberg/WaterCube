@@ -86,6 +86,7 @@ FluidRef Fluid::gravityStrength(float g) {
  * setup GUI configuration parameters
  */
 void Fluid::addParams(params::InterfaceGlRef p) {
+    p->addParam("Rotation", &rotation_);
     p->addParam("Render Mode", &render_mode_, "min=0 max=9 step=1");
     p->addParam("Viscosity", &viscosity_coefficient_, "min=0.0 max=1000.0 step=10.0");
     p->addParam("Stifness", &stiffness_, "min=0.0 max=500.0 step=10.0");
@@ -93,20 +94,6 @@ void Fluid::addParams(params::InterfaceGlRef p) {
     p->addParam("Rest Pressure", &rest_pressure_, "min=0.0 max=100000.0 step=100.0");
     p->addParam("Gravity Strength", &gravity_strength_, "min=0.0 max=1000.0 step=10.0");
     p->addParam("Rotate Gravity", &rotate_gravity_);
-}
-
-/**
- * set rotation and update settings
- */
-void Fluid::setRotation(quat r) {
-    rotation_ = r;
-
-    mat4 rotation_matrix = glm::toMat4(-r);
-
-    if (rotate_gravity_) {
-        vec4 rotated = rotation_matrix * vec4(0, -1, 0, 1);
-        gravity_direction_ = vec3(rotated);
-    }
 }
 
 /**
@@ -280,6 +267,15 @@ FluidRef Fluid::setup() {
     return std::make_shared<Fluid>(*this);
 }
 
+void Fluid::transformWorldSpaceVectors() {
+    mat4 rotation_matrix = glm::toMat4(-rotation_);
+
+    if (rotate_gravity_) {
+        vec4 rotated = rotation_matrix * vec4(0, -1, 0, 1);
+        gravity_direction_ = vec3(rotated);
+    }
+}
+
 /**
  * Run density compute shader
  */
@@ -355,6 +351,8 @@ void Fluid::runAdvectProg(GLuint particle_buffer, float time_step) {
  * Update simulation logic - run compute shaders
  */
 void Fluid::update(double time) {
+    transformWorldSpaceVectors();
+
     odd_frame_ = !odd_frame_;
     GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
     GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;

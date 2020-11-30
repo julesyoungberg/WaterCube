@@ -33,7 +33,6 @@ private:
     float size_;
 
     ivec2 mouse_position_;
-    quat scene_rotation_;
 
     CameraPersp cam_;
     SceneRef scene_;
@@ -49,7 +48,6 @@ void WaterCubeApp::setup() {
     prev_time_ = 0.0f;
 
     params_ = params::InterfaceGl::create("WaterCube", ivec2(225, 200));
-    params_->addParam("Rotation", &scene_rotation_);
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
     vec3 camera_pos = vec3(0, size_ / 2.0, size_ * 3) / 1.5f;
@@ -90,7 +88,6 @@ void WaterCubeApp::update() {
         return;
     }
 
-    fluid_->setRotation(scene_rotation_);
     fluid_->setMouseRay(getMouseRay());
 
     double time = getElapsedSeconds();
@@ -107,7 +104,6 @@ void WaterCubeApp::draw() {
     gl::clear(Color(0.8f, 0.8f, 0.8f));
     gl::setMatricesWindowPersp(getWindowSize());
     gl::setMatrices(cam_);
-    gl::rotate(scene_rotation_);
 
     scene_->draw();
     params_->draw();

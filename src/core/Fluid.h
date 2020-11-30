@@ -69,6 +69,8 @@ protected:
 
     void compileShaders();
 
+    void transformWorldSpaceVectors();
+
     void runProg() { util::runProg(num_work_groups_); }
     void runDensityProg(GLuint particle_buffer);
     void runUpdateProg(GLuint particle_buffer, float time_step);
