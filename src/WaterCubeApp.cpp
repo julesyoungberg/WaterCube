@@ -40,13 +40,13 @@ private:
 
 void WaterCubeApp::setup() {
     run_once_ = false;
-    running_ = true;
+    running_ = false;
     reset_ = false;
     size_ = 1.0;
     prev_time_ = 0.0f;
 
     cam_.setPerspective(45.0f, getWindowAspectRatio(), 0.1f, 1000.0f);
-    vec3 camera_pos = vec3(0, 0, size_ * 2);
+    vec3 camera_pos = vec3(-size_, size_ / 3.0f, size_ * 2);
     cam_.lookAt(camera_pos, vec3(0, 0, 0));
 
     gl::enableDepthWrite();
@@ -74,6 +74,10 @@ Ray WaterCubeApp::getMouseRay() {
 }
 
 void WaterCubeApp::update() {
+    double time = getElapsedSeconds();
+    double step = time - prev_time_;
+    prev_time_ = time;
+
     if (!running_) {
         if (reset_) {
             setup();
@@ -84,11 +88,14 @@ void WaterCubeApp::update() {
         return;
     }
 
+    if (step > 1) {
+        // better luck next time
+        return;
+    }
+
     fluid_->setMouseRay(getMouseRay());
 
-    double time = getElapsedSeconds();
-    scene_->update(time - prev_time_);
-    prev_time_ = time;
+    scene_->update(step);
 
     if (run_once_) {
         running_ = false;
@@ -113,7 +120,7 @@ void WaterCubeApp::draw() {
 void WaterCubeApp::keyDown(KeyEvent event) {
     char c = event.getChar();
     switch (c) {
-    case 'p':
+    case 's':
         running_ = !running_;
     case 'r':
         running_ = false;

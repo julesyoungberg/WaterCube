@@ -9,7 +9,7 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     position_ = -vec3(size_ / 2.0f);
-    num_particles_ = 50000;
+    num_particles_ = 60000;
     // must be less than (size / kernel_radius - b) where b is a positive int
     grid_res_ = 21;
     gravity_strength_ = 900.0f;
@@ -21,7 +21,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
-    time_scale_ = 0.01f;
+    time_scale_ = 0.012f;
     rotate_gravity_ = false;
     createParams();
 }
