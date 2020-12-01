@@ -9,9 +9,9 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     position_ = -vec3(size_ / 2.0f);
-    num_particles_ = 50000;
+    num_particles_ = 12000;
     // must be less than (size / kernel_radius - b) where b is a positive int
-    grid_res_ = 21;
+    grid_res_ = 1;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
@@ -21,7 +21,7 @@ Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
     point_scale_ = 300.0f;
-    time_scale_ = 0.01f;
+    time_scale_ = 0.013f;
     rotate_gravity_ = false;
     createParams();
 }
@@ -350,16 +350,16 @@ void Fluid::runAdvectProg(GLuint particle_buffer, float time_step) {
 void Fluid::update(double time) {
     updateGravity();
 
-    odd_frame_ = !odd_frame_;
-    GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
-    GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
+    // odd_frame_ = !odd_frame_;
+    // GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
+    // GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
 
     // util::printParticles(in_particles, debug_buffer_, 10, bin_size_);
 
-    sort_->run(in_particles, out_particles);
+    // sort_->run(in_particles, out_particles);
 
-    runDensityProg(out_particles);
-    runUpdateProg(out_particles, float(time));
+    runDensityProg(particle_buffer1_);
+    runUpdateProg(particle_buffer1_, float(time));
     // runAdvectProg(out_particles, float(time));
 
     // util::printParticles(out_particles, debug_buffer_, 10, bin_size_);
@@ -407,9 +407,8 @@ void Fluid::renderParticles() {
     gl::pointSize(pointRadius * 2.0f);
 
     gl::ScopedGlslProg render(render_particles_prog_);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
-                     odd_frame_ ? particle_buffer2_ : particle_buffer1_);
-    glBindVertexArray(odd_frame_ ? vao2_ : vao1_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer1_);
+    glBindVertexArray(vao1_);
 
     render_particles_prog_->uniform("renderMode", render_mode_);
     render_particles_prog_->uniform("size", size_);
@@ -426,8 +425,6 @@ void Fluid::renderParticles() {
  * Draw simulation logic
  */
 void Fluid::draw() {
-    params_->draw();
-
     gl::enableDepthRead();
     gl::enableDepthWrite();
     gl::pushMatrices();
@@ -451,4 +448,6 @@ void Fluid::draw() {
     // drawLight();
 
     gl::popMatrices();
+
+    params_->draw();
 }

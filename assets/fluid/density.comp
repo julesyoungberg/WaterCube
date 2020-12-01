@@ -36,19 +36,6 @@ uniform float restDensity;
 uniform float restPressure;
 uniform float poly6KernelConst;
 
-// neighborhood coordinate offsets
-const ivec3 NEIGHBORHOOD[27] = {
-    ivec3(-1, -1, -1), ivec3(-1, -1,  0), ivec3(-1, -1,  1),
-    ivec3(-1,  0, -1), ivec3(-1,  0,  0), ivec3(-1,  0,  1),
-    ivec3(-1,  1, -1), ivec3(-1,  1,  0), ivec3(-1,  1,  1),
-    ivec3( 0, -1, -1), ivec3( 0, -1,  0), ivec3( 0, -1,  1),
-    ivec3( 0,  0, -1), ivec3( 0,  0,  0), ivec3( 0,  0,  1),
-    ivec3( 0,  1, -1), ivec3( 0,  1,  0), ivec3( 0,  1,  1),
-    ivec3( 1, -1, -1), ivec3( 1, -1,  0), ivec3( 1, -1,  1),
-    ivec3( 1,  0, -1), ivec3( 1,  0,  0), ivec3( 1,  0,  1),
-    ivec3( 1,  1, -1), ivec3( 1,  1,  0), ivec3( 1,  1,  1)
-};
-
 // Equation (10) from Harada
 float poly6Kernel(float r) {
     return pow(kernelRadius * kernelRadius - r * r, 3) * poly6KernelConst;
@@ -90,37 +77,21 @@ void main() {
     float density = particleMass * poly6Kernel(0);
     uint d = 0;
 
-    // search the particles of each neighboring bin
-    #pragma unroll 1
-    for (uint binIndex = 0; binIndex < 27; binIndex++) {
-        const ivec3 nc = coord + NEIGHBORHOOD[binIndex];
-
-        // don't go out of bounds
-        if (any(lessThan(nc, ivec3(0))) || any(greaterThanEqual(nc, ivec3(gridRes)))) {
+    // search the particles of this bin
+    for (uint otherParticleID = 0; otherParticleID < numParticles; otherParticleID++) {
+        if (particleID == otherParticleID) {
             continue;
         }
 
-        const uint index = nc.z * gridRes * gridRes + nc.y * gridRes + nc.x;
-        const uint count = counts[index];
-        const uint offset = offsets[index];
-
-        // search the particles of this bin
-        for (uint localIndex = 0; localIndex < count; localIndex++) {
-            const uint otherParticleID = offset + localIndex;
-            if (particleID == otherParticleID) {
-                continue;
-            }
-
-            // find the distance, ignore if too far
-            const vec3 r = p.position - particles[otherParticleID].position;
-            const float dist = length(r);
-            if (dist >= kernelRadius) {
-                continue;
-            }
-
-            // Equation (4) from Harada
-            density += particleMass * poly6Kernel(dist);
+        // find the distance, ignore if too far
+        const vec3 r = p.position - particles[otherParticleID].position;
+        const float dist = length(r);
+        if (dist >= kernelRadius) {
+            continue;
         }
+
+        // Equation (4) from Harada
+        density += particleMass * poly6Kernel(dist);
     }
 
     p.density = density + wallDensity(p.position);
