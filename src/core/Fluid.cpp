@@ -9,14 +9,14 @@ using namespace core;
 Fluid::Fluid(const std::string& name) : BaseObject(name), position_(0), rotation_(0, 0, 0, 0) {
     size_ = 1.0f;
     position_ = -vec3(size_ / 2.0f);
-    num_particles_ = 100000;
+    num_particles_ = 80000;
     // must be less than (size / kernel_radius - b) where b is a positive int
     grid_res_ = 21;
     gravity_strength_ = 900.0f;
     gravity_direction_ = vec3(0, -1, 0);
     particle_radius_ = 0.01f;
-    rest_density_ = 1000.0f;
-    viscosity_coefficient_ = 20;
+    rest_density_ = 500.0f;
+    viscosity_coefficient_ = 200;
     stiffness_ = 100.0f;
     rest_pressure_ = 0.0f;
     render_mode_ = 0;
@@ -107,7 +107,7 @@ void Fluid::generateInitialParticles() {
     util::log("creating particles");
     int n = num_particles_;
     initial_particles_.assign(n, Particle());
-    float distance = particle_radius_ * 2.0f;
+    float distance = particle_radius_ * 1.5f;
     int d = int(ceil(std::cbrt(n)));
 
     float jitter = distance * 0.5f;
