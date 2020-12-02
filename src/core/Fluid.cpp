@@ -107,7 +107,7 @@ void Fluid::generateInitialParticles() {
     util::log("creating particles");
     int n = num_particles_;
     initial_particles_.assign(n, Particle());
-    float distance = particle_radius_ * 1.5f;
+    float distance = particle_radius_ * 1.75f;
     int d = int(ceil(std::cbrt(n)));
 
     float jitter = distance * 0.5f;
