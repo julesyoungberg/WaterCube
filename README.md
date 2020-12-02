@@ -6,7 +6,7 @@ demo: https://www.youtube.com/watch?v=w6Nh7prwYbY
 
 ## Setup
 
-No macs sorry, you need modern OpenGL with compute shaders to run this.
+Windows only sorry
 
 ```shell
 git clone --recursive https://github.com/julesyoungberg/WaterCube
