@@ -112,9 +112,9 @@ void WaterCubeApp::draw() {
 
     vec2 window = app::getWindowSize();
     gl::setMatricesWindow(window);
-    gl::color(Color("black"));
+    std::string font = "Ariel";
     gl::drawString(toString(static_cast<int>(getAverageFps())) + " fps",
-                   vec2(window.x - 64.0f, 100.0f));
+                   vec2(window.x - 64.0f, 20.0f), Color("black"), Font(font, 20));
 }
 
 void WaterCubeApp::keyDown(KeyEvent event) {
