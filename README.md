@@ -2,6 +2,8 @@
 
 A GPU powered SPH water simulation built on OpenGL with Cinder.
 
+demo: https://www.youtube.com/watch?v=w6Nh7prwYbY
+
 ## Setup
 
 No macs sorry, you need modern OpenGL with compute shaders to run this.
