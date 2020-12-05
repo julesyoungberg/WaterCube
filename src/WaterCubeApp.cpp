@@ -40,7 +40,7 @@ private:
 
 void WaterCubeApp::setup() {
     run_once_ = false;
-    running_ = false;
+    running_ = true;
     reset_ = false;
     size_ = 1.0;
     prev_time_ = 0.0f;
