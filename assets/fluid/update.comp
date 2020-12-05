@@ -11,8 +11,8 @@ struct Particle {
     float pressure;
 };
 
-layout(std430, binding = 0) restrict buffer Particles {
-    Particle particles[];
+layout(std430, binding = 0) restrict buffer InParticles {
+    Particle inParticles[];
 };
 
 layout(std430, binding = 1) restrict readonly buffer Counts {
@@ -25,6 +25,10 @@ layout(std430, binding = 2) restrict readonly buffer Offsets {
 
 layout(std430, binding = 3) restrict buffer Debug {
     uint debug[];
+};
+
+layout(std430, binding = 4) restrict buffer OutParticles {
+    Particle outParticles[];
 };
 
 uniform float size;
@@ -133,7 +137,7 @@ void main() {
         return;
     }
 
-    Particle p = particles[particleID];
+    Particle p = inParticles[particleID];
     const ivec3 coord = clamp(ivec3(p.position / binSize), ivec3(0), ivec3(gridRes - 1));
     
     vec3 pressureForce = vec3(0);
@@ -161,7 +165,7 @@ void main() {
                 continue;
             }
 
-            Particle other = particles[otherParticleID];
+            Particle other = inParticles[otherParticleID];
 
             // find the distance, ignore if too far
             const vec3 r = p.position - other.position;
@@ -224,5 +228,5 @@ void main() {
 
     p.velocity = vel;
     p.position = pos;
-    particles[particleID] = p;
+    outParticles[particleID] = p;
 }

@@ -300,13 +300,14 @@ void Fluid::runDensityProg(GLuint particle_buffer) {
 /**
  * Run update compute shader
  */
-void Fluid::runUpdateProg(GLuint particle_buffer, float time_step) {
+void Fluid::runUpdateProg(GLuint in_particle_buffer, GLuint out_particle_buffer, float time_step) {
     gl::ScopedGlslProg prog(update_prog_);
 
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, in_particle_buffer);
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, sort_->getCountBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, sort_->getOffsetBuffer());
     glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 3, debug_buffer_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 4, out_particle_buffer);
 
     Ray mouse_ray = getRelativeMouseRay();
 
@@ -350,16 +351,12 @@ void Fluid::runAdvectProg(GLuint particle_buffer, float time_step) {
 void Fluid::update(double time) {
     updateGravity();
 
-    odd_frame_ = !odd_frame_;
-    GLuint in_particles = odd_frame_ ? particle_buffer1_ : particle_buffer2_;
-    GLuint out_particles = odd_frame_ ? particle_buffer2_ : particle_buffer1_;
-
     // util::printParticles(in_particles, debug_buffer_, 10, bin_size_);
 
-    sort_->run(in_particles, out_particles);
+    sort_->run(particle_buffer1_, particle_buffer2_);
 
-    runDensityProg(out_particles);
-    runUpdateProg(out_particles, float(time));
+    runDensityProg(particle_buffer2_);
+    runUpdateProg(particle_buffer2_, particle_buffer1_, float(time));
     // runAdvectProg(out_particles, float(time));
 
     // util::printParticles(out_particles, debug_buffer_, 10, bin_size_);
@@ -407,9 +404,8 @@ void Fluid::renderParticles() {
     gl::pointSize(pointRadius * 2.0f);
 
     gl::ScopedGlslProg render(render_particles_prog_);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0,
-                     odd_frame_ ? particle_buffer2_ : particle_buffer1_);
-    glBindVertexArray(odd_frame_ ? vao2_ : vao1_);
+    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, particle_buffer1_);
+    glBindVertexArray(vao1_);
 
     render_particles_prog_->uniform("renderMode", render_mode_);
     render_particles_prog_->uniform("size", size_);

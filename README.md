@@ -27,3 +27,7 @@ You must [build cinder](https://libcinder.org/docs/guides/cmake/cmake.html) with
 cp .env.example .env
 make
 ```
+
+## Running
+
+Once the application starts press `s` to start the simulation.

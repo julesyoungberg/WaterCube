@@ -77,7 +77,7 @@ protected:
 
     void runProg() { util::runProg(num_work_groups_); }
     void runDensityProg(GLuint particle_buffer);
-    void runUpdateProg(GLuint particle_buffer, float time_step);
+    void runUpdateProg(GLuint in_particle_buffer, GLuint out_prticle_buffer, float time_step);
     void runAdvectProg(GLuint particle_buffer, float time_step);
     void drawGravity();
     void drawLight();
