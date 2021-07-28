@@ -230,15 +230,6 @@ FluidRef Fluid::setup() {
     sort_->prepareBuffers();
     sort_->compileShaders();
 
-    util::log("initializing marching cube");
-    marching_cube_ = MarchingCube::create()
-                         ->size(size_)
-                         ->numItems(num_particles_)
-                         ->threshold(0.5f)
-                         ->sortingResolution(grid_res_)
-                         ->subdivisions(1);
-    marching_cube_->setup();
-
     util::log("fluid created");
     return std::make_shared<Fluid>(*this);
 }
@@ -360,10 +351,6 @@ void Fluid::update(double time) {
     // runAdvectProg(out_particles, float(time));
 
     // util::printParticles(out_particles, debug_buffer_, 10, bin_size_);
-
-    // marching_cube_->setCameraPosition(getRelativeCameraPosition());
-    // marching_cube_->setLightPosition(getRelativeLightPosition());
-    // marching_cube_->update(out_particles, sort_->getCountBuffer(), sort_->getOffsetBuffer());
 }
 
 /**
@@ -432,12 +419,6 @@ void Fluid::draw() {
 
     if (render_mode_ == 4) {
         sort_->renderGrid(size_);
-    } else if (render_mode_ == 5) {
-        marching_cube_->renderParticleGrid();
-    } else if (render_mode_ == 6) {
-        marching_cube_->renderSurfaceVertices();
-    } else if (render_mode_ == 7) {
-        marching_cube_->renderSurface();
     } else {
         renderParticles();
     }

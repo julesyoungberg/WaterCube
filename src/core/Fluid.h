@@ -16,7 +16,6 @@
 
 #include "./BaseObject.h"
 #include "./Container.h"
-#include "./MarchingCube.h"
 #include "./Sort.h"
 #include "./util.h"
 
@@ -132,7 +131,6 @@ protected:
     gl::GlslProgRef advect_prog_;
 
     SortRef sort_;
-    MarchingCubeRef marching_cube_;
 
     GLuint particle_buffer1_;
     GLuint particle_buffer2_;
