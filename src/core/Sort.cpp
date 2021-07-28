@@ -2,11 +2,7 @@
 
 using namespace core;
 
-Sort::Sort() {
-    num_items_ = 0;
-    num_bins_ = 1;
-    use_linear_scan_ = true;
-}
+Sort::Sort(): num_items_(0), num_bins_(1) {}
 
 Sort::~Sort() {
     glDeleteBuffers(1, &count_buffer_);
@@ -109,9 +105,6 @@ void Sort::compileShaders() {
     util::log("\tcompiling sorter linear scan shader");
     linear_scan_prog_ = util::compileComputeShader("sort/linearScan.comp");
 
-    util::log("\tcompiling sorter scan shader");
-    scan_prog_ = util::compileComputeShader("sort/scan.comp");
-
     util::log("\tcompiling sorter reorder shader");
     reorder_prog_ = util::compileComputeShader("sort/reorder.comp");
 
@@ -201,24 +194,6 @@ void Sort::runLinearScanProg() {
 }
 
 /**
- * Run bucket scan compute shader
- */
-void Sort::runScanProg() {
-    gl::ScopedGlslProg prog(scan_prog_);
-
-    gl::ScopedBuffer scoped_count_buffer(global_count_buffer_);
-    global_count_buffer_->bindBase(0);
-
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, count_buffer_);
-    glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 2, offset_buffer_);
-
-    scan_prog_->uniform("gridRes", grid_res_);
-
-    util::runProg(ivec3(int(ceil(num_bins_ / 4.0f))));
-    gl::memoryBarrier(GL_SHADER_STORAGE_BARRIER_BIT);
-}
-
-/**
  * Run reorder compute shader
  */
 void Sort::runReorderProg(GLuint in_particles, GLuint out_particles) {
@@ -281,11 +256,7 @@ void Sort::run(GLuint in_particles, GLuint out_particles) {
     runCountProg(in_particles);
 
     clearOffsetBuffer();
-    if (use_linear_scan_) {
-        runLinearScanProg();
-    } else {
-        runScanProg();
-    }
+    runLinearScanProg();
     // util::log("counted");
     // printGrids();
 
